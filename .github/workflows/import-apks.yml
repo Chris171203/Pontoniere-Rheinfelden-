@@ -1,0 +1,61 @@
+name: Import test APK downloads
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Download verified APK artifacts
+        env:
+          OLD_URL: 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-e710-81f4-acb1-20202a1b5e29/raw?se=2026-08-31T23%3A01%3A33Z&sp=r&sv=2026-02-06&sr=b&scid=b205ae63-c635-56e3-91e3-7a92aad51e45&skoid=8981e47a-681f-4a6a-b86c-73d6347614b7&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-31T06%3A10%3A11Z&ske=2026-09-01T06%3A10%3A11Z&sks=b&skv=2026-02-06&sig=Tv1YVhBcunBZAhgc3BpxTe%2B%2BxvkjMMTIvbtTTcrrLss%3D'
+          CURRENT_URL: 'https://sdmntprdenmarkeast.oaiusercontent.com/files/00000000-ee1c-8210-a3f0-8a9b0b237d9a/raw?se=2026-08-31T23%3A01%3A08Z&sp=r&sv=2026-02-06&sr=b&scid=6f730629-fd50-56a1-8582-825e3615b76e&skoid=8981e47a-681f-4a6a-b86c-73d6347614b7&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-31T06%3A49%3A51Z&ske=2026-09-01T06%3A49%3A51Z&sks=b&skv=2026-02-06&sig=/srAU2UvQZ4eiBe4xKUPRJ9cSszhviITx%2Bapp4kwjk4%3D'
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 2 "$OLD_URL" -o /tmp/old.zip
+          curl -L --fail --retry 2 "$CURRENT_URL" -o /tmp/current.zip
+          mkdir -p /tmp/old /tmp/current Downloads/archive Downloads/current
+          unzip -q /tmp/old.zip -d /tmp/old
+          unzip -q /tmp/current.zip -d /tmp/current
+          OLD_APK=$(find /tmp/old -type f -name '*.apk' -print -quit)
+          CURRENT_APK=$(find /tmp/current -type f -name '*.apk' -print -quit)
+          cp "$OLD_APK" Downloads/archive/PFVR-Rheinfelden-test-0.4.0.apk
+          cp "$CURRENT_APK" Downloads/current/PFVR-Rheinfelden-test-0.5.0.apk
+          echo '6a34d7b2872b22dd2a769b7b0bc6beb5283a2263fd09350144e1f7ec6b4c755d  Downloads/archive/PFVR-Rheinfelden-test-0.4.0.apk' | sha256sum -c -
+          echo '64fce0d403c83c5ace8224fb89e9b48f7bd17e55fecb8d9559766016db7a5677  Downloads/current/PFVR-Rheinfelden-test-0.5.0.apk' | sha256sum -c -
+
+      - name: Add download documentation
+        run: |
+          cat > Downloads/README.md <<'EOF'
+          # Android-Testversionen
+
+          ## Aktuell
+
+          - [`PFVR-Rheinfelden-test-0.5.0.apk`](current/PFVR-Rheinfelden-test-0.5.0.apk)
+
+          ## Archiv
+
+          - [`PFVR-Rheinfelden-test-0.4.0.apk`](archive/PFVR-Rheinfelden-test-0.4.0.apk)
+
+          Die Dateien sind Debug-signierte Testversionen. Der spätere offizielle Release erhält eine dauerhaft verwaltete Release-/Play-Signatur.
+          EOF
+          sha256sum Downloads/current/*.apk Downloads/archive/*.apk > Downloads/SHA256SUMS.txt
+
+      - name: Commit APK downloads
+        run: |
+          rm .github/workflows/import-apks.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Downloads .github/workflows/import-apks.yml
+          git commit -m 'Add current and archived Android test APKs'
+          git push origin HEAD:${{ github.head_ref }}
