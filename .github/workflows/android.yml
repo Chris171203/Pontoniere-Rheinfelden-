@@ -1,0 +1,60 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Reject personal PFVR access links
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Build debug APK
+        working-directory: Android
+        run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK
+        run: |
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -5
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Android-debug
+          path: Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
