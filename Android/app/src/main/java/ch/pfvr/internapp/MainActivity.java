@@ -99,6 +99,7 @@ public class MainActivity extends Activity {
     private static final String CLUB_IBAN = "CH58 0076 9440 9013 1200 1";
     private static final String CLUB_PAYEE = "Pontonierfahrverein Rheinfelden";
     private static final String CLUB_PAYMENT_NOTE = "Konsumation Vereinsbeiz";
+    private static final String TWINT_QR_PDF = "https://www.pfvr.ch/wp-content/uploads/Seiten/vereinsbeiz_zahlung/Twint_QR.pdf";
 
     private static final int NAVY = Color.rgb(12,45,72);
     private static final int WATER = Color.rgb(43,142,166);
@@ -481,7 +482,9 @@ public class MainActivity extends Activity {
         String bankLabel=prefs.getString(PREF_BANK_LABEL,""); Button bank=btn(bankLabel.trim().isEmpty()?"Banking-App auswählen":bankLabel+" öffnen",Color.rgb(232,240,244),NAVY); bankButton=bank; bank.setOnClickListener(v->openPreferred(false,amount)); LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(46)); bp.setMargins(0,dp(8),0,0); amountCard.addView(bank,bp);
         if(!bankLabel.trim().isEmpty()) { TextView change=link("Andere Banking-App wählen"); change.setOnClickListener(v->chooseApp(false,amount)); amountCard.addView(change); }
 
-        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Alternative. Ohne separaten Vereins-Zahlungslink öffnet die App deine TWINT-App; bezahlt wird über den bestehenden Vereins-QR.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti); Button twb=btn("TWINT öffnen",Color.rgb(232,240,244),NAVY); twb.setOnClickListener(v->openPreferred(true,amount)); tw.addView(twb,new LinearLayout.LayoutParams(-1,dp(46)));
+        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Alternative zur Bankzahlung. Der offizielle Vereinsbeiz-TWINT-QR liegt auf pfvr.ch und kann als PDF geöffnet bzw. gespeichert werden.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti);
+        Button twq=btn("Vereins-TWINT-QR öffnen",NAVY,Color.WHITE); twq.setOnClickListener(v->external(TWINT_QR_PDF)); tw.addView(twq,new LinearLayout.LayoutParams(-1,dp(48)));
+        Button twb=btn("TWINT-App öffnen",Color.rgb(232,240,244),NAVY); twb.setOnClickListener(v->openPreferred(true,amount)); LinearLayout.LayoutParams twbp=new LinearLayout.LayoutParams(-1,dp(44)); twbp.setMargins(0,dp(8),0,0); tw.addView(twb,twbp);
 
         section(b,"Zahlungsdaten","Für E-Banking und manuelle Überweisung");
         LinearLayout details=card(); details.setOrientation(LinearLayout.VERTICAL); b.addView(details,margin(-1,-2,0,0,0,12)); details.addView(txt(CLUB_PAYEE,16,TEXT,true)); details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false)); TextView iban=txt(CLUB_IBAN,19,NAVY,true); iban.setPadding(0,dp(12),0,dp(4)); details.addView(iban); details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
