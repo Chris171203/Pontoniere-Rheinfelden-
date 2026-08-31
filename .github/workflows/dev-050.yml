@@ -5,8 +5,9 @@ on:
     branches:
       - dev-0.5.0
 
-permissions:
-  contents: write
+concurrency:
+  group: pfvr-dev-050
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -24,11 +25,10 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Apply 0.5.0 source patch
-        run: python tools/apply_050.py
-
-      - name: Probe PFVR payment media
-        run: python tools/probe_twint.py
+      - name: Apply 0.5.0 source patches
+        run: |
+          python tools/apply_050.py
+          python tools/apply_twint_050.py
 
       - name: Install Android 16 SDK
         run: |
@@ -44,22 +44,25 @@ jobs:
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='8' versionName='0.5.0'"
+          grep -q 'TWINT_QR_PDF' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'Zeit · 24 h' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q '19:30–21:00 Uhr' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
 
-      - name: Commit generated source
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
-          if ! git diff --cached --quiet; then
-            git commit -m 'Apply Android 0.5.0 UI fixes'
-            git push origin HEAD:dev-0.5.0
-          fi
+      - name: Prepare source artifact
+        run: cp Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java PFVR-MainActivity-0.5.0.java
 
       - uses: actions/upload-artifact@v4
         with:
           name: PFVR-Rheinfelden-test-0.5.0-apk
           path: Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: PFVR-Rheinfelden-test-0.5.0-aab
           path: Android/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Rheinfelden-test-0.5.0-source
+          path: PFVR-MainActivity-0.5.0.java
+          if-no-files-found: error
