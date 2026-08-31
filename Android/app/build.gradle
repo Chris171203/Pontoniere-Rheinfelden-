@@ -2,16 +2,38 @@ plugins {
     id 'com.android.application'
 }
 
+def uploadKeystore = System.getenv('ANDROID_UPLOAD_KEYSTORE')
+
 android {
     namespace 'ch.pfvr.internapp'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId 'ch.pfvr.app'
         minSdk 26
-        targetSdk 35
-        versionCode 7
-        versionName '0.4.0'
+        targetSdk 36
+        versionCode 8
+        versionName '0.5.0'
+    }
+
+    if (uploadKeystore) {
+        signingConfigs {
+            release {
+                storeFile file(uploadKeystore)
+                storePassword System.getenv('ANDROID_UPLOAD_STORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_UPLOAD_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (uploadKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
     }
 
     compileOptions {
@@ -19,7 +41,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
-
 
 dependencies {
     implementation 'com.google.zxing:core:3.5.3'
