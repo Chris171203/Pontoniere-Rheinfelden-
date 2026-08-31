@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'ch.pfvr.internapp'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'ch.pfvr.app'
+        minSdk 26
+        targetSdk 35
+        versionCode 7
+        versionName '0.4.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+
+dependencies {
+    implementation 'com.google.zxing:core:3.5.3'
+}
