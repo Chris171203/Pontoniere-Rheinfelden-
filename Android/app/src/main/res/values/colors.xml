@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pfvr_navy">#0C2D48</color>
+    <color name="pfvr_blue">#155A7A</color>
+    <color name="pfvr_water">#2B8EA6</color>
+    <color name="pfvr_red">#D93A34</color>
+    <color name="pfvr_yellow">#F2C94C</color>
+    <color name="surface">#F4F7F9</color>
+    <color name="white">#FFFFFF</color>
+    <color name="text_primary">#15232E</color>
+    <color name="text_secondary">#60717E</color>
+</resources>
