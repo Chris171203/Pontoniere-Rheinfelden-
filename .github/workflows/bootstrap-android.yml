@@ -1,9 +1,9 @@
 name: Bootstrap Android 0.4.0
 
 on:
-  push:
-    paths:
-      - '.github/workflows/bootstrap-android.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -25,7 +27,7 @@ jobs:
 
       - name: Import verified source
         env:
-          SRC_URL: 'https://sdmntprdenmarkeast.oaiusercontent.com/files/00000000-20ec-8210-99a1-4dda855098a5/raw?se=2026-08-31T22%3A28%3A24Z&sp=r&sv=2026-02-06&sr=b&scid=5eef3c12-5af7-5f47-a975-3d0ba269d49d&skoid=697a5987-0cd9-4222-b5b8-500b90fa271b&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-31T17%3A46%3A51Z&ske=2026-09-01T17%3A46%3A51Z&sks=b&skv=2026-02-06&sig=BecEX5jMOz0U3Lnh1GcVJHKw8oq5ZzbF11CWbvnK%2B6Q%3D'
+          SRC_URL: 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-5694-81f4-9a7c-e43a2e57593e/raw?se=2026-08-31T22%3A29%3A35Z&sp=r&sv=2026-02-06&sr=b&scid=f924756d-c7b5-5837-977b-356c27c64487&skoid=697a5987-0cd9-4222-b5b8-500b90fa271b&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-31T09%3A26%3A28Z&ske=2026-09-01T09%3A26%3A28Z&sks=b&skv=2026-02-06&sig=NAZ4wlSpdSrl77B16FWQmu1X47QU4i3Bo2vf5zmJi8g%3D'
         run: |
           set -euo pipefail
           curl -L --fail --retry 2 "$SRC_URL" -o /tmp/artifact.zip
@@ -53,11 +55,12 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='7' versionName='0.4.0'"
 
-      - name: Commit verified source
+      - name: Commit verified source to PR branch
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           rm -rf Android/.bootstrap Android/app/build Android/.gradle
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Android
           git commit -m 'Add verified Android 0.4.0 source'
-          git push
+          git push origin HEAD:${{ github.head_ref }}
