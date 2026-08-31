@@ -127,6 +127,10 @@ public class MainActivity extends Activity {
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
+    private Button bankButton;
+    private TextView bankChangeLink;
+    private Button twintButton;
+    private EditText cashAmountInput;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -216,6 +220,7 @@ public class MainActivity extends Activity {
 
     private void navigate(Screen screen) {
         current = screen; activeWebView = null;
+        if (screen != Screen.CASH) { bankButton = null; bankChangeLink = null; twintButton = null; cashAmountInput = null; }
         if (headerBack != null) headerBack.setVisibility(screen == Screen.HOME ? View.GONE : View.VISIBLE);
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==screen;
@@ -266,7 +271,6 @@ public class MainActivity extends Activity {
         TextView all=link("Alle Termine anzeigen  →"); all.setOnClickListener(v->navigate(Screen.EVENTS)); b.addView(all);
 
         section(b,"Schnellzugriff",null);
-        b.addView(action("Vereinsbeiz","Betrag eingeben und Banking-App öffnen","Zur Kasse",v->navigate(Screen.CASH)));
         b.addView(action("Depot","Rheinweg 42 · 4310 Rheinfelden","Route",v->openMap()));
         return scroll;
     }
@@ -301,31 +305,49 @@ public class MainActivity extends Activity {
         TrendSeries level=hydroSeries("W"), temp=hydroSeries("WT");
         if(level.values.size()>=2){
             TextView title=txt("Pegelverlauf",13,TEXT,true); title.setPadding(0,dp(14),0,dp(3)); c.addView(title);
-            c.addView(new TrendView(this,level,"m ü.M.",WATER),new LinearLayout.LayoutParams(-1,dp(104)));
+            c.addView(new TrendView(this,level,"Pegel","m ü.M.",WATER),new LinearLayout.LayoutParams(-1,dp(132)));
         }
         if(temp.values.size()>=2){
             TextView title=txt("Wassertemperatur",13,TEXT,true); title.setPadding(0,dp(12),0,dp(3)); c.addView(title);
-            c.addView(new TrendView(this,temp,"°C",Color.rgb(220,137,63)),new LinearLayout.LayoutParams(-1,dp(104)));
+            c.addView(new TrendView(this,temp,"Temperatur","°C",Color.rgb(220,137,63)),new LinearLayout.LayoutParams(-1,dp(132)));
         }
         TextView src=txt(x[3],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(9),0,0); c.addView(src);
         return c;
     }
 
-    private LocalDate nextTrainingDay(){
-        ZoneId zone=ZoneId.of("Europe/Zurich"); ZonedDateTime now=ZonedDateTime.now(zone); LocalDate start=now.toLocalDate();
-        for(int i=0;i<8;i++){LocalDate d=start.plusDays(i);DayOfWeek w=d.getDayOfWeek();if(w!=DayOfWeek.MONDAY&&w!=DayOfWeek.WEDNESDAY)continue;ZonedDateTime cutoff=d.atTime(21,0).atZone(zone);if(i>0||now.isBefore(cutoff))return d;}
-        return start.plusDays(1);
+    private Event nextTrainingEvent(){
+        ZonedDateTime now=ZonedDateTime.now(ZoneId.of("Europe/Zurich")).minusMinutes(20);
+        for(Event e:events){
+            String title=e.title==null?"":e.title.toLowerCase(Locale.GERMAN);
+            if(!title.contains("training")||title.contains("abgesagt")||title.contains("kein training"))continue;
+            ZonedDateTime end=e.end==null?e.start.plusMinutes(90):e.end;
+            if(end.isBefore(now))continue;
+            return e;
+        }
+        return null;
     }
 
     private String[] weatherSummary(){
-        LocalDate d=nextTrainingDay(); String date=cap(d.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN)))+" · 18–20 Uhr";
+        Event training=nextTrainingEvent();
+        if(training==null){
+            String main=eventsLoading||events.isEmpty()?"Trainingstermin wird geladen …":"Kein kommendes Training im Kalender";
+            String detail=eventsLoading||events.isEmpty()?"Der öffentliche Vereinskalender wird im Hintergrund aktualisiert.":"Wetter wird erst angezeigt, wenn ein Training als Termin vorhanden ist.";
+            return new String[]{"NÄCHSTES TRAINING","Kalenderbasiert",main,detail,prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo"),"◌"};
+        }
+        LocalDate d=training.start.toLocalDate();
+        ZonedDateTime trainingEnd=training.end==null?training.start.plusMinutes(90):training.end;
+        String time=training.start.format(DateTimeFormatter.ofPattern("HH:mm"))+"–"+trainingEnd.format(DateTimeFormatter.ofPattern("HH:mm"))+" Uhr";
+        String date=cap(d.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN)))+" · "+time;
         String raw=prefs.getString(PREF_WEATHER_CACHE,""); long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L); String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
         if(raw.trim().isEmpty())return new String[]{"NÄCHSTES TRAINING",date,"Wetter wird geladen …","Prognose wird im Hintergrund aktualisiert.",source,"◌"};
         try{
             JSONObject h=new JSONObject(raw).getJSONObject("hourly"); JSONArray times=h.getJSONArray("time"),temp=h.getJSONArray("temperature_2m"),prob=h.getJSONArray("precipitation_probability"),prec=h.getJSONArray("precipitation"),code=h.getJSONArray("weather_code"),wind=h.getJSONArray("wind_speed_10m"),gust=h.getJSONArray("wind_gusts_10m");
             double tFirst=Double.NaN,tLast=Double.NaN,psum=0,wmax=0,gmax=0; int pmax=0,wcode=-1,count=0; String prefix=d.toString()+"T";
+            int startHour=training.start.getHour(); int endHour=trainingEnd.getHour();
             for(int i=0;i<times.length();i++){
-                String tm=times.optString(i,""); if(!(tm.equals(prefix+"18:00")||tm.equals(prefix+"19:00")||tm.equals(prefix+"20:00")))continue;
+                String tm=times.optString(i,""); if(!tm.startsWith(prefix)||tm.length()<13)continue;
+                int hour; try{hour=Integer.parseInt(tm.substring(11,13));}catch(Exception badHour){continue;}
+                if(hour<startHour||hour>endHour)continue;
                 double tv=temp.optDouble(i,Double.NaN); if(count==0){tFirst=tv;wcode=code.optInt(i,-1);} tLast=tv;
                 pmax=Math.max(pmax,prob.optInt(i,0)); psum+=Math.max(0,prec.optDouble(i,0)); wmax=Math.max(wmax,wind.optDouble(i,0)); gmax=Math.max(gmax,gust.optDouble(i,0)); count++;
             }
@@ -334,7 +356,7 @@ public class MainActivity extends Activity {
             if(!Double.isNaN(tLast)&&!Double.isNaN(tFirst)&&Math.abs(tLast-tFirst)>=1.0)tempText+=String.format(Locale.GERMAN," → %.0f °C",tLast);
             String main=tempText+(tempText.isEmpty()?"":" · ")+weatherCode(wcode);
             String details="Regen "+pmax+" % · "+String.format(Locale.GERMAN,"%.1f mm",psum)+"\nWind "+Math.round(wmax)+" km/h · Böen "+Math.round(gmax)+" km/h";
-            return new String[]{"NÄCHSTES TRAINING",date,main,details,weatherAge(source,updated),weatherIcon(wcode)};
+            return new String[]{"NÄCHSTES TRAINING",training.title+" · "+date,main,details,weatherAge(source,updated),weatherIcon(wcode)};
         }catch(Exception e){return new String[]{"NÄCHSTES TRAINING",date,"Gespeicherte Wetterdaten nicht lesbar","Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen.",weatherAge(source,updated),"◌"};}
     }
 
@@ -385,7 +407,7 @@ public class MainActivity extends Activity {
         long age=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_UPDATED,0L);if(hydroLoading||(!force&&!prefs.getString(PREF_HYDRO_CACHE,"").isBlank()&&age<10*60000L))return;hydroLoading=true;
         new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL("https://data.bafu.admin.ch/api").openConnection();c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");String query="{ water { observations { data_live(where:{stationNo:{_eq:\"2091\"}}) { stationNo parameterName timestamp value releaseStatus } } } }";String body=new JSONObject().put("query",query).toString();try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));}if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());String raw=readConnection(c);JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL");j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");prefs.edit().putString(PREF_HYDRO_CACHE,raw).putLong(PREF_HYDRO_UPDATED,System.currentTimeMillis()).apply();}catch(Exception ignored){}finally{if(c!=null)c.disconnect();hydroLoading=false;runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});}}).start();
     }
-    private String httpGet(String url) throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();try{c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.3");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());return readConnection(c);}finally{c.disconnect();}}
+    private String httpGet(String url) throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();try{c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/0.5.0");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());return readConnection(c);}finally{c.disconnect();}}
     private String readConnection(HttpURLConnection c) throws Exception{BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line);br.close();return sb.toString();}
 
     private View settings(){
@@ -409,8 +431,13 @@ public class MainActivity extends Activity {
 
         section(b,"App",null);
         LinearLayout about=card(); about.setOrientation(LinearLayout.VERTICAL); b.addView(about,margin(-1,-2,0,0,0,8));
-        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion 0.4.0 · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion 0.5.0 · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        Button privacy=btn("Datenschutz anzeigen",Color.rgb(232,240,244),NAVY); privacy.setOnClickListener(v->showPrivacyPolicy()); LinearLayout.LayoutParams plp=new LinearLayout.LayoutParams(-1,dp(44)); plp.setMargins(0,dp(10),0,0); about.addView(privacy,plp);
         return scroll;
+    }
+
+    private void showPrivacyPolicy(){
+        ScrollView scroll=new ScrollView(this); TextView text=txt("Datenschutz – PFVR Rheinfelden\n\nDie App besitzt keinen eigenen Server, keine Werbung und keine Analyse- oder Tracking-Funktion. Kalender-, Wetter- und Rhein-Daten werden von öffentlichen Diensten abgerufen und lokal zwischengespeichert. Dabei erhalten die jeweiligen Anbieter technisch notwendige Verbindungsdaten wie IP-Adresse und User-Agent.\n\nDer persönliche Link zum internen PFVR-Bereich wird ausschließlich lokal auf dem Gerät gespeichert. Beim Öffnen werden Mitgliedsbezug, Zugangsschlüssel sowie An-/Abmeldungen einschließlich Essenswahl direkt an intern.pfvr.ch übertragen. Die App selbst sendet diese Angaben an keinen zusätzlichen Dienst.\n\nBanking- und TWINT-Apps werden nur geöffnet. Zahlungsdaten werden lokal erzeugt oder in die Zwischenablage kopiert; die App erhält keine Bestätigung über ausgeführte Zahlungen.\n\nKontakt: Pontonierfahrverein Rheinfelden, info@pfvr.ch",14,TEXT,false); text.setPadding(dp(20),dp(12),dp(20),dp(20)); scroll.addView(text); new AlertDialog.Builder(this,dialogTheme()).setTitle("Datenschutz").setView(scroll).setPositiveButton("Schliessen",null).show();
     }
 
     private boolean resolveDarkMode(){
@@ -470,13 +497,13 @@ public class MainActivity extends Activity {
         LinearLayout amountCard=card(); amountCard.setOrientation(LinearLayout.VERTICAL); b.addView(amountCard,margin(-1,-2,0,0,0,12)); amountCard.addView(txt("Betrag",14,MUTED,true));
         LinearLayout amountRow=new LinearLayout(this); amountRow.setGravity(Gravity.CENTER_VERTICAL); amountRow.setPadding(0,dp(8),0,dp(8)); amountCard.addView(amountRow);
         TextView chf=txt("CHF",20,NAVY,true); chf.setGravity(Gravity.CENTER_VERTICAL); amountRow.addView(chf,new LinearLayout.LayoutParams(dp(55),dp(56)));
-        EditText amount=new EditText(this); amount.setHint("0.00"); amount.setTextSize(25); amount.setSingleLine(true); amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL); amount.setTextColor(themeText(TEXT)); amount.setHintTextColor(themeText(MUTED)); amount.setBackground(round(Color.rgb(238,243,246),14)); amount.setPadding(dp(14),0,dp(14),0); amountRow.addView(amount,new LinearLayout.LayoutParams(0,dp(56),1));
+        EditText amount=new EditText(this); amount.setHint("0.00"); amount.setTextSize(25); amount.setSingleLine(true); amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL); amount.setTextColor(themeText(TEXT)); amount.setHintTextColor(themeText(MUTED)); amount.setBackground(round(Color.rgb(238,243,246),14)); amount.setPadding(dp(14),0,dp(14),0); amountRow.addView(amount,new LinearLayout.LayoutParams(0,dp(56),1)); cashAmountInput=amount;
         TextView hi=txt("Der Swiss QR enthält Empfänger, IBAN, Betrag und Zahlungszweck. So gehen die Zahlungsdaten vollständig mit.",12,MUTED,false); hi.setPadding(0,0,0,dp(10)); amountCard.addView(hi);
         Button qr=btn("Swiss QR mit Betrag erstellen",NAVY,Color.WHITE); qr.setOnClickListener(v->showPaymentQr(amount)); amountCard.addView(qr,new LinearLayout.LayoutParams(-1,dp(52)));
-        String bankLabel=prefs.getString(PREF_BANK_LABEL,""); Button bank=btn(bankLabel.trim().isEmpty()?"Banking-App auswählen":bankLabel+" öffnen",Color.rgb(232,240,244),NAVY); bank.setOnClickListener(v->openPreferred(false,amount)); LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(46)); bp.setMargins(0,dp(8),0,0); amountCard.addView(bank,bp);
-        if(!bankLabel.trim().isEmpty()) { TextView change=link("Andere Banking-App wählen"); change.setOnClickListener(v->chooseApp(false,amount)); amountCard.addView(change); }
+        String bankLabel=prefs.getString(PREF_BANK_LABEL,""); bankButton=btn(bankLabel.trim().isEmpty()?"Banking-App auswählen":bankLabel+" öffnen",Color.rgb(232,240,244),NAVY); bankButton.setOnClickListener(v->openPreferred(false,amount)); LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(46)); bp.setMargins(0,dp(8),0,0); amountCard.addView(bankButton,bp);
+        bankChangeLink=link("Andere Banking-App wählen"); bankChangeLink.setOnClickListener(v->chooseApp(false,amount)); bankChangeLink.setVisibility(bankLabel.trim().isEmpty()?View.GONE:View.VISIBLE); amountCard.addView(bankChangeLink);
 
-        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Alternative. Ohne separaten Vereins-Zahlungslink öffnet die App deine TWINT-App; bezahlt wird über den bestehenden Vereins-QR.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti); Button twb=btn("TWINT öffnen",Color.rgb(232,240,244),NAVY); twb.setOnClickListener(v->openPreferred(true,amount)); tw.addView(twb,new LinearLayout.LayoutParams(-1,dp(46)));
+        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Alternative. Eine TWINT-App kann geöffnet werden. Für einen downloadbaren Vereins-TWINT-QR wird die Originalgrafik oder ein offizieller Zahlungslink benötigt; der vorhandene Swiss QR ist kein TWINT-QR.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti); String twintLabel=prefs.getString(PREF_TWINT_LABEL,""); twintButton=btn(twintLabel.trim().isEmpty()?"TWINT-App auswählen":twintLabel+" öffnen",Color.rgb(232,240,244),NAVY); twintButton.setOnClickListener(v->openPreferred(true,amount)); tw.addView(twintButton,new LinearLayout.LayoutParams(-1,dp(46)));
 
         section(b,"Zahlungsdaten","Für E-Banking und manuelle Überweisung");
         LinearLayout details=card(); details.setOrientation(LinearLayout.VERTICAL); b.addView(details,margin(-1,-2,0,0,0,12)); details.addView(txt(CLUB_PAYEE,16,TEXT,true)); details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false)); TextView iban=txt(CLUB_IBAN,19,NAVY,true); iban.setPadding(0,dp(12),0,dp(4)); details.addView(iban); details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
@@ -556,7 +583,7 @@ public class MainActivity extends Activity {
         String pkg=prefs.getString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,"");
         if(pkg.isBlank()) { chooseApp(twint,amountInput); return; }
         Intent launch=getPackageManager().getLaunchIntentForPackage(pkg);
-        if(launch==null) { prefs.edit().remove(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE).remove(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL).apply(); chooseApp(twint,amountInput); return; }
+        if(launch==null) { prefs.edit().remove(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE).remove(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL).apply(); if(twint){if(twintButton!=null)twintButton.setText("TWINT-App auswählen");}else updateBankUi(""); chooseApp(twint,amountInput); return; }
         copyAmount(amountInput); try { startActivity(launch); } catch(Exception e) { chooseApp(twint,amountInput); }
     }
 
@@ -571,7 +598,12 @@ public class MainActivity extends Activity {
         found.sort((a,b)->{int pa=bankPriority(a),pb=bankPriority(b);if(pa!=pb)return Integer.compare(pa,pb);return a.label.compareToIgnoreCase(b.label);});
         if(found.isEmpty()) { if(twint) { try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("market://search?q=TWINT&c=apps")));}catch(Exception e){external("https://www.twint.ch/privatkunden/");} } else Toast.makeText(this,"Keine passende Banking-App gefunden.",Toast.LENGTH_LONG).show(); return; }
         String[] labels=new String[found.size()]; for(int i=0;i<found.size();i++) labels[i]=found.get(i).label;
-        new AlertDialog.Builder(this,dialogTheme()).setTitle(twint?"TWINT-App auswählen":"Banking-App auswählen").setItems(labels,(d,i)->{AppChoice c=found.get(i); prefs.edit().putString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,c.pkg).putString(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL,c.label).apply(); copyAmount(amountInput); Intent launch=pm.getLaunchIntentForPackage(c.pkg); if(launch!=null) startActivity(launch);}).setNegativeButton("Abbrechen",null).show();
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(twint?"TWINT-App auswählen":"Banking-App auswählen").setItems(labels,(d,i)->{AppChoice c=found.get(i); prefs.edit().putString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,c.pkg).putString(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL,c.label).apply(); if(twint){if(twintButton!=null)twintButton.setText(c.label+" öffnen");}else updateBankUi(c.label); copyAmount(amountInput); Intent launch=pm.getLaunchIntentForPackage(c.pkg); if(launch!=null) startActivity(launch);}).setNegativeButton("Abbrechen",null).show();
+    }
+
+    private void updateBankUi(String label){
+        if(bankButton!=null)bankButton.setText(label==null||label.trim().isEmpty()?"Banking-App auswählen":label+" öffnen");
+        if(bankChangeLink!=null)bankChangeLink.setVisibility(label==null||label.trim().isEmpty()?View.GONE:View.VISIBLE);
     }
 
     private int bankPriority(AppChoice app) {
@@ -607,7 +639,7 @@ public class MainActivity extends Activity {
         String url=prefs.getString(PREF_INTERNAL_URL,""); if(!validInternal(url)) return internalMissing();
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(themeBg(Color.WHITE));
         LinearLayout tools=new LinearLayout(this); tools.setPadding(dp(9),dp(8),dp(9),dp(8)); tools.setBackgroundColor(themeBg(Color.rgb(236,243,247))); root.addView(tools,new LinearLayout.LayoutParams(-1,dp(56)));
-        WebView web=web(false); activeWebView=web;
+        WebView web=web(true); activeWebView=web;
         Button back=btn("‹ Zurück",Color.WHITE,NAVY); back.setOnClickListener(v->handleBack()); tools.addView(back,new LinearLayout.LayoutParams(0,dp(40),1));
         Button start=btn("Start",NAVY,Color.WHITE); start.setOnClickListener(v->web.loadUrl(prefs.getString(PREF_INTERNAL_URL,""))); LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,dp(40),1); sp.setMargins(dp(7),0,0,0); tools.addView(start,sp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->web.reload()); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
@@ -634,17 +666,22 @@ public class MainActivity extends Activity {
     private boolean validInternal(String x){if(x==null||x.isBlank())return false;try{Uri u=Uri.parse(x);return "https".equalsIgnoreCase(u.getScheme())&&"intern.pfvr.ch".equalsIgnoreCase(u.getHost());}catch(Exception e){return false;}}
 
     private View webScreen(String url,boolean simplify){LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);ProgressBar p=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);p.setMax(100);root.addView(p,new LinearLayout.LayoutParams(-1,dp(2)));WebView w=web(simplify);activeWebView=w;w.setWebChromeClient(new WebChromeClient(){@Override public void onProgressChanged(WebView v,int n){p.setProgress(n);p.setVisibility(n>=100?View.GONE:View.VISIBLE);}});root.addView(w,new LinearLayout.LayoutParams(-1,0,1));w.loadUrl(url);return root;}
-    private WebView web(boolean simplify){WebView w=new WebView(this);w.setBackgroundColor(themeBg(Color.WHITE));WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setDatabaseEnabled(true);s.setCacheMode(WebSettings.LOAD_DEFAULT);s.setLoadsImagesAutomatically(true);s.setLoadWithOverviewMode(true);s.setUseWideViewPort(true);s.setSupportZoom(false);s.setAllowFileAccess(false);s.setAllowContentAccess(true);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);String ua=s.getUserAgentString();if(ua!=null)s.setUserAgentString(ua.replace("; wv","").replace("Version/4.0 ",""));CookieManager.getInstance().setAcceptCookie(true);CookieManager.getInstance().setAcceptThirdPartyCookies(w,true);w.setWebViewClient(new WebViewClient(){@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();String h=u.getHost()==null?"":u.getHost().toLowerCase(Locale.ROOT);if(h.endsWith("pfvr.ch")||h.endsWith("google.com"))return false;external(u.toString());return true;}@Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(simplify&&u.contains("pfvr.ch"))skin(v);}});return w;}
+    private WebView web(boolean simplify){WebView w=new WebView(this);w.setBackgroundColor(Color.WHITE);WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setDatabaseEnabled(true);s.setCacheMode(WebSettings.LOAD_DEFAULT);s.setLoadsImagesAutomatically(true);s.setLoadWithOverviewMode(true);s.setUseWideViewPort(true);s.setSupportZoom(false);s.setAllowFileAccess(false);s.setAllowContentAccess(true);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);if(android.os.Build.VERSION.SDK_INT>=33)s.setAlgorithmicDarkeningAllowed(false);else if(android.os.Build.VERSION.SDK_INT>=29)s.setForceDark(WebSettings.FORCE_DARK_OFF);String ua=s.getUserAgentString();if(ua!=null)s.setUserAgentString(ua.replace("; wv","").replace("Version/4.0 ",""));CookieManager.getInstance().setAcceptCookie(true);CookieManager.getInstance().setAcceptThirdPartyCookies(w,true);w.setWebViewClient(new WebViewClient(){@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();String h=u.getHost()==null?"":u.getHost().toLowerCase(Locale.ROOT);if(h.endsWith("pfvr.ch")||h.endsWith("google.com"))return false;external(u.toString());return true;}@Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(u.contains("intern.pfvr.ch"))skinInternal(v);else if(simplify&&u.contains("pfvr.ch"))skin(v);}});return w;}
     private void skin(WebView v){
-        String bg=darkMode?"#11171C":"#F4F7F9", card=darkMode?"#1A2228":"#FFFFFF", text=darkMode?"#ECF1F4":"#15232E", heading=darkMode?"#ECF1F4":"#0C2D48", link=darkMode?"#5BBED5":"#247E99";
-        String css="header,.site-header,.header-wrapper,nav,.main-navigation,footer,.site-footer,.scroll-top,.back-to-top{display:none!important;}html,body{background:"+bg+"!important;}body{margin:0!important;padding:14px 14px 40px!important;font-family:Arial,sans-serif!important;color:"+text+"!important;}main,.site-content,.content-area,.container,.wrapper{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;}article,.post,.entry{background:"+card+"!important;border-radius:16px!important;padding:16px!important;margin:0 0 14px!important;box-shadow:0 2px 10px rgba(0,0,0,.16)!important;}img{max-width:100%!important;height:auto!important;border-radius:12px!important;}a{color:"+link+"!important;}h1,h2,h3{color:"+heading+"!important;}";
+        String bg="#F4F7F9", card="#FFFFFF", text="#15232E", heading="#0C2D48", link="#247E99";
+        String css="header,.site-header,.header-wrapper,nav,.main-navigation,footer,.site-footer,.scroll-top,.back-to-top{display:none!important;}html,body{background:"+bg+"!important;color:"+text+"!important;color-scheme:light!important;}body{margin:0!important;padding:14px 14px 40px!important;font-family:Arial,sans-serif!important;color:"+text+"!important;}main,.site-content,.content-area,.container,.wrapper{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:"+bg+"!important;}article,.post,.entry,.entry-content,.et_pb_text_inner{background:"+card+"!important;color:"+text+"!important;border-radius:16px!important;padding:16px!important;margin:0 0 14px!important;box-shadow:0 2px 10px rgba(0,0,0,.16)!important;}p,li,td,th,.entry-content p,.entry-content li,.entry-content span,.et_pb_text_inner p,.et_pb_text_inner span{color:"+text+"!important;}iframe,embed,object{background:#FFFFFF!important;max-width:100%!important;}img{max-width:100%!important;height:auto!important;border-radius:12px!important;}a,a *{color:"+link+"!important;}h1,h2,h3,h4,h5,h6{color:"+heading+"!important;}input,select,textarea{background:#FFFFFF!important;color:"+text+"!important;}";
         String js="(function(){var s=document.getElementById('pfvr-app-style');if(!s){s=document.createElement('style');s.id='pfvr-app-style';document.head.appendChild(s);}s.innerHTML='"+css.replace("\\","\\\\").replace("'","\\'")+"';})();"; v.evaluateJavascript(js,null);
     }
+    private void skinInternal(WebView v){
+        String css="html,body{background:#F4F7F9!important;color:#15232E!important;color-scheme:light!important;font-family:Arial,sans-serif!important;}body{margin:0!important;padding:10px 8px 36px!important;}body *{box-sizing:border-box;}table{border-collapse:separate!important;border-spacing:0!important;background:#fff!important;color:#15232E!important;border-radius:12px!important;overflow:hidden!important;}th,td{border-color:#D7E1E7!important;color:#15232E!important;}p,span,div,label{color:#15232E;}select,input,button,.btn,a.btn,input[type=submit]{min-height:42px!important;border-radius:9px!important;font-size:16px!important;}input[type=submit],button,.btn,a.btn{background:#0C2D48!important;color:#fff!important;border:0!important;padding:8px 12px!important;}select,input[type=text],input[type=number]{background:#fff!important;color:#15232E!important;border:1px solid #B9C8D1!important;padding:8px!important;}a{color:#247E99!important;}h1,h2,h3,strong{color:#0C2D48!important;}";
+        String js="(function(){var s=document.getElementById('pfvr-internal-style');if(!s){s=document.createElement('style');s.id='pfvr-internal-style';document.head.appendChild(s);}s.innerHTML='"+css.replace("\\","\\\\").replace("'","\\'")+"';})();";v.evaluateJavascript(js,null);
+    }
+
     private void openInApp(String url,String title){headerSubtitle.setText(title);content.removeAllViews();content.addView(webScreen(url,true));}
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
     private String calendarStatus(){if(eventsUpdated<=0)return eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.";ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?"heute "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return "Lokal gespeichert · zuletzt aktualisiert "+d+" Uhr";}
-    private void refreshEvents(boolean toast,Runnable done){if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.1.1");c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
+    private void refreshEvents(boolean toast,Runnable done){if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/0.5.0");c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
     private List<Event> parseIcs(String raw){List<String> lines=unfold(raw);List<Event> base=new ArrayList<>();Event e=null;for(String line:lines){if(line.equals("BEGIN:VEVENT"))e=new Event();else if(line.equals("END:VEVENT")&&e!=null){if(e.start!=null&&e.title!=null&&!e.title.isBlank())base.add(e);e=null;}else if(e!=null){int p=line.indexOf(':');if(p<0)continue;String k=line.substring(0,p),v=unesc(line.substring(p+1));if(k.startsWith("SUMMARY"))e.title=v;else if(k.startsWith("LOCATION"))e.location=v;else if(k.startsWith("DTSTART")){ParsedDate d=date(k,v);if(d!=null){e.start=d.z;e.allDay=d.allDay;}}else if(k.startsWith("DTEND")){ParsedDate d=date(k,v);if(d!=null)e.end=d.z;}else if(k.startsWith("RRULE"))e.rule=v;else if(k.startsWith("EXDATE"))for(String x:v.split(",")){ParsedDate d=date(k,x);if(d!=null)e.ex.add(d.z.toLocalDate());}}}ZonedDateTime now=ZonedDateTime.now(ZoneId.of("Europe/Zurich")).minusHours(6),limit=now.plusMonths(14);List<Event> out=new ArrayList<>();for(Event x:base)expand(x,limit,out);out.removeIf(x->x.start.isBefore(now)||x.start.isAfter(limit));out.sort(Comparator.comparing(x->x.start));Set<String> seen=new LinkedHashSet<>();List<Event> unique=new ArrayList<>();for(Event x:out){String id=x.start+"|"+x.title;if(seen.add(id))unique.add(x);}return unique;}
     private List<String> unfold(String raw){List<String> out=new ArrayList<>();for(String l:raw.replace("\r\n","\n").split("\n")){if((l.startsWith(" ")||l.startsWith("\t"))&&!out.isEmpty())out.set(out.size()-1,out.get(out.size()-1)+l.substring(1));else out.add(l);}return out;}
@@ -676,10 +713,20 @@ public class MainActivity extends Activity {
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}
     private class TrendView extends View {
-        private final TrendSeries series; private final String unit; private final int lineColor;
+        private final TrendSeries series; private final String yName,unit; private final int lineColor;
         private final Paint line=new Paint(Paint.ANTI_ALIAS_FLAG), grid=new Paint(Paint.ANTI_ALIAS_FLAG), label=new Paint(Paint.ANTI_ALIAS_FLAG);
-        TrendView(Context c,TrendSeries s,String u,int color){super(c);series=s;unit=u;lineColor=color;line.setStrokeWidth(dp(2));line.setStyle(Paint.Style.STROKE);grid.setStrokeWidth(dp(1));label.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);setPadding(0,0,0,0);}
-        @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);if(series.values.size()<2)return;float w=getWidth(),h=getHeight(),left=dp(7),right=w-dp(7),top=dp(8),bottom=h-dp(22);double min=Double.POSITIVE_INFINITY,max=Double.NEGATIVE_INFINITY;for(double v:series.values){min=Math.min(min,v);max=Math.max(max,v);}if(!(max>min)){max=min+1;}grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*i/(series.values.size()-1f);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);label.setColor(themeText(MUTED));String lo=fmtTrend(min)+" "+unit,hi=fmtTrend(max)+" "+unit;canvas.drawText(lo,left,h-dp(5),label);float tw=label.measureText(hi);canvas.drawText(hi,right-tw,h-dp(5),label);}
+        TrendView(Context c,TrendSeries s,String y,String u,int color){super(c);series=s;yName=y;unit=u;lineColor=color;line.setStrokeWidth(dp(2));line.setStyle(Paint.Style.STROKE);grid.setStrokeWidth(dp(1));label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);setPadding(0,0,0,0);}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);if(series.values.size()<2)return;
+            float w=getWidth(),h=getHeight(),left=dp(52),right=w-dp(8),top=dp(9),bottom=h-dp(36);
+            double min=Double.POSITIVE_INFINITY,max=Double.NEGATIVE_INFINITY;for(double v:series.values){min=Math.min(min,v);max=Math.max(max,v);}if(!(max>min)){max=min+1;}
+            grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}
+            Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*i/(series.values.size()-1f);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);
+            label.setColor(themeText(MUTED));String maxText=fmtTrend(max),minText=fmtTrend(min);canvas.drawText(maxText,left-dp(6)-label.measureText(maxText),top+dp(4),label);canvas.drawText(minText,left-dp(6)-label.measureText(minText),bottom+dp(3),label);
+            canvas.save();canvas.rotate(-90,dp(11),(top+bottom)/2f);String axis=yName+" ["+unit+"]";canvas.drawText(axis,dp(11)-label.measureText(axis)/2f,(top+bottom)/2f,label);canvas.restore();
+            String first=timeLabel(series.times.get(0)),last=timeLabel(series.times.get(series.times.size()-1));canvas.drawText(first,left,h-dp(18),label);canvas.drawText(last,right-label.measureText(last),h-dp(18),label);String xAxis="Zeit";canvas.drawText(xAxis,(left+right-label.measureText(xAxis))/2f,h-dp(4),label);
+        }
+        private String timeLabel(long millis){return java.time.Instant.ofEpochMilli(millis).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}
         private String fmtTrend(double v){return Math.abs(v)>=100?String.format(Locale.GERMAN,"%.1f",v):String.format(Locale.GERMAN,"%.2f",v);}
     }
 
