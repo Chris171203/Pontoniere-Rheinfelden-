@@ -19,9 +19,10 @@ Technisch ist die Android-App für Google Play geeignet. Vor dem ersten Store-Re
 4. **Datenschutzerklärung** finalisieren. Der Entwurf liegt in `PlayStore/privacy-policy-draft.md`; Herausgeber/Datenschutzkontakt müssen zum tatsächlichen Play-Konto passen. Die finale Erklärung muss öffentlich erreichbar sein und zusätzlich aus der App verlinkt werden.
 5. **Store-Grafiken**: hochauflösendes App-Icon, Feature Graphic und Screenshots erzeugen. Das aktuelle kleine Vereinslogo ist für einen finalen Store-Auftritt qualitativ noch nicht ideal.
 6. **Data-Safety-Formular** anhand der finalen App und des tatsächlichen Herausgebers ausfüllen.
-7. **Inhaltsklassifizierung** und sonstige App-Content-Angaben in der Play Console ausfüllen.
-8. **App-Zugriff für Google-Review**: Der interne PFVR-Bereich ist zugangsbeschränkt. Für eine Store-Prüfung sollte der Verein einen separaten Test-/Demo-Zugang bereitstellen, der ausschließlich in der Play Console unter den Review-Zugangsdaten hinterlegt wird. Keinesfalls einen persönlichen Vereinslink ins Repository oder in den Store-Text übernehmen.
-9. Falls ein **neues privates Entwicklerkonto** verwendet wird: geschlossenen Test mit mindestens 12 Testern über 14 aufeinanderfolgende Tage durchführen, bevor Produktionszugriff beantragt werden kann. Der interne Test-Track kann bereits vorher für die Verteilung an Tester genutzt werden.
+7. **Financial-Features-Erklärung** ausfüllen. Google verlangt diese Erklärung für alle auf Google Play veröffentlichten Apps. Die PFVR-App verarbeitet selbst keine Bankzugangsdaten und führt keine Zahlung aus; sie erzeugt Händler-Zahlungsdaten/Swiss-QR bzw. übergibt an externe Banking-/TWINT-Apps. Die endgültige Auswahl im Play-Formular ist anhand der dann aktuellen Google-Kategorien zu bestätigen und darf nicht pauschal als Banking-App deklariert werden.
+8. **Inhaltsklassifizierung** und sonstige App-Content-Angaben in der Play Console ausfüllen.
+9. **App-Zugriff für Google-Review**: Der interne PFVR-Bereich ist zugangsbeschränkt. Für eine Store-Prüfung sollte der Verein einen separaten Test-/Demo-Zugang bereitstellen, der ausschließlich in der Play Console unter den Review-Zugangsdaten hinterlegt wird. Keinesfalls einen persönlichen Vereinslink ins Repository oder in den Store-Text übernehmen.
+10. Falls ein **neues privates Entwicklerkonto** verwendet wird: geschlossenen Test mit mindestens 12 Testern über 14 aufeinanderfolgende Tage durchführen, bevor Produktionszugriff beantragt werden kann. Der interne Test-Track kann bereits vorher für die Verteilung an Tester genutzt werden.
 
 ## GitHub-Secrets für den Release-Workflow
 
