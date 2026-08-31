@@ -20,7 +20,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 gradle assembleDebug
 ```
 
-Die GitHub-Action `.github/workflows/android.yml` erzeugt eine geprüfte Debug-APK.
+Die GitHub-Action `.github/workflows/android.yml` erzeugt eine geprüfte Debug-APK. Nach erfolgreichem Test wird die aktuelle APK zusätzlich unter `Downloads/current/` abgelegt; ältere Teststände kommen nach `Downloads/archive/`.
 
 ## Google-Play-Build
 
