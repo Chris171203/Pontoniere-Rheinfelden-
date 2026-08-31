@@ -1,0 +1,78 @@
+name: Android Play Bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Check release secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.PFVR_UPLOAD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PFVR_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PFVR_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PFVR_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_B64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+
+      - name: Decode upload key
+        env:
+          KEYSTORE_B64: ${{ secrets.PFVR_UPLOAD_KEYSTORE_BASE64 }}
+        run: printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/pfvr-upload.jks"
+
+      - name: Reject personal PFVR access links
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Build signed Play bundle and APK
+        working-directory: Android
+        env:
+          PFVR_KEYSTORE_FILE: ${{ runner.temp }}/pfvr-upload.jks
+          PFVR_KEYSTORE_PASSWORD: ${{ secrets.PFVR_KEYSTORE_PASSWORD }}
+          PFVR_KEY_ALIAS: ${{ secrets.PFVR_KEY_ALIAS }}
+          PFVR_KEY_PASSWORD: ${{ secrets.PFVR_KEY_PASSWORD }}
+        run: gradle --no-daemon clean bundleRelease assembleRelease
+
+      - name: Verify release outputs
+        run: |
+          APK=Android/app/build/outputs/apk/release/app-release.apk
+          AAB=Android/app/build/outputs/bundle/release/app-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          jarsigner -verify "$AAB"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='8' versionName='0.5.0'"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Rheinfelden-Play-0.5.0
+          path: |
+            Android/app/build/outputs/bundle/release/app-release.aab
+            Android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
