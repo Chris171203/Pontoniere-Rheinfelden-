@@ -35,6 +35,25 @@ jobs:
 
       - name: Apply 0.7.1 source patch
         run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tools/apply_071.py')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'text, count = pattern.subn(river_method + "\\n", text, count=1)':
+                  'text, count = pattern.subn(lambda _: river_method + "\\n", text, count=1)',
+              'text, count = chart_pattern.subn(chart_block + "\\n", text, count=1)':
+                  'text, count = chart_pattern.subn(lambda _: chart_block + "\\n", text, count=1)',
+          }
+          for old, new in replacements.items():
+              if old in text:
+                  text = text.replace(old, new, 1)
+              elif new not in text:
+                  raise SystemExit(f'Patch-script anchor missing: {old}')
+          path.write_text(text, encoding='utf-8')
+          PY
+
           SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           if grep -q "versionName '0.7.1'" Android/app/build.gradle \
              && grep -q 'TWINT-Code erzeugen' "$SRC" \
@@ -62,6 +81,7 @@ jobs:
           grep -Fq 'drawFlowThresholds' "$SRC"
           grep -Fq 'riverLegend()' "$SRC"
           grep -Fq 'statusBadge(' "$SRC"
+          grep -Fq 'pattern.subn(lambda _: river_method + "\n"' tools/apply_071.py
           grep -Fq 'versionCode 12' Android/app/build.gradle
           grep -Fq "versionName '0.7.1'" Android/app/build.gradle
           if grep -Fq 'action("Depot","Rheinweg 42 · 4310 Rheinfelden"' "$SRC"; then
@@ -117,6 +137,7 @@ jobs:
             Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
             Android/app/build.gradle \
             .github/workflows/android.yml \
+            tools/apply_071.py \
             STATUS.md
           if ! git diff --cached --quiet; then
             git commit -m 'Apply verified Android 0.7.1 changes'
