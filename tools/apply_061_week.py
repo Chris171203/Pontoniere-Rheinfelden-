@@ -34,7 +34,6 @@ new_hydro_series = '''    private TrendSeries hydroSeries(String parameter){
                 }
             }catch(Exception ignored){}
         }
-        // Append the newest live point so the right edge reflects the current measurement, not only the last hourly mean.
         String live=prefs.getString(PREF_HYDRO_CACHE,"");
         if(!live.trim().isEmpty()){
             try{
@@ -70,9 +69,10 @@ new_refresh = '''    private void refreshHydro(boolean force){
         hydroLoading=true;
         new Thread(()->{
             try{
+                String dq=String.valueOf((char)34);
                 if(force||!liveFresh){
                     try{
-                        String liveQuery="{ water { observations { data_live(where:{stationNo:{_eq:\"2091\"}}) { stationNo parameterName timestamp value releaseStatus } } } }";
+                        String liveQuery="{ water { observations { data_live(where:{stationNo:{_eq:"+dq+"2091"+dq+"}}) { stationNo parameterName timestamp value releaseStatus } } } }";
                         String raw=bafuPost(liveQuery);
                         JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL live");
                         j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
@@ -82,7 +82,7 @@ new_refresh = '''    private void refreshHydro(boolean force){
                 if(force||!histFresh){
                     try{
                         String from=java.time.Instant.now().minus(java.time.Duration.ofDays(7)).toString();
-                        String historyQuery="{ water { observations { data_1hour_mean(where:{station:{no:{_eq:\"2091\"}},timestamp:{_gte:\""+from+"\"}}) { parameterName timestamp value } } } }";
+                        String historyQuery="{ water { observations { data_1hour_mean(where:{station:{no:{_eq:"+dq+"2091"+dq+"}},timestamp:{_gte:"+dq+from+dq+"}}) { parameterName timestamp value } } } }";
                         String raw=bafuPost(historyQuery);
                         JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL history");
                         j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
@@ -119,13 +119,13 @@ old = '''            grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,22
             ZoneId zone=ZoneId.of("Europe/Zurich");DateTimeFormatter tf=DateTimeFormatter.ofPattern("HH:mm");String first=java.time.Instant.ofEpochMilli(minT).atZone(zone).format(tf),last=java.time.Instant.ofEpochMilli(maxT).atZone(zone).format(tf);canvas.drawText(first,left,h-dp(6),label);float lw=label.measureText(last);canvas.drawText(last,right-lw,h-dp(6),label);String xLabel="Zeit · 24 h";float xw=axis.measureText(xLabel);canvas.drawText(xLabel,left+(right-left-xw)/2f,h-dp(6),axis);
 '''
 new = '''            grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));
+            label.setColor(themeText(MUTED));axis.setColor(themeText(MUTED));
             for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}
             ZoneId zone=ZoneId.of("Europe/Zurich");
             ZonedDateTime firstZ=java.time.Instant.ofEpochMilli(minT).atZone(zone),lastZ=java.time.Instant.ofEpochMilli(maxT).atZone(zone);
             LocalDate tickDay=firstZ.toLocalDate().plusDays(1);DateTimeFormatter dayFmt=DateTimeFormatter.ofPattern("EE",Locale.GERMAN);
             while(!tickDay.isAfter(lastZ.toLocalDate())){long tt=tickDay.atStartOfDay(zone).toInstant().toEpochMilli();if(tt>=minT&&tt<=maxT){float x=left+(right-left)*(tt-minT)/(float)(maxT-minT);canvas.drawLine(x,top,x,bottom,grid);String lab=tickDay.format(dayFmt);float tw=label.measureText(lab);canvas.drawText(lab,x-tw/2f,h-dp(6),label);}tickDay=tickDay.plusDays(1);}
             Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*(series.times.get(i)-minT)/(float)(maxT-minT);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);
-            label.setColor(themeText(MUTED));axis.setColor(themeText(MUTED));
             canvas.drawText(fmtTrend(max),dp(2),top+dp(4),label);canvas.drawText(fmtTrend(min),dp(2),bottom,label);canvas.drawText(unit,dp(2),dp(10),axis);
             String xLabel="7 Tage · Stundenmittel";float xw=axis.measureText(xLabel);canvas.drawText(xLabel,left+(right-left-xw)/2f,dp(11),axis);
 '''
