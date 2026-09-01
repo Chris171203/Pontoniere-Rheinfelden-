@@ -4,108 +4,102 @@ on:
   push:
     branches:
       - dev-0.8.0
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: pfvr-dev-080
   cancel-in-progress: true
 
 jobs:
-  bootstrap-source:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: dev-0.8.0
+          fetch-depth: 0
 
-      - name: Materialize verified 0.7.1 source
+      - name: Materialize supplied 0.8.0 source
+        id: payload
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('tools/apply_071.py')
-          text = path.read_text(encoding='utf-8')
-          replacements = {
-              'text, count = pattern.subn(river_method + "\\n", text, count=1)':
-                  'text, count = pattern.subn(lambda _: river_method + "\\n", text, count=1)',
-              'text, count = chart_pattern.subn(chart_block + "\\n", text, count=1)':
-                  'text, count = chart_pattern.subn(lambda _: chart_block + "\\n", text, count=1)',
-          }
-          for old, new in replacements.items():
-              if old in text:
-                  text = text.replace(old, new, 1)
-              elif new not in text:
-                  raise SystemExit(f'Patch-script anchor missing: {old}')
-          path.write_text(text, encoding='utf-8')
-          PY
-          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
-          if grep -q "versionName '0.7.1'" Android/app/build.gradle \
-             && grep -q 'TWINT-Code erzeugen' "$SRC" \
-             && grep -q 'class AxisScale' "$SRC"; then
-            echo '0.7.1 source already materialized'
-          else
-            python tools/apply_071.py
+          if [ ! -f tools/payload-080.tar.gz.b64 ]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base64 --decode tools/payload-080.tar.gz.b64 > "$RUNNER_TEMP/payload-080.tar.gz"
+          tar -xzf "$RUNNER_TEMP/payload-080.tar.gz"
+          rm -f tools/payload-080.tar.gz.b64 tools/probe-trigger-080.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Implement Android 0.8.0'
+          git push origin HEAD:dev-0.8.0
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v5
+        if: steps.payload.outputs.changed != 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        if: steps.payload.outputs.changed != 'true'
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.payload.outputs.changed != 'true'
+        with:
+          gradle-version: '8.13'
+
+      - name: Reject personal PFVR access data
+        if: steps.payload.outputs.changed != 'true'
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
           fi
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: PFVR-source-materialized-0.7.1
-          path: |
-            Android
-            PROJECT.md
-            STATUS.md
-            README.md
-            AGENTS.md
-            tools
-          if-no-files-found: error
-
-  probe-public-sources:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fetch public PFVR calendar
+      - name: Verify 0.8.0 source state
+        if: steps.payload.outputs.changed != 'true'
         run: |
-          mkdir -p probe
-          curl --fail --silent --show-error --location \
-            'https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics' \
-            -o probe/calendar.ics
-          grep -q 'BEGIN:VCALENDAR' probe/calendar.ics
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -Fq 'versionCode 13' Android/app/build.gradle
+          grep -Fq "versionName '0.8.0'" Android/app/build.gradle
+          grep -Fq 'enum RiverRange' "$SRC"
+          grep -Fq 'HOUR("1h"' "$SRC"
+          grep -Fq 'DAY("24h"' "$SRC"
+          grep -Fq 'WEEK("7d"' "$SRC"
+          grep -Fq 'data_10min_mean' "$SRC"
+          grep -Fq 'class RiverTrendView' "$SRC"
+          grep -Fq 'nextTrainingSlot()' "$SRC"
+          grep -Fq 'showEventDetails' "$SRC"
+          grep -Fq 'AppLinkPolicy.isInternalPfvrHost' "$SRC"
+          grep -Fq 'HydroMath.niceAxis' "$SRC"
+          test ! -f tools/payload-080.tar.gz.b64
 
-      - name: Fetch BAFU live, 10-minute and hourly samples
+      - name: Install Android SDK
+        if: steps.payload.outputs.changed != 'true'
         run: |
-          mkdir -p probe
-          FROM_24H=$(date -u -d '26 hours ago' +%Y-%m-%dT%H:%M:%SZ)
-          FROM_7D=$(date -u -d '8 days ago' +%Y-%m-%dT%H:%M:%SZ)
-          cat > probe/query.graphql <<EOF
-          {
-            water {
-              observations {
-                data_live(where:{stationNo:{_eq:"2091"}}) {
-                  stationNo parameterName timestamp value releaseStatus
-                }
-                data_10min_mean(where:{station:{no:{_eq:"2091"}},timestamp:{_gte:"$FROM_24H"}}) {
-                  parameterName timestamp value unitSymbol
-                }
-                data_1hour_mean(where:{station:{no:{_eq:"2091"}},timestamp:{_gte:"$FROM_7D"}}) {
-                  parameterName timestamp value unitSymbol
-                }
-              }
-            }
-          }
-          EOF
-          jq -Rs '{query:.}' probe/query.graphql > probe/request.json
-          curl --fail --silent --show-error \
-            -H 'Content-Type: application/json' \
-            --data-binary @probe/request.json \
-            https://data.bafu.admin.ch/api \
-            -o probe/hydro.json
-          jq -e '.data.water.observations.data_live | length > 0' probe/hydro.json
-          jq -e '.data.water.observations.data_10min_mean | length > 0' probe/hydro.json
-          jq -e '.data.water.observations.data_1hour_mean | length > 0' probe/hydro.json
-          jq '{live:(.data.water.observations.data_live|length), ten_min:(.data.water.observations.data_10min_mean|length), hourly:(.data.water.observations.data_1hour_mean|length)}' probe/hydro.json
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Unit tests and APK build
+        if: steps.payload.outputs.changed != 'true'
+        working-directory: Android
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+
+      - name: Verify APK
+        if: steps.payload.outputs.changed != 'true'
+        run: |
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='13' versionName='0.8.0'"
 
       - uses: actions/upload-artifact@v4
+        if: steps.payload.outputs.changed != 'true'
         with:
-          name: PFVR-public-source-probe-0.8.0
-          path: probe
+          name: PFVR-Rheinfelden-test-0.8.0-apk
+          path: Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
