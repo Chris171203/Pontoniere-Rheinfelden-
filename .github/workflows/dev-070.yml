@@ -1,0 +1,88 @@
+name: Dev Android 0.7.0
+
+on:
+  push:
+    branches:
+      - dev-0.7.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pfvr-dev-070
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.7.0
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Apply 0.7.0 source patch
+        run: python tools/apply_070.py
+
+      - name: Reject personal PFVR access links
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - name: Verify public live sources
+        run: |
+          BODY='{"query":"{ water { observations { data_1hour_mean(where:{station:{no:{_eq:\"2091\"}}},limit:3) { parameterName timestamp value } } } }"}'
+          curl -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" | jq -e '.data.water.observations.data_1hour_mean | length > 0'
+          curl -fsS 'https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,uv_index&timezone=Europe%2FZurich&forecast_days=2' | jq -e '.hourly.uv_index | length > 0'
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Build APK
+        working-directory: Android
+        run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK and 0.7.0 features
+        run: |
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='11' versionName='0.7.0'"
+          grep -q 'DualTrendView' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'Pegel & Abfluss' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'DEFAULT_RIVER_WARN = 2500f' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'DEFAULT_RIVER_ALARM = 3600f' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'uv_index' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'Betrag offen' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'Seit 1896 auf dem Rhein' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+
+      - name: Persist verified source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply verified Android 0.7.0 changes'
+            git pull --rebase origin dev-0.7.0
+            git push origin HEAD:dev-0.7.0
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Rheinfelden-test-0.7.0-apk
+          path: Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
