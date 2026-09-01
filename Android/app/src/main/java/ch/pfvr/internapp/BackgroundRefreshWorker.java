@@ -35,7 +35,7 @@ public final class BackgroundRefreshWorker extends Worker {
     private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
 
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
-    private static final String WEATHER_BASE = "https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Europe%2FZurich&forecast_days=8";
+    private static final String WEATHER_BASE = "https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8";
 
     public BackgroundRefreshWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
@@ -119,7 +119,7 @@ public final class BackgroundRefreshWorker extends Worker {
             c.setReadTimeout(12000);
             c.setRequestProperty("Content-Type", "application/json");
             c.setRequestProperty("Accept", "application/json");
-            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.6.1");
+            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.7.0");
             String body = new JSONObject().put("query", query).toString();
             try (OutputStream out = c.getOutputStream()) {
                 out.write(body.getBytes(StandardCharsets.UTF_8));
@@ -138,7 +138,7 @@ public final class BackgroundRefreshWorker extends Worker {
             c.setReadTimeout(12000);
             c.setUseCaches(true);
             c.setRequestProperty("Accept", accept);
-            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.6.1");
+            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.7.0");
             if (c.getResponseCode() / 100 != 2) throw new Exception("HTTP " + c.getResponseCode());
             return read(c);
         } finally {
