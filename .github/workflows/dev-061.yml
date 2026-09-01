@@ -29,8 +29,10 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Apply 0.6.1 source patch
-        run: python tools/apply_061.py
+      - name: Apply 0.6.1 source patches
+        run: |
+          python tools/apply_061.py
+          python tools/apply_061_week.py
 
       - name: Reject personal PFVR access links
         run: |
@@ -48,7 +50,7 @@ jobs:
         working-directory: Android
         run: gradle --no-daemon assembleDebug
 
-      - name: Verify APK metadata and attendance behavior
+      - name: Verify APK metadata and test features
         run: |
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
@@ -60,6 +62,8 @@ jobs:
           grep -q 'LOAD_NO_CACHE' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -q 'window.location.reload' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -q 'normalizeInternalUrl' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'data_1hour_mean' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q '7 Tage · Stundenmittel' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
 
       - name: Persist verified source
         run: |
@@ -67,7 +71,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           if ! git diff --cached --quiet; then
-            git commit -m 'Apply verified Android 0.6.1 attendance refresh'
+            git commit -m 'Apply verified Android 0.6.1 changes'
             git pull --rebase origin dev-0.6.1
             git push origin HEAD:dev-0.6.1
           fi
