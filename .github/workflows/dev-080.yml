@@ -31,30 +31,21 @@ jobs:
           fi
           base64 --decode tools/payload-080.tar.gz.b64 > "$RUNNER_TEMP/payload-080.tar.gz"
           tar -xzf "$RUNNER_TEMP/payload-080.tar.gz"
-          rm -f tools/payload-080.tar.gz.b64 tools/probe-trigger-080.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Implement Android 0.8.0'
-          git push origin HEAD:dev-0.8.0
+          rm -f tools/payload-080.tar.gz.b64 tools/probe-trigger-080.txt tools/apply_*.py tools/fix_*.py
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v5
-        if: steps.payload.outputs.changed != 'true'
         with:
           distribution: temurin
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
-        if: steps.payload.outputs.changed != 'true'
 
       - uses: gradle/actions/setup-gradle@v4
-        if: steps.payload.outputs.changed != 'true'
         with:
           gradle-version: '8.13'
 
       - name: Reject personal PFVR access data
-        if: steps.payload.outputs.changed != 'true'
         run: |
           if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
             echo 'Personal PFVR access data found in Android source.' >&2
@@ -62,7 +53,6 @@ jobs:
           fi
 
       - name: Verify 0.8.0 source state
-        if: steps.payload.outputs.changed != 'true'
         run: |
           SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -Fq 'versionCode 13' Android/app/build.gradle
@@ -80,25 +70,30 @@ jobs:
           test ! -f tools/payload-080.tar.gz.b64
 
       - name: Install Android SDK
-        if: steps.payload.outputs.changed != 'true'
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
       - name: Unit tests and APK build
-        if: steps.payload.outputs.changed != 'true'
         working-directory: Android
         run: gradle --no-daemon testDebugUnitTest assembleDebug
 
       - name: Verify APK
-        if: steps.payload.outputs.changed != 'true'
         run: |
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='13' versionName='0.8.0'"
 
+      - name: Persist verified 0.8.0 source
+        if: steps.payload.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Implement Android 0.8.0'
+          git push origin HEAD:dev-0.8.0
+
       - uses: actions/upload-artifact@v4
-        if: steps.payload.outputs.changed != 'true'
         with:
           name: PFVR-Rheinfelden-test-0.8.0-apk
           path: Android/app/build/outputs/apk/debug/app-debug.apk
