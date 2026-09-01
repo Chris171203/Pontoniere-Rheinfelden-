@@ -25,27 +25,40 @@ jobs:
       - name: Materialize supplied 0.8.0 source
         id: payload
         run: |
-          if [ ! -f tools/payload-080.tar.gz.b64 ]; then
+          if [ ! -f tools/payload-080.ready ]; then
+            echo 'skip=true' >> "$GITHUB_OUTPUT"
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          base64 --decode tools/payload-080.tar.gz.b64 > "$RUNNER_TEMP/payload-080.tar.gz"
+          mapfile -t PARTS < <(find tools -maxdepth 1 -type f -name 'payload-080.part-*' | sort)
+          if [ "${#PARTS[@]}" -eq 0 ]; then
+            echo 'Payload marker exists but no chunks were found.' >&2
+            exit 1
+          fi
+          cat "${PARTS[@]}" > "$RUNNER_TEMP/payload-080.tar.gz.b64"
+          base64 --decode "$RUNNER_TEMP/payload-080.tar.gz.b64" > "$RUNNER_TEMP/payload-080.tar.gz"
+          echo '9b55fa119ed0c6f094dd6db7210b97a0e890f57e5ca4e9021f4c30ad91803fad  '"$RUNNER_TEMP/payload-080.tar.gz" | sha256sum --check --strict
           tar -xzf "$RUNNER_TEMP/payload-080.tar.gz"
-          rm -f tools/payload-080.tar.gz.b64 tools/probe-trigger-080.txt tools/apply_*.py tools/fix_*.py
+          rm -f tools/payload-080.ready tools/payload-080.part-* tools/probe-trigger-080.txt tools/apply_*.py tools/fix_*.py
+          echo 'skip=false' >> "$GITHUB_OUTPUT"
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v5
+        if: steps.payload.outputs.skip != 'true'
         with:
           distribution: temurin
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        if: steps.payload.outputs.skip != 'true'
 
       - uses: gradle/actions/setup-gradle@v4
+        if: steps.payload.outputs.skip != 'true'
         with:
           gradle-version: '8.13'
 
       - name: Reject personal PFVR access data
+        if: steps.payload.outputs.skip != 'true'
         run: |
           if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
             echo 'Personal PFVR access data found in Android source.' >&2
@@ -53,6 +66,7 @@ jobs:
           fi
 
       - name: Verify 0.8.0 source state
+        if: steps.payload.outputs.skip != 'true'
         run: |
           SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -Fq 'versionCode 13' Android/app/build.gradle
@@ -67,18 +81,21 @@ jobs:
           grep -Fq 'showEventDetails' "$SRC"
           grep -Fq 'AppLinkPolicy.isInternalPfvrHost' "$SRC"
           grep -Fq 'HydroMath.niceAxis' "$SRC"
-          test ! -f tools/payload-080.tar.gz.b64
+          test ! -f tools/payload-080.ready
 
       - name: Install Android SDK
+        if: steps.payload.outputs.skip != 'true'
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
       - name: Unit tests and APK build
+        if: steps.payload.outputs.skip != 'true'
         working-directory: Android
         run: gradle --no-daemon testDebugUnitTest assembleDebug
 
       - name: Verify APK
+        if: steps.payload.outputs.skip != 'true'
         run: |
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
@@ -94,6 +111,7 @@ jobs:
           git push origin HEAD:dev-0.8.0
 
       - uses: actions/upload-artifact@v4
+        if: steps.payload.outputs.skip != 'true'
         with:
           name: PFVR-Rheinfelden-test-0.8.0-apk
           path: Android/app/build/outputs/apk/debug/app-debug.apk
