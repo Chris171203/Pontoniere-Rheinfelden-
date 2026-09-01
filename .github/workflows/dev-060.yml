@@ -30,7 +30,9 @@ jobs:
           gradle-version: '8.13'
 
       - name: Apply 0.6.0 source patch
-        run: python tools/apply_060.py
+        run: |
+          python tools/apply_060.py
+          python tools/fix_060_escape.py
 
       - name: Reject personal PFVR access links
         run: |
@@ -55,6 +57,8 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='9' versionName='0.6.0'"
           grep -q 'PREF_INTERNAL_APP_VIEW' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -q 'private void internalSkin' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'setAlgorithmicDarkeningAllowed(false)' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'onReceivedHttpError' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
 
       - name: Persist verified source
         run: |
