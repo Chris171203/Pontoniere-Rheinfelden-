@@ -18,10 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 
-/**
- * Refreshes public PFVR/BAFU/weather data into the same local cache used by MainActivity.
- * WorkManager execution is intentionally best-effort: Android may defer periodic work in Doze.
- */
+/** Refreshes public PFVR, weather and BAFU data into the app's local cache. */
 public final class BackgroundRefreshWorker extends Worker {
     private static final String PREFS = "pfvr_prefs";
     private static final String PREF_ICS_CACHE = "ics_cache";
@@ -31,6 +28,8 @@ public final class BackgroundRefreshWorker extends Worker {
     private static final String PREF_WEATHER_SOURCE = "weather_source";
     private static final String PREF_HYDRO_CACHE = "hydro_cache";
     private static final String PREF_HYDRO_UPDATED = "hydro_updated";
+    private static final String PREF_HYDRO_FINE_CACHE = "hydro_fine_cache";
+    private static final String PREF_HYDRO_FINE_UPDATED = "hydro_fine_updated";
     private static final String PREF_HYDRO_HISTORY_CACHE = "hydro_history_cache";
     private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
 
@@ -48,11 +47,12 @@ public final class BackgroundRefreshWorker extends Worker {
         long now = System.currentTimeMillis();
 
         if (stale(prefs, PREF_HYDRO_UPDATED, 15L * 60L * 1000L)) refreshHydroLive(prefs, now);
+        if (stale(prefs, PREF_HYDRO_FINE_UPDATED, 30L * 60L * 1000L)) refreshHydroFine(prefs, now);
         if (stale(prefs, PREF_HYDRO_HISTORY_UPDATED, 60L * 60L * 1000L)) refreshHydroHistory(prefs, now);
         if (stale(prefs, PREF_WEATHER_UPDATED, 60L * 60L * 1000L)) refreshWeather(prefs, now);
         if (stale(prefs, PREF_ICS_UPDATED, 4L * 60L * 60L * 1000L)) refreshCalendar(prefs, now);
 
-        // Individual source failures keep the previous cache. The next periodic run tries again.
+        // Individual source failures preserve the previous successful cache.
         return Result.success();
     }
 
@@ -86,72 +86,77 @@ public final class BackgroundRefreshWorker extends Worker {
     }
 
     private void refreshHydroLive(SharedPreferences prefs, long now) {
-        try {
-            String dq = String.valueOf((char)34);
-            String query = "{ water { observations { data_live(where:{stationNo:{_eq:" + dq + "2091" + dq + "}}) { stationNo parameterName timestamp value releaseStatus } } } }";
-            String raw = bafuPost(query);
-            JSONObject json = new JSONObject(raw);
-            if (json.has("errors")) return;
-            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
-            prefs.edit().putString(PREF_HYDRO_CACHE, raw).putLong(PREF_HYDRO_UPDATED, now).apply();
-        } catch (Exception ignored) {}
+        String quote = String.valueOf((char) 34);
+        String query = "{ water { observations { data_live(where:{stationNo:{_eq:" + quote + "2091" + quote + "}}) { stationNo parameterName timestamp value releaseStatus } } } }";
+        refreshHydroSeries(prefs, now, query, "data_live", PREF_HYDRO_CACHE, PREF_HYDRO_UPDATED);
+    }
+
+    private void refreshHydroFine(SharedPreferences prefs, long now) {
+        String quote = String.valueOf((char) 34);
+        String from = Instant.now().minus(Duration.ofHours(26)).toString();
+        String query = "{ water { observations { data_10min_mean(where:{station:{no:{_eq:" + quote + "2091" + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
+        refreshHydroSeries(prefs, now, query, "data_10min_mean", PREF_HYDRO_FINE_CACHE, PREF_HYDRO_FINE_UPDATED);
     }
 
     private void refreshHydroHistory(SharedPreferences prefs, long now) {
+        String quote = String.valueOf((char) 34);
+        String from = Instant.now().minus(Duration.ofDays(8)).toString();
+        String query = "{ water { observations { data_1hour_mean(where:{station:{no:{_eq:" + quote + "2091" + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
+        refreshHydroSeries(prefs, now, query, "data_1hour_mean", PREF_HYDRO_HISTORY_CACHE, PREF_HYDRO_HISTORY_UPDATED);
+    }
+
+    private void refreshHydroSeries(SharedPreferences prefs, long now, String query, String arrayName, String cacheKey, String updatedKey) {
         try {
-            String dq = String.valueOf((char)34);
-            String from = Instant.now().minus(Duration.ofDays(7)).toString();
-            String query = "{ water { observations { data_1hour_mean(where:{station:{no:{_eq:" + dq + "2091" + dq + "}},timestamp:{_gte:" + dq + from + dq + "}}) { parameterName timestamp value } } } }";
             String raw = bafuPost(query);
             JSONObject json = new JSONObject(raw);
             if (json.has("errors")) return;
-            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
-            prefs.edit().putString(PREF_HYDRO_HISTORY_CACHE, raw).putLong(PREF_HYDRO_HISTORY_UPDATED, now).apply();
+            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray(arrayName);
+            prefs.edit().putString(cacheKey, raw).putLong(updatedKey, now).apply();
         } catch (Exception ignored) {}
     }
 
     private String bafuPost(String query) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL("https://data.bafu.admin.ch/api").openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL("https://data.bafu.admin.ch/api").openConnection();
         try {
-            c.setRequestMethod("POST");
-            c.setDoOutput(true);
-            c.setConnectTimeout(7000);
-            c.setReadTimeout(12000);
-            c.setRequestProperty("Content-Type", "application/json");
-            c.setRequestProperty("Accept", "application/json");
-            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.7.0");
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setConnectTimeout(7000);
+            connection.setReadTimeout(12000);
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/" + BuildConfig.VERSION_NAME);
             String body = new JSONObject().put("query", query).toString();
-            try (OutputStream out = c.getOutputStream()) {
+            try (OutputStream out = connection.getOutputStream()) {
                 out.write(body.getBytes(StandardCharsets.UTF_8));
             }
-            if (c.getResponseCode() / 100 != 2) throw new Exception("HTTP " + c.getResponseCode());
-            return read(c);
+            if (connection.getResponseCode() / 100 != 2) throw new Exception("HTTP " + connection.getResponseCode());
+            return read(connection);
         } finally {
-            c.disconnect();
+            connection.disconnect();
         }
     }
 
     private String httpGet(String url, String accept) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         try {
-            c.setConnectTimeout(7000);
-            c.setReadTimeout(12000);
-            c.setUseCaches(true);
-            c.setRequestProperty("Accept", accept);
-            c.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/0.7.0");
-            if (c.getResponseCode() / 100 != 2) throw new Exception("HTTP " + c.getResponseCode());
-            return read(c);
+            connection.setConnectTimeout(7000);
+            connection.setReadTimeout(12000);
+            connection.setUseCaches(true);
+            connection.setRequestProperty("Accept", accept);
+            connection.setRequestProperty("User-Agent", "PFVR-Rheinfelden-App/" + BuildConfig.VERSION_NAME);
+            if (connection.getResponseCode() / 100 != 2) throw new Exception("HTTP " + connection.getResponseCode());
+            return read(connection);
         } finally {
-            c.disconnect();
+            connection.disconnect();
         }
     }
 
-    private String read(HttpURLConnection c) throws Exception {
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
+    private String read(HttpURLConnection connection) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder out = new StringBuilder();
             String line;
-            while ((line = br.readLine()) != null) sb.append(line).append('\n');
-            return sb.toString();
+            while ((line = reader.readLine()) != null) out.append(line).append('\n');
+            return out.toString();
         }
     }
 }

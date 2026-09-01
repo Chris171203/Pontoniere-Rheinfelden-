@@ -13,16 +13,20 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.provider.CalendarContract;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -62,17 +66,20 @@ import java.net.URL;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.json.JSONArray;
@@ -93,6 +100,8 @@ public class MainActivity extends Activity {
     private static final String PREF_WEATHER_SOURCE = "weather_source";
     private static final String PREF_HYDRO_CACHE = "hydro_cache";
     private static final String PREF_HYDRO_UPDATED = "hydro_updated";
+    private static final String PREF_HYDRO_FINE_CACHE = "hydro_fine_cache";
+    private static final String PREF_HYDRO_FINE_UPDATED = "hydro_fine_updated";
     private static final String PREF_HYDRO_HISTORY_CACHE = "hydro_history_cache";
     private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
     private static final String PREF_THEME = "theme_mode";
@@ -101,6 +110,8 @@ public class MainActivity extends Activity {
     private static final String PREF_RIVER_LOW = "river_low";
     private static final String PREF_RIVER_WARN = "river_warn";
     private static final String PREF_RIVER_ALARM = "river_alarm";
+    private static final String PREF_RIVER_RANGE = "river_range";
+    private static final String PREF_RIVER_METRIC = "river_metric";
     private static final float DEFAULT_RIVER_LOW = 400f;
     private static final float DEFAULT_RIVER_WARN = 2500f;
     private static final float DEFAULT_RIVER_ALARM = 3600f;
@@ -120,6 +131,7 @@ public class MainActivity extends Activity {
     private static final String CLUB_PAYEE = "Pontonierfahrverein Rheinfelden";
     private static final String CLUB_PAYMENT_NOTE = "Konsumation Vereinsbeiz";
     private static final String TWINT_QR_PDF = "https://www.pfvr.ch/wp-content/uploads/Seiten/vereinsbeiz_zahlung/Twint_QR.pdf";
+    private static final String TWINT_DIRECT_URL = "https://www.pfvr.ch/vereinsbeiz-zahlung/";
 
     private static final int NAVY = Color.rgb(12,45,72);
     private static final int WATER = Color.rgb(43,142,166);
@@ -137,6 +149,43 @@ public class MainActivity extends Activity {
     private static final int STATUS_ALARM = Color.rgb(200,55,55);
 
     private enum Screen { HOME, EVENTS, CASH, CLUB, SETTINGS, INTERNAL }
+
+    private enum RiverRange {
+        HOUR("1h", 60L * 60L * 1000L, "Livewerte"),
+        DAY("24h", 24L * 60L * 60L * 1000L, "10-Minuten-Mittel"),
+        WEEK("7d", 7L * 24L * 60L * 60L * 1000L, "Stundenmittel");
+
+        final String label;
+        final long windowMs;
+        final String sourceLabel;
+
+        RiverRange(String label,long windowMs,String sourceLabel){
+            this.label=label;this.windowMs=windowMs;this.sourceLabel=sourceLabel;
+        }
+
+        static RiverRange from(String value){
+            for(RiverRange range:values())if(range.label.equals(value))return range;
+            return DAY;
+        }
+    }
+
+    private enum RiverMetric {
+        FLOW("Abfluss","Q","m³/s",Color.rgb(220,137,63),0),
+        LEVEL("Pegel","W","m ü.M.",WATER,2),
+        TEMPERATURE("Temperatur","WT","°C",Color.rgb(70,157,177),1);
+
+        final String label,parameter,unit;
+        final int color,decimals;
+
+        RiverMetric(String label,String parameter,String unit,int color,int decimals){
+            this.label=label;this.parameter=parameter;this.unit=unit;this.color=color;this.decimals=decimals;
+        }
+
+        static RiverMetric from(String value){
+            for(RiverMetric metric:values())if(metric.parameter.equals(value))return metric;
+            return FLOW;
+        }
+    }
 
     private FrameLayout content;
     private TextView headerSubtitle;
@@ -315,8 +364,6 @@ public class MainActivity extends Activity {
         }
         TextView all=link("Alle Termine anzeigen  →"); all.setOnClickListener(v->navigate(Screen.EVENTS)); b.addView(all);
 
-        section(b,"Schnellzugriff",null);
-        b.addView(action("Depot","Rheinweg 42 · 4310 Rheinfelden","Route",v->openMap()));
         return scroll;
     }
 
@@ -342,67 +389,399 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout riverCard(){
-        LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
-        String[] x=hydroSummary(); c.setOnClickListener(v->external("https://www.hydrodaten.admin.ch/de/seen-und-fluesse/stationen-und-daten/2091"));
-        c.addView(txt(x[0],11,WATER,true));
-        TextView main=txt(x[1],22,TEXT,true); main.setPadding(0,dp(5),0,dp(3)); c.addView(main);
-        c.addView(txt(x[2],13,MUTED,false));
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16),dp(15),dp(16),dp(15));
 
-        double q=currentHydroValue("Q"); RiverStatus rs=riverStatus(q);
-        TextView status=txt(rs.label,13,rs.fg,true); status.setGravity(Gravity.CENTER); status.setPadding(dp(12),dp(7),dp(12),dp(7)); status.setBackground(round(rs.bg,12));
-        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-2,-2); slp.setMargins(0,dp(10),0,0); c.addView(status,slp);
-        TextView limits=txt(String.format(Locale.GERMAN,"Niedrig < %.0f · Warn ab %.0f · Alarm ab %.0f m³/s",riverLow(),riverWarn(),riverAlarm()),10,MUTED,false); limits.setPadding(0,dp(6),0,0); c.addView(limits);
+        String[] summary=hydroSummary();
+        RiverRange range=riverRange();
+        RiverMetric metric=riverMetric();
+        TrendSeries series=hydroSeries(metric.parameter,range);
+        HydroMath.Stats stats=HydroMath.stats(series.values);
+        double flow=currentHydroValue("Q");
+        RiverStatus status=riverStatus(flow);
 
-        TrendSeries level=hydroSeries("W"), flow=hydroSeries("Q"), temp=hydroSeries("WT");
-        if(level.values.size()>=2 && flow.values.size()>=2){
-            TextView title=txt("Pegel & Abfluss · 7 Tage",13,TEXT,true); title.setPadding(0,dp(14),0,dp(2)); c.addView(title);
-            TextView legend=txt("Blau: Pegel · Orange: Abfluss",10,MUTED,false); legend.setPadding(0,0,0,dp(3)); c.addView(legend);
-            c.addView(new DualTrendView(this,level,flow,"m ü.M.","m³/s",WATER,Color.rgb(220,137,63)),new LinearLayout.LayoutParams(-1,dp(154)));
-        } else if(level.values.size()>=2){
-            TextView title=txt("Pegelverlauf · 7 Tage",13,TEXT,true); title.setPadding(0,dp(14),0,dp(3)); c.addView(title);
-            c.addView(new TrendView(this,level,"m ü.M.",WATER),new LinearLayout.LayoutParams(-1,dp(132)));
+        LinearLayout eyebrow=new LinearLayout(this);
+        eyebrow.setGravity(Gravity.CENTER_VERTICAL);
+        eyebrow.addView(txt("RHEIN · BAFU 2091",11,WATER,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView sourceLink=txt("Messstation  ↗",11,WATER,true);
+        sourceLink.setGravity(Gravity.END);
+        sourceLink.setPadding(dp(8),dp(4),0,dp(4));
+        sourceLink.setOnClickListener(v->external("https://www.hydrodaten.admin.ch/de/seen-und-fluesse/stationen-und-daten/2091"));
+        eyebrow.addView(sourceLink,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(eyebrow);
+
+        LinearLayout headline=new LinearLayout(this);
+        headline.setGravity(Gravity.CENTER_VERTICAL);
+        headline.setPadding(0,dp(4),0,dp(1));
+        card.addView(headline);
+
+        LinearLayout valueBox=new LinearLayout(this);
+        valueBox.setGravity(Gravity.BOTTOM);
+        TextView value=txt(Double.isNaN(flow)?"–":String.format(Locale.GERMAN,"%.0f",flow),34,TEXT,true);
+        valueBox.addView(value);
+        TextView unit=txt("m³/s",14,MUTED,true);
+        unit.setPadding(dp(5),0,0,dp(5));
+        valueBox.addView(unit);
+        headline.addView(valueBox,new LinearLayout.LayoutParams(0,-2,1));
+        headline.addView(riverStatusPill(status),new LinearLayout.LayoutParams(-2,-2));
+
+        TextView secondary=txt(summary[2].replace("\n","   ·   "),13,MUTED,false);
+        secondary.setPadding(0,dp(1),0,dp(5));
+        card.addView(secondary);
+
+        TextView thresholdTitle=txt("ABFLUSSBEREICHE · m³/s",10,MUTED,true);
+        thresholdTitle.setPadding(dp(2),dp(3),0,dp(5));
+        card.addView(thresholdTitle);
+        card.addView(thresholdGrid(),margin(-1,-2,0,0,0,11));
+
+        TextView rangeLabel=txt("ZEITRAUM",10,MUTED,true);
+        rangeLabel.setPadding(dp(2),0,0,dp(5));
+        card.addView(rangeLabel);
+        card.addView(riverRangeSelector(range),new LinearLayout.LayoutParams(-1,dp(42)));
+
+        TextView metricLabel=txt("MESSWERT",10,MUTED,true);
+        metricLabel.setPadding(dp(2),dp(10),0,dp(5));
+        card.addView(metricLabel);
+        card.addView(riverMetricSelector(metric),new LinearLayout.LayoutParams(-1,dp(42)));
+
+        if(stats.isValid()&&stats.count>=2){
+            card.addView(riverMetrics(stats,range,metric),margin(-1,-2,0,11,0,11));
         }
-        if(temp.values.size()>=2){
-            TextView title=txt("Wassertemperatur · 7 Tage",13,TEXT,true); title.setPadding(0,dp(12),0,dp(3)); c.addView(title);
-            c.addView(new TrendView(this,temp,"°C",Color.rgb(220,137,63)),new LinearLayout.LayoutParams(-1,dp(132)));
+
+        LinearLayout chartTitle=new LinearLayout(this);
+        chartTitle.setGravity(Gravity.CENTER_VERTICAL);
+        chartTitle.addView(txt(metric.label,15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        chartTitle.addView(txt(metric.unit+" · "+range.label,10,MUTED,false),new LinearLayout.LayoutParams(-2,-2));
+        card.addView(chartTitle);
+
+        if(series.values.size()>=2){
+            RiverTrendView chart=new RiverTrendView(this,series,metric,range);
+            card.addView(chart,new LinearLayout.LayoutParams(-1,dp(200)));
+            TextView hint=txt("Diagramm berühren, um Einzelwerte anzuzeigen.",10,MUTED,false);
+            hint.setGravity(Gravity.CENTER);
+            hint.setPadding(0,dp(2),0,0);
+            card.addView(hint);
+        }else{
+            TextView missing=txt(range==RiverRange.HOUR?"Für die letzte Stunde liegen noch nicht genug Livewerte vor.":"Für diesen Zeitraum liegen noch nicht genug Messwerte vor.",12,MUTED,false);
+            missing.setGravity(Gravity.CENTER);
+            missing.setPadding(dp(8),dp(22),dp(8),dp(22));
+            missing.setBackground(round(Color.rgb(238,243,246),14));
+            LinearLayout.LayoutParams missingParams=new LinearLayout.LayoutParams(-1,-2);
+            missingParams.setMargins(0,dp(8),0,0);
+            card.addView(missing,missingParams);
         }
-        TextView src=txt(x[3],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(9),0,0); c.addView(src);
-        return c;
+
+        TextView src=txt(summary[3]+" · "+range.sourceLabel,10,Color.rgb(126,140,150),false);
+        src.setPadding(0,dp(10),0,0);
+        card.addView(src);
+        return card;
     }
 
-    private boolean summerTraining(LocalDate d){int m=d.getMonthValue();return m>=4&&m<=9;}
-    private boolean regularTrainingDay(LocalDate d){DayOfWeek w=d.getDayOfWeek();return summerTraining(d)?(w==DayOfWeek.MONDAY||w==DayOfWeek.WEDNESDAY):w==DayOfWeek.THURSDAY;}
-    private String trainingTime(LocalDate d){return summerTraining(d)?"18:30–20:00 Uhr":"19:30–21:00 Uhr";}
-    private int trainingEndHour(LocalDate d){return summerTraining(d)?20:21;}
-    private int[] trainingWeatherHours(LocalDate d){return summerTraining(d)?new int[]{18,19,20}:new int[]{19,20,21};}
-    private LocalDate nextTrainingDay(){
-        ZoneId zone=ZoneId.of("Europe/Zurich"); ZonedDateTime now=ZonedDateTime.now(zone); LocalDate start=now.toLocalDate();
-        for(int i=0;i<10;i++){LocalDate d=start.plusDays(i);if(!regularTrainingDay(d))continue;ZonedDateTime cutoff=d.atTime(trainingEndHour(d),0).atZone(zone);if(i>0||now.isBefore(cutoff))return d;}
-        return start.plusDays(1);
+    private RiverRange riverRange(){return RiverRange.from(prefs.getString(PREF_RIVER_RANGE,RiverRange.DAY.label));}
+    private RiverMetric riverMetric(){return RiverMetric.from(prefs.getString(PREF_RIVER_METRIC,RiverMetric.FLOW.parameter));}
+
+    private View riverRangeSelector(RiverRange selected){
+        LinearLayout outer=segmentedBackground();
+        for(RiverRange range:RiverRange.values()){
+            TextView option=segmentOption(range.label,range==selected);
+            option.setContentDescription("Rheinwerte "+range.label);
+            option.setOnClickListener(v->{
+                prefs.edit().putString(PREF_RIVER_RANGE,range.label).apply();
+                if(current==Screen.HOME)navigate(Screen.HOME);
+            });
+            outer.addView(option,segmentParams(outer));
+        }
+        return outer;
+    }
+
+    private View riverMetricSelector(RiverMetric selected){
+        LinearLayout outer=segmentedBackground();
+        for(RiverMetric metric:RiverMetric.values()){
+            TextView option=segmentOption(metric.label,metric==selected);
+            option.setContentDescription("Rheinwert "+metric.label);
+            option.setOnClickListener(v->{
+                prefs.edit().putString(PREF_RIVER_METRIC,metric.parameter).apply();
+                if(current==Screen.HOME)navigate(Screen.HOME);
+            });
+            outer.addView(option,segmentParams(outer));
+        }
+        return outer;
+    }
+
+    private LinearLayout segmentedBackground(){
+        LinearLayout outer=new LinearLayout(this);
+        outer.setGravity(Gravity.CENTER);
+        outer.setPadding(dp(3),dp(3),dp(3),dp(3));
+        outer.setBackground(round(Color.rgb(232,240,244),14));
+        return outer;
+    }
+
+    private TextView segmentOption(String label,boolean active){
+        TextView option=txt(label,13,active?Color.WHITE:MUTED,true);
+        option.setTextColor(active?Color.WHITE:themeText(MUTED));
+        option.setGravity(Gravity.CENTER);
+        option.setBackground(active?round(NAVY,11):null);
+        return option;
+    }
+
+    private LinearLayout.LayoutParams segmentParams(LinearLayout parent){
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,-1,1);
+        if(parent.getChildCount()>0)params.setMargins(dp(3),0,0,0);
+        return params;
+    }
+
+    private View riverStatusPill(RiverStatus status){
+        int color=statusTextColor(status.bg);
+        LinearLayout pill=new LinearLayout(this);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        pill.setPadding(dp(10),dp(7),dp(12),dp(7));
+        GradientDrawable bg=new GradientDrawable();
+        bg.setColor(Color.argb(darkMode?48:22,Color.red(color),Color.green(color),Color.blue(color)));
+        bg.setStroke(dp(1),Color.argb(darkMode?140:80,Color.red(color),Color.green(color),Color.blue(color)));
+        bg.setCornerRadius(dp(18));
+        pill.setBackground(bg);
+        View dot=new View(this);
+        dot.setBackground(statusDot(color));
+        pill.addView(dot,new LinearLayout.LayoutParams(dp(8),dp(8)));
+        TextView label=txt(status.label,14,color,true);
+        label.setTextColor(color);
+        label.setPadding(dp(7),0,0,0);
+        pill.addView(label);
+        return pill;
+    }
+
+    private GradientDrawable statusDot(int color){GradientDrawable d=new GradientDrawable();d.setShape(GradientDrawable.OVAL);d.setColor(color);return d;}
+
+    private View riverMetrics(HydroMath.Stats stats,RiverRange range,RiverMetric metric){
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.CENTER);
+        addMetric(row,formatMetric(metric,stats.mean),"Ø "+range.label);
+        addMetric(row,formatMetric(metric,stats.min)+"–"+formatMetric(metric,stats.max),"Min–Max");
+        addMetric(row,trendText(stats,metric),"Start → Ende");
+        return row;
+    }
+
+    private void addMetric(LinearLayout row,String value,String label){
+        LinearLayout tile=new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(5),dp(8),dp(5),dp(8));
+        tile.setBackground(round(Color.rgb(238,243,246),12));
+        TextView valueView=txt(value,14,TEXT,true);valueView.setGravity(Gravity.CENTER);tile.addView(valueView);
+        TextView labelView=txt(label,10,MUTED,false);labelView.setGravity(Gravity.CENTER);labelView.setPadding(0,dp(2),0,0);tile.addView(labelView);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
+        if(row.getChildCount()>0)lp.setMargins(dp(6),0,0,0);
+        row.addView(tile,lp);
+    }
+
+    private String trendText(HydroMath.Stats stats,RiverMetric metric){
+        double change=stats.change();
+        double tolerance;
+        if(metric==RiverMetric.FLOW)tolerance=Math.max(1d,Math.abs(stats.last)*0.0025d);
+        else if(metric==RiverMetric.LEVEL)tolerance=0.01d;
+        else tolerance=0.1d;
+        if(Math.abs(change)<=tolerance)return "→ stabil";
+        return (change>0?"↗ +":"↘ −")+formatMetric(metric,Math.abs(change));
+    }
+
+    private String formatMetric(RiverMetric metric,double value){
+        if(!Double.isFinite(value))return "–";
+        if(metric.decimals==0)return String.format(Locale.GERMAN,"%.0f",value);
+        if(metric.decimals==1)return String.format(Locale.GERMAN,"%.1f",value);
+        return String.format(Locale.GERMAN,"%.2f",value);
+    }
+
+    private View thresholdGrid(){
+        LinearLayout stack=new LinearLayout(this);
+        stack.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout first=new LinearLayout(this);
+        addThresholdTile(first,"Niedrig",String.format(Locale.GERMAN,"< %.0f",riverLow()),STATUS_LOW);
+        addThresholdTile(first,"Gut",String.format(Locale.GERMAN,"%.0f – < %.0f",riverLow(),riverWarn()),STATUS_GOOD);
+        stack.addView(first,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout second=new LinearLayout(this);
+        addThresholdTile(second,"Warnung",String.format(Locale.GERMAN,"%.0f – < %.0f",riverWarn(),riverAlarm()),STATUS_WARN);
+        addThresholdTile(second,"Alarm",String.format(Locale.GERMAN,"ab %.0f",riverAlarm()),STATUS_ALARM);
+        LinearLayout.LayoutParams secondParams=new LinearLayout.LayoutParams(-1,-2);
+        secondParams.setMargins(0,dp(6),0,0);
+        stack.addView(second,secondParams);
+        return stack;
+    }
+
+    private void addThresholdTile(LinearLayout row,String label,String range,int statusColor){
+        int color=statusTextColor(statusColor);
+        LinearLayout tile=new LinearLayout(this);
+        tile.setGravity(Gravity.CENTER_VERTICAL);
+        tile.setPadding(dp(9),dp(7),dp(9),dp(7));
+        GradientDrawable background=new GradientDrawable();
+        background.setColor(themeBg(Color.rgb(238,243,246)));
+        background.setStroke(dp(1),Color.argb(darkMode?95:46,Color.red(color),Color.green(color),Color.blue(color)));
+        background.setCornerRadius(dp(12));
+        tile.setBackground(background);
+        View dot=new View(this);
+        dot.setBackground(statusDot(color));
+        tile.addView(dot,new LinearLayout.LayoutParams(dp(7),dp(7)));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(7),0,0,0);
+        TextView name=txt(label,11,color,true);
+        name.setTextColor(color);
+        copy.addView(name);
+        copy.addView(txt(range,10,MUTED,false));
+        tile.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,-2,1);
+        if(row.getChildCount()>0)params.setMargins(dp(6),0,0,0);
+        row.addView(tile,params);
+    }
+
+    private int statusTextColor(int color){
+        if(!darkMode){if(color==STATUS_WARN)return Color.rgb(166,108,0);return color;}
+        if(color==STATUS_LOW)return Color.rgb(91,190,213);
+        if(color==STATUS_GOOD)return Color.rgb(73,196,111);
+        if(color==STATUS_WARN)return Color.rgb(255,216,92);
+        if(color==STATUS_ALARM)return Color.rgb(255,105,105);
+        return DARK_MUTED;
+    }
+
+    private GradientDrawable statusBadge(int statusColor){
+        int color=statusTextColor(statusColor);
+        GradientDrawable background=new GradientDrawable();
+        background.setColor(Color.argb(darkMode?44:22,Color.red(color),Color.green(color),Color.blue(color)));
+        background.setStroke(dp(1),Color.argb(darkMode?170:105,Color.red(color),Color.green(color),Color.blue(color)));
+        background.setCornerRadius(dp(14));
+        return background;
+    }
+
+    private boolean summerTraining(LocalDate day){int month=day.getMonthValue();return month>=4&&month<=9;}
+    private boolean regularTrainingDay(LocalDate day){DayOfWeek weekday=day.getDayOfWeek();return summerTraining(day)?(weekday==DayOfWeek.MONDAY||weekday==DayOfWeek.WEDNESDAY):weekday==DayOfWeek.THURSDAY;}
+    private LocalTime regularTrainingStart(LocalDate day){return summerTraining(day)?LocalTime.of(18,30):LocalTime.of(19,30);}
+    private LocalTime regularTrainingEnd(LocalDate day){return summerTraining(day)?LocalTime.of(20,0):LocalTime.of(21,0);}
+
+    private TrainingSlot nextTrainingSlot(){
+        ZoneId zone=ZoneId.of("Europe/Zurich");
+        ZonedDateTime now=ZonedDateTime.now(zone);
+        TrainingSlot explicit=nextExplicitCalendarTraining(now);
+        TrainingSlot regular=nextRegularTraining(now,zone);
+        if(explicit==null)return regular;
+        if(regular==null)return explicit;
+        return explicit.start.isBefore(regular.start)?explicit:regular;
+    }
+
+    private TrainingSlot nextExplicitCalendarTraining(ZonedDateTime now){
+        TrainingSlot best=null;
+        ZonedDateTime limit=now.plusDays(21);
+        for(Event event:events){
+            if(event.start==null||event.start.isAfter(limit)||isCancelledEvent(event))continue;
+            ZonedDateTime end=event.end!=null?event.end:(event.allDay?event.start.plusDays(1):event.start.plusMinutes(90));
+            if(!end.isAfter(now))continue;
+            if(!TrainingMatcher.isExplicitTraining(event.title,event.description,event.start.getHour(),event.allDay))continue;
+            TrainingSlot slot=trainingSlotFromEvent(event);
+            if(best==null||slot.start.isBefore(best.start))best=slot;
+        }
+        return best;
+    }
+
+    private TrainingSlot nextRegularTraining(ZonedDateTime now,ZoneId zone){
+        LocalDate first=now.toLocalDate();
+        for(int offset=0;offset<21;offset++){
+            LocalDate day=first.plusDays(offset);
+            if(!regularTrainingDay(day)||isCancelledTrainingDate(day))continue;
+            Event override=trainingOverrideForDate(day);
+            if(override!=null){
+                TrainingSlot slot=trainingSlotFromEvent(override);
+                if(slot.end.isAfter(now))return slot;
+                continue;
+            }
+            ZonedDateTime start=day.atTime(regularTrainingStart(day)).atZone(zone);
+            ZonedDateTime end=day.atTime(regularTrainingEnd(day)).atZone(zone);
+            if(end.isAfter(now))return new TrainingSlot(start,end,false,"Regelmässiges Training");
+        }
+        LocalDate fallback=first.plusDays(1);
+        while(!regularTrainingDay(fallback))fallback=fallback.plusDays(1);
+        return new TrainingSlot(fallback.atTime(regularTrainingStart(fallback)).atZone(zone),fallback.atTime(regularTrainingEnd(fallback)).atZone(zone),false,"Regelmässiges Training");
+    }
+
+    private TrainingSlot trainingSlotFromEvent(Event event){
+        ZoneId zone=ZoneId.of("Europe/Zurich");
+        LocalDate day=event.start.toLocalDate();
+        ZonedDateTime start=event.allDay?day.atTime(regularTrainingStart(day)).atZone(zone):event.start;
+        ZonedDateTime end=event.allDay?day.atTime(regularTrainingEnd(day)).atZone(zone):(event.end!=null?event.end:start.plusMinutes(90));
+        if(!end.isAfter(start))end=start.plusMinutes(90);
+        return new TrainingSlot(start,end,true,event.title);
+    }
+
+    private Event trainingOverrideForDate(LocalDate day){
+        Event best=null;
+        int bestScore=Integer.MIN_VALUE;
+        for(Event event:events){
+            if(event.start==null||!event.start.toLocalDate().equals(day)||isCancelledEvent(event))continue;
+            int score=TrainingMatcher.score(event.title,event.description,event.start.getHour(),event.allDay);
+            if(score<4)continue;
+            if(score>bestScore||(score==bestScore&&best!=null&&event.start.isBefore(best.start))){best=event;bestScore=score;}
+        }
+        return best;
+    }
+
+    private boolean isCancelledTrainingDate(LocalDate day){
+        for(Event event:events){
+            if(event.start==null||!event.start.toLocalDate().equals(day))continue;
+            if(TrainingMatcher.isRelevant(event.title,event.description,event.start.getHour(),event.allDay)&&isCancelledEvent(event))return true;
+        }
+        return false;
+    }
+
+    private boolean isCancelledEvent(Event event){return TrainingMatcher.isCancelled(event.status,event.title,event.description);}
+
+    private String trainingTimeLabel(TrainingSlot slot){
+        DateTimeFormatter format=DateTimeFormatter.ofPattern("HH:mm");
+        return slot.start.format(format)+"–"+slot.end.format(format)+" Uhr";
+    }
+
+    private boolean weatherHourMatches(String timestamp,TrainingSlot slot){
+        try{
+            ZonedDateTime hour=LocalDateTime.parse(timestamp).atZone(ZoneId.of("Europe/Zurich"));
+            ZonedDateTime intervalEnd=hour.plusHours(1);
+            return intervalEnd.isAfter(slot.start)&&hour.isBefore(slot.end);
+        }catch(Exception ignored){return false;}
     }
 
     private String[] weatherSummary(){
-        LocalDate d=nextTrainingDay(); String date=cap(d.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN)))+" · "+trainingTime(d);
-        String raw=prefs.getString(PREF_WEATHER_CACHE,""); long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L); String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
-        if(raw.trim().isEmpty())return new String[]{"NÄCHSTES TRAINING",date,"Wetter wird geladen …","Prognose wird im Hintergrund aktualisiert.",source,"◌"};
+        TrainingSlot slot=nextTrainingSlot();
+        String date=cap(slot.start.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN)))+" · "+trainingTimeLabel(slot);
+        if(slot.fromCalendar&&slot.title!=null&&!slot.title.isBlank())date+="\n"+slot.title;
+        String raw=prefs.getString(PREF_WEATHER_CACHE,"");
+        long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
+        String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
+        String provenance=(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
+        if(raw.trim().isEmpty())return new String[]{"NÄCHSTES TRAINING",date,"Wetter wird geladen …","Prognose wird im Hintergrund aktualisiert.",provenance,"◌"};
         try{
-            JSONObject h=new JSONObject(raw).getJSONObject("hourly"); JSONArray times=h.getJSONArray("time"),temp=h.getJSONArray("temperature_2m"),prob=h.getJSONArray("precipitation_probability"),prec=h.getJSONArray("precipitation"),code=h.getJSONArray("weather_code"),wind=h.getJSONArray("wind_speed_10m"),gust=h.getJSONArray("wind_gusts_10m"); JSONArray uv=h.optJSONArray("uv_index");
-            double tFirst=Double.NaN,tLast=Double.NaN,psum=0,wmax=0,gmax=0,uvMax=Double.NaN; int pmax=0,wcode=-1,count=0; String prefix=d.toString()+"T"; int[] hours=trainingWeatherHours(d);
+            JSONObject hourly=new JSONObject(raw).getJSONObject("hourly");
+            JSONArray times=hourly.getJSONArray("time"),temperatures=hourly.getJSONArray("temperature_2m"),probabilities=hourly.getJSONArray("precipitation_probability"),precipitation=hourly.getJSONArray("precipitation"),codes=hourly.getJSONArray("weather_code"),wind=hourly.getJSONArray("wind_speed_10m"),gusts=hourly.getJSONArray("wind_gusts_10m");
+            JSONArray uv=hourly.optJSONArray("uv_index");
+            double firstTemperature=Double.NaN,lastTemperature=Double.NaN,precipitationSum=0,windMax=0,gustMax=0,uvMax=Double.NaN;
+            int probabilityMax=0,codeValue=-1,count=0;
             for(int i=0;i<times.length();i++){
-                String tm=times.optString(i,""); boolean inWindow=false; for(int hour:hours)if(tm.equals(prefix+String.format(Locale.ROOT,"%02d:00",hour))){inWindow=true;break;} if(!inWindow)continue;
-                double tv=temp.optDouble(i,Double.NaN); if(count==0){tFirst=tv;wcode=code.optInt(i,-1);} tLast=tv;
-                pmax=Math.max(pmax,prob.optInt(i,0)); psum+=Math.max(0,prec.optDouble(i,0)); wmax=Math.max(wmax,wind.optDouble(i,0)); gmax=Math.max(gmax,gust.optDouble(i,0));
-                if(uv!=null){double u=uv.optDouble(i,Double.NaN);if(!Double.isNaN(u)&&(Double.isNaN(uvMax)||u>uvMax))uvMax=u;}
+                if(!weatherHourMatches(times.optString(i,""),slot))continue;
+                double temperature=temperatures.optDouble(i,Double.NaN);
+                if(count==0){firstTemperature=temperature;codeValue=codes.optInt(i,-1);}
+                lastTemperature=temperature;
+                probabilityMax=Math.max(probabilityMax,probabilities.optInt(i,0));
+                precipitationSum+=Math.max(0,precipitation.optDouble(i,0));
+                windMax=Math.max(windMax,wind.optDouble(i,0));
+                gustMax=Math.max(gustMax,gusts.optDouble(i,0));
+                if(uv!=null){double value=uv.optDouble(i,Double.NaN);if(Double.isFinite(value)&&(Double.isNaN(uvMax)||value>uvMax))uvMax=value;}
                 count++;
             }
-            if(count==0)return new String[]{"NÄCHSTES TRAINING",date,"Noch keine Prognose","Für diesen Trainingszeitraum liegen noch keine Stundenwerte vor.",weatherAge(source,updated),"◌"};
-            String tempText=Double.isNaN(tFirst)?"":String.format(Locale.GERMAN,"%.0f °C",tFirst);
-            if(!Double.isNaN(tLast)&&!Double.isNaN(tFirst)&&Math.abs(tLast-tFirst)>=1.0)tempText+=String.format(Locale.GERMAN," → %.0f °C",tLast);
-            String main=tempText+(tempText.isEmpty()?"":" · ")+weatherCode(wcode);
-            String details="Regen "+pmax+" % · "+String.format(Locale.GERMAN,"%.1f mm",psum)+"\nWind "+Math.round(wmax)+" km/h · Böen "+Math.round(gmax)+" km/h";
-            if(!Double.isNaN(uvMax))details+="\nUV "+String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax);
-            return new String[]{"NÄCHSTES TRAINING",date,main,details,weatherAge(source,updated),weatherIcon(wcode)};
-        }catch(Exception e){return new String[]{"NÄCHSTES TRAINING",date,"Gespeicherte Wetterdaten nicht lesbar","Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen.",weatherAge(source,updated),"◌"};}
+            if(count==0)return new String[]{"NÄCHSTES TRAINING",date,"Noch keine Prognose","Für diesen Trainingszeitraum liegen noch keine Stundenwerte vor.",provenance,"◌"};
+            String temperatureText=Double.isNaN(firstTemperature)?"":String.format(Locale.GERMAN,"%.0f °C",firstTemperature);
+            if(Double.isFinite(lastTemperature)&&Double.isFinite(firstTemperature)&&Math.abs(lastTemperature-firstTemperature)>=1.0)temperatureText+=String.format(Locale.GERMAN," → %.0f °C",lastTemperature);
+            String main=temperatureText+(temperatureText.isEmpty()?"":" · ")+weatherCode(codeValue);
+            String details="Regen "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\nWind "+Math.round(windMax)+" km/h · Böen "+Math.round(gustMax)+" km/h";
+            if(Double.isFinite(uvMax))details+="\nUV "+String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax);
+            return new String[]{"NÄCHSTES TRAINING",date,main,details,provenance,weatherIcon(codeValue)};
+        }catch(Exception e){
+            return new String[]{"NÄCHSTES TRAINING",date,"Gespeicherte Wetterdaten nicht lesbar","Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen.",provenance,"◌"};
+        }
     }
 
     private String uvLabel(double uv){if(uv<3)return "niedrig";if(uv<6)return "mässig";if(uv<8)return "hoch";if(uv<11)return "sehr hoch";return "extrem";}
@@ -426,7 +805,7 @@ public class MainActivity extends Activity {
     private float riverWarn(){return prefs.getFloat(PREF_RIVER_WARN,DEFAULT_RIVER_WARN);}
     private float riverAlarm(){return prefs.getFloat(PREF_RIVER_ALARM,DEFAULT_RIVER_ALARM);}
     private RiverStatus riverStatus(double q){
-        if(Double.isNaN(q))return new RiverStatus("Status unbekannt",themeBg(Color.rgb(109,120,128)),Color.WHITE);
+        if(Double.isNaN(q))return new RiverStatus("Keine Daten",Color.rgb(109,120,128),Color.WHITE);
         if(q<riverLow())return new RiverStatus("Niedrig",STATUS_LOW,Color.WHITE);
         if(q>=riverAlarm())return new RiverStatus("Alarm",STATUS_ALARM,Color.WHITE);
         if(q>=riverWarn())return new RiverStatus("Warnung",STATUS_WARN,Color.rgb(23,34,43));
@@ -449,74 +828,120 @@ public class MainActivity extends Activity {
         }catch(Exception e){return new String[]{"RHEIN · BAFU 2091","Gespeicherter Stand","Messdaten nicht lesbar","BAFU · Cache"};}
     }
 
-    private TrendSeries hydroSeries(String parameter){
-        TrendSeries out=new TrendSeries();
-        List<HydroPoint> points=new ArrayList<>();
-        String history=prefs.getString(PREF_HYDRO_HISTORY_CACHE,"");
-        if(!history.trim().isEmpty()){
-            try{
-                JSONArray a=new JSONObject(history).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
-                for(int i=0;i<a.length();i++){
-                    JSONObject o=a.getJSONObject(i); if(!parameter.equals(o.optString("parameterName","")))continue;
-                    double value=o.optDouble("value",Double.NaN); String ts=o.optString("timestamp",""); if(Double.isNaN(value)||ts.isEmpty())continue;
-                    try{points.add(new HydroPoint(java.time.Instant.parse(ts).toEpochMilli(),value));}catch(Exception ignored){}
-                }
-            }catch(Exception ignored){}
-        }
+    private TrendSeries hydroSeries(String parameter,RiverRange range){
+        TrendSeries result=new TrendSeries();
+        TreeMap<Long,Double> points=new TreeMap<>();
         String live=prefs.getString(PREF_HYDRO_CACHE,"");
-        if(!live.trim().isEmpty()){
-            try{
-                JSONArray a=new JSONObject(live).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
-                HydroPoint newest=null;
-                for(int i=0;i<a.length();i++){
-                    JSONObject o=a.getJSONObject(i); if(!parameter.equals(o.optString("parameterName","")))continue;
-                    double value=o.optDouble("value",Double.NaN); String ts=o.optString("timestamp",""); if(Double.isNaN(value)||ts.isEmpty())continue;
-                    try{HydroPoint hp=new HydroPoint(java.time.Instant.parse(ts).toEpochMilli(),value);if(newest==null||hp.time>newest.time)newest=hp;}catch(Exception ignored){}
-                }
-                if(newest!=null)points.add(newest);
-            }catch(Exception ignored){}
+        String fine=prefs.getString(PREF_HYDRO_FINE_CACHE,"");
+        String history=prefs.getString(PREF_HYDRO_HISTORY_CACHE,"");
+
+        if(range==RiverRange.HOUR){
+            appendHydroPoints(points,live,"data_live",parameter);
+        }else if(range==RiverRange.DAY){
+            appendHydroPoints(points,fine,"data_10min_mean",parameter);
+            long after=points.isEmpty()?Long.MIN_VALUE:points.lastKey();
+            appendHydroTail(points,live,"data_live",parameter,after,9L*60L*1000L);
+            if(points.size()<2)appendHydroPoints(points,history,"data_1hour_mean",parameter);
+        }else{
+            appendHydroPoints(points,history,"data_1hour_mean",parameter);
+            HydroPoint latest=latestHydroPoint(live,"data_live",parameter);
+            if(latest!=null)points.put(latest.time,latest.value);
         }
-        points.sort(Comparator.comparingLong(x->x.time));
-        long newest=points.isEmpty()?Long.MIN_VALUE:points.get(points.size()-1).time;
-        long cutoff=newest==Long.MIN_VALUE?Long.MIN_VALUE:newest-7L*24L*60L*60L*1000L;
-        long last=Long.MIN_VALUE;
-        for(HydroPoint hp:points){if(hp.time<cutoff||hp.time==last)continue;last=hp.time;out.times.add(hp.time);out.values.add(hp.value);}
-        return out;
+        if(points.size()<2)appendHydroPoints(points,live,"data_live",parameter);
+        if(points.isEmpty())return result;
+
+        long newest=points.lastKey();
+        long cutoff=newest-range.windowMs;
+        for(Map.Entry<Long,Double> entry:points.entrySet()){
+            if(entry.getKey()<cutoff)continue;
+            result.times.add(entry.getKey());
+            result.values.add(entry.getValue());
+        }
+        return result;
+    }
+
+    private void appendHydroPoints(TreeMap<Long,Double> points,String raw,String arrayName,String parameter){
+        if(raw==null||raw.trim().isEmpty())return;
+        try{
+            JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray(arrayName);
+            for(int i=0;i<data.length();i++){
+                JSONObject row=data.getJSONObject(i);
+                if(!parameter.equals(row.optString("parameterName","")))continue;
+                double value=row.optDouble("value",Double.NaN);
+                String timestamp=row.optString("timestamp","");
+                if(!Double.isFinite(value)||timestamp.isEmpty())continue;
+                try{points.put(java.time.Instant.parse(timestamp).toEpochMilli(),value);}catch(Exception ignored){}
+            }
+        }catch(Exception ignored){}
+    }
+
+    private void appendHydroTail(TreeMap<Long,Double> points,String raw,String arrayName,String parameter,long after,long minimumSpacing){
+        TreeMap<Long,Double> tail=new TreeMap<>();
+        appendHydroPoints(tail,raw,arrayName,parameter);
+        long lastAdded=after;
+        for(Map.Entry<Long,Double> entry:tail.entrySet()){
+            if(entry.getKey()<=after)continue;
+            if(lastAdded!=Long.MIN_VALUE&&entry.getKey()-lastAdded<minimumSpacing)continue;
+            points.put(entry.getKey(),entry.getValue());
+            lastAdded=entry.getKey();
+        }
+        if(!tail.isEmpty()&&tail.lastKey()>after)points.put(tail.lastKey(),tail.lastEntry().getValue());
+    }
+
+    private HydroPoint latestHydroPoint(String raw,String arrayName,String parameter){
+        TreeMap<Long,Double> points=new TreeMap<>();
+        appendHydroPoints(points,raw,arrayName,parameter);
+        if(points.isEmpty())return null;
+        Map.Entry<Long,Double> latest=points.lastEntry();
+        return new HydroPoint(latest.getKey(),latest.getValue());
     }
 
     private void refreshLive(boolean force){refreshWeather(force);refreshHydro(force);}
+
     private void refreshWeather(boolean force){
-        long age=System.currentTimeMillis()-prefs.getLong(PREF_WEATHER_UPDATED,0L);if(weatherLoading||(!force&&!prefs.getString(PREF_WEATHER_CACHE,"").isBlank()&&age<30*60000L))return;weatherLoading=true;
-        new Thread(()->{try{String base="https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8";String raw;String src;try{raw=httpGet(base+"&models=meteoswiss_icon_seamless");src="MeteoSwiss ICON via Open-Meteo";}catch(Exception first){raw=httpGet(base);src="Open-Meteo Best Match";}new JSONObject(raw).getJSONObject("hourly");prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,src).apply();}catch(Exception ignored){}finally{weatherLoading=false;runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});}}).start();
+        long age=System.currentTimeMillis()-prefs.getLong(PREF_WEATHER_UPDATED,0L);
+        if(weatherLoading||(!force&&!prefs.getString(PREF_WEATHER_CACHE,"").isBlank()&&age<30*60000L))return;
+        weatherLoading=true;
+        new Thread(()->{
+            try{
+                String base="https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8";
+                String raw;
+                String source;
+                try{raw=httpGet(base+"&models=meteoswiss_icon_seamless");source="MeteoSwiss ICON via Open-Meteo";}
+                catch(Exception first){raw=httpGet(base);source="Open-Meteo Best Match";}
+                new JSONObject(raw).getJSONObject("hourly");
+                prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,source).apply();
+            }catch(Exception ignored){}
+            finally{
+                weatherLoading=false;
+                runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});
+            }
+        }).start();
     }
+
     private void refreshHydro(boolean force){
-        long age=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_UPDATED,0L);
-        long histAge=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_HISTORY_UPDATED,0L);
-        boolean liveFresh=!prefs.getString(PREF_HYDRO_CACHE,"").isBlank()&&age<10*60000L;
-        boolean histFresh=!prefs.getString(PREF_HYDRO_HISTORY_CACHE,"").isBlank()&&histAge<60*60000L;
-        if(hydroLoading||(!force&&liveFresh&&histFresh))return;
+        long now=System.currentTimeMillis();
+        boolean liveFresh=!prefs.getString(PREF_HYDRO_CACHE,"").isBlank()&&now-prefs.getLong(PREF_HYDRO_UPDATED,0L)<10*60000L;
+        boolean fineFresh=!prefs.getString(PREF_HYDRO_FINE_CACHE,"").isBlank()&&now-prefs.getLong(PREF_HYDRO_FINE_UPDATED,0L)<30*60000L;
+        boolean historyFresh=!prefs.getString(PREF_HYDRO_HISTORY_CACHE,"").isBlank()&&now-prefs.getLong(PREF_HYDRO_HISTORY_UPDATED,0L)<60*60000L;
+        if(hydroLoading||(!force&&liveFresh&&fineFresh&&historyFresh))return;
         hydroLoading=true;
         new Thread(()->{
             try{
-                String dq=String.valueOf((char)34);
+                String quote=String.valueOf((char)34);
                 if(force||!liveFresh){
-                    try{
-                        String liveQuery="{ water { observations { data_live(where:{stationNo:{_eq:"+dq+"2091"+dq+"}}) { stationNo parameterName timestamp value releaseStatus } } } }";
-                        String raw=bafuPost(liveQuery);
-                        JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL live");
-                        j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
-                        prefs.edit().putString(PREF_HYDRO_CACHE,raw).putLong(PREF_HYDRO_UPDATED,System.currentTimeMillis()).apply();
-                    }catch(Exception ignored){}
+                    String query="{ water { observations { data_live(where:{stationNo:{_eq:"+quote+"2091"+quote+"}}) { stationNo parameterName timestamp value releaseStatus } } } }";
+                    refreshHydroCache(query,"data_live",PREF_HYDRO_CACHE,PREF_HYDRO_UPDATED);
                 }
-                if(force||!histFresh){
-                    try{
-                        String from=java.time.Instant.now().minus(java.time.Duration.ofDays(7)).toString();
-                        String historyQuery="{ water { observations { data_1hour_mean(where:{station:{no:{_eq:"+dq+"2091"+dq+"}},timestamp:{_gte:"+dq+from+dq+"}}) { parameterName timestamp value } } } }";
-                        String raw=bafuPost(historyQuery);
-                        JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL history");
-                        j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
-                        prefs.edit().putString(PREF_HYDRO_HISTORY_CACHE,raw).putLong(PREF_HYDRO_HISTORY_UPDATED,System.currentTimeMillis()).apply();
-                    }catch(Exception ignored){}
+                if(force||!fineFresh){
+                    String from=java.time.Instant.now().minus(java.time.Duration.ofHours(26)).toString();
+                    String query="{ water { observations { data_10min_mean(where:{station:{no:{_eq:"+quote+"2091"+quote+"}},timestamp:{_gte:"+quote+from+quote+"}}) { parameterName timestamp value } } } }";
+                    refreshHydroCache(query,"data_10min_mean",PREF_HYDRO_FINE_CACHE,PREF_HYDRO_FINE_UPDATED);
+                }
+                if(force||!historyFresh){
+                    String from=java.time.Instant.now().minus(java.time.Duration.ofDays(8)).toString();
+                    String query="{ water { observations { data_1hour_mean(where:{station:{no:{_eq:"+quote+"2091"+quote+"}},timestamp:{_gte:"+quote+from+quote+"}}) { parameterName timestamp value } } } }";
+                    refreshHydroCache(query,"data_1hour_mean",PREF_HYDRO_HISTORY_CACHE,PREF_HYDRO_HISTORY_UPDATED);
                 }
             }finally{
                 hydroLoading=false;
@@ -525,11 +950,21 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    private void refreshHydroCache(String query,String arrayName,String cacheKey,String updatedKey){
+        try{
+            String raw=bafuPost(query);
+            JSONObject json=new JSONObject(raw);
+            if(json.has("errors"))return;
+            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray(arrayName);
+            prefs.edit().putString(cacheKey,raw).putLong(updatedKey,System.currentTimeMillis()).apply();
+        }catch(Exception ignored){}
+    }
+
     private String bafuPost(String query) throws Exception{
         HttpURLConnection c=(HttpURLConnection)new URL("https://data.bafu.admin.ch/api").openConnection();
         try{
             c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(7000);c.setReadTimeout(12000);
-            c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");
+            c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);
             String body=new JSONObject().put("query",query).toString();
             try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));}
             if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());
@@ -537,7 +972,7 @@ public class MainActivity extends Activity {
         }finally{c.disconnect();}
     }
 
-    private String httpGet(String url) throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();try{c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.3");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());return readConnection(c);}finally{c.disconnect();}}
+    private String httpGet(String url) throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();try{c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());return readConnection(c);}finally{c.disconnect();}}
     private String readConnection(HttpURLConnection c) throws Exception{BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line);br.close();return sb.toString();}
 
     private View settings(){
@@ -556,6 +991,7 @@ public class MainActivity extends Activity {
         section(b,"Daten","Kalender, Training-Wetter und Rhein-Messwerte");
         LinearLayout data=card(); data.setOrientation(LinearLayout.VERTICAL); b.addView(data,margin(-1,-2,0,0,0,12));
         data.addView(txt("Lokaler Cache",16,TEXT,true)); TextView d=txt("Beim Start wird zuerst der letzte erfolgreiche Stand angezeigt und anschließend im Hintergrund aktualisiert.",13,MUTED,false); d.setPadding(0,dp(4),0,dp(10)); data.addView(d);
+        data.addView(dataFreshnessRow(),margin(-1,-2,0,0,0,10));
         Button reload=btn("Alle Daten aktualisieren",Color.rgb(232,240,244),NAVY); reload.setOnClickListener(v->{refreshEvents(true,()->{});refreshLive(true);Toast.makeText(this,"Aktualisierung gestartet.",Toast.LENGTH_SHORT).show();}); data.addView(reload,new LinearLayout.LayoutParams(-1,dp(44)));
         Button clear=btn("Daten-Cache leeren",Color.rgb(232,240,244),NAVY); clear.setOnClickListener(v->clearDataCache()); LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-1,dp(44)); clp.setMargins(0,dp(8),0,0); data.addView(clear,clp);
         boolean bgOn=prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
@@ -567,15 +1003,63 @@ public class MainActivity extends Activity {
         section(b,"Rhein-Grenzwerte","Farbliche Einordnung des Abflusses an BAFU-Station 2091");
         LinearLayout limitsCard=card(); limitsCard.setOrientation(LinearLayout.VERTICAL); b.addView(limitsCard,margin(-1,-2,0,0,0,12));
         limitsCard.addView(txt("Abfluss-Ampel",16,TEXT,true));
-        TextView ranges=txt(String.format(Locale.GERMAN,"🔵 Niedrig  < %.0f m³/s\n🟢 Gut  %.0f–%.0f m³/s\n🟡 Warnung  ab %.0f m³/s\n🔴 Alarm  ab %.0f m³/s",riverLow(),riverLow(),riverWarn(),riverWarn(),riverAlarm()),13,MUTED,false); ranges.setPadding(0,dp(5),0,dp(10)); limitsCard.addView(ranges);
+        limitsCard.addView(thresholdGrid(),margin(-1,-2,0,6,0,10));
         TextView sourceInfo=txt("Standard: Warnung ab 2500 m³/s = BAFU Gefahrenstufe 2; Alarm ab 3600 m³/s = Gefahrenstufe 4. Der Niedrigwert 400 m³/s ist eine anpassbare App-Vorgabe, kein offizieller BAFU-Grenzwert.",11,MUTED,false); sourceInfo.setPadding(0,0,0,dp(10)); limitsCard.addView(sourceInfo);
         Button editLimits=btn("Grenzwerte ändern",Color.rgb(232,240,244),NAVY); editLimits.setOnClickListener(v->editRiverThresholds()); limitsCard.addView(editLimits,new LinearLayout.LayoutParams(-1,dp(44)));
         Button resetLimits=btn("Standardwerte wiederherstellen",Color.rgb(232,240,244),NAVY); resetLimits.setOnClickListener(v->{prefs.edit().remove(PREF_RIVER_LOW).remove(PREF_RIVER_WARN).remove(PREF_RIVER_ALARM).apply();navigate(Screen.SETTINGS);}); LinearLayout.LayoutParams rlp=new LinearLayout.LayoutParams(-1,dp(44));rlp.setMargins(0,dp(8),0,0);limitsCard.addView(resetLimits,rlp);
 
         section(b,"App",null);
         LinearLayout about=card(); about.setOrientation(LinearLayout.VERTICAL); b.addView(about,margin(-1,-2,0,0,0,8));
-        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion 0.7.0 · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
         return scroll;
+    }
+
+    private View dataFreshnessRow(){
+        LinearLayout stack=new LinearLayout(this);
+        stack.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout first=new LinearLayout(this);
+        addFreshnessTile(first,"Kalender",prefs.getLong(PREF_ICS_UPDATED,0L),4L*60L*60L*1000L);
+        addFreshnessTile(first,"Wetter",prefs.getLong(PREF_WEATHER_UPDATED,0L),90L*60L*1000L);
+        addFreshnessTile(first,"Rhein live",prefs.getLong(PREF_HYDRO_UPDATED,0L),45L*60L*1000L);
+        stack.addView(first,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout second=new LinearLayout(this);
+        addFreshnessTile(second,"Rhein 24h",prefs.getLong(PREF_HYDRO_FINE_UPDATED,0L),90L*60L*1000L);
+        addFreshnessTile(second,"Rhein 7d",prefs.getLong(PREF_HYDRO_HISTORY_UPDATED,0L),2L*60L*60L*1000L);
+        LinearLayout.LayoutParams secondParams=new LinearLayout.LayoutParams(-1,-2);
+        secondParams.setMargins(0,dp(6),0,0);
+        stack.addView(second,secondParams);
+        return stack;
+    }
+
+    private void addFreshnessTile(LinearLayout row,String label,long updated,long staleAfter){
+        long age=updated<=0?Long.MAX_VALUE:Math.max(0,System.currentTimeMillis()-updated);
+        int color=updated<=0?MUTED:(age>staleAfter?STATUS_WARN:STATUS_GOOD);
+        LinearLayout tile=new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(5),dp(8),dp(5),dp(8));
+        tile.setBackground(round(Color.rgb(238,243,246),12));
+        TextView ageView=txt(dataAge(updated),12,color,true);
+        ageView.setTextColor(statusTextColor(color));
+        ageView.setGravity(Gravity.CENTER);
+        tile.addView(ageView);
+        TextView labelView=txt(label,10,MUTED,false);
+        labelView.setGravity(Gravity.CENTER);
+        labelView.setPadding(0,dp(2),0,0);
+        tile.addView(labelView);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
+        if(row.getChildCount()>0)lp.setMargins(dp(6),0,0,0);
+        row.addView(tile,lp);
+    }
+
+    private String dataAge(long updated){
+        if(updated<=0)return "kein Stand";
+        long minutes=Math.max(0,(System.currentTimeMillis()-updated)/60000L);
+        if(minutes<1)return "gerade eben";
+        if(minutes<60)return minutes+" min";
+        long hours=minutes/60;
+        if(hours<24)return hours+" h";
+        return (hours/24)+" d";
     }
 
     private boolean resolveDarkMode(){
@@ -594,7 +1078,7 @@ public class MainActivity extends Activity {
     }
     private int themeText(int c){if(!darkMode)return c;if(c==TEXT)return DARK_TEXT;if(c==MUTED||c==Color.rgb(65,82,96)||c==Color.rgb(126,140,150))return DARK_MUTED;if(c==NAVY)return Color.rgb(105,193,218);if(c==WATER)return Color.rgb(91,190,213);return c;}
     private int themeBg(int c){if(!darkMode)return c;if(c==SURFACE)return DARK_SURFACE;if(c==Color.WHITE)return DARK_CARD;if(c==Color.rgb(232,240,244)||c==Color.rgb(238,243,246)||c==Color.rgb(231,242,246)||c==Color.rgb(236,243,247))return DARK_SOFT;return c;}
-    private void clearDataCache(){prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED).remove(PREF_HYDRO_CACHE).remove(PREF_HYDRO_UPDATED).remove(PREF_HYDRO_HISTORY_CACHE).remove(PREF_HYDRO_HISTORY_UPDATED).apply();events=new ArrayList<>();eventsUpdated=0L;Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();refreshEvents(false,()->{});refreshLive(true);}
+    private void clearDataCache(){prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED).remove(PREF_HYDRO_CACHE).remove(PREF_HYDRO_UPDATED).remove(PREF_HYDRO_FINE_CACHE).remove(PREF_HYDRO_FINE_UPDATED).remove(PREF_HYDRO_HISTORY_CACHE).remove(PREF_HYDRO_HISTORY_UPDATED).apply();events=new ArrayList<>();eventsUpdated=0L;Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();refreshEvents(false,()->{});refreshLive(true);}
 
     private void editRiverThresholds(){
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(16),dp(4),dp(16),0);
@@ -607,34 +1091,214 @@ public class MainActivity extends Activity {
     private EditText thresholdInput(String hint,float value){EditText e=new EditText(this);e.setHint(hint);e.setText(String.format(Locale.US,"%.0f",value));e.setSingleLine(true);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setTextColor(themeText(TEXT));e.setHintTextColor(themeText(MUTED));e.setBackground(round(Color.rgb(238,243,246),12));e.setPadding(dp(12),0,dp(12),0);return e;}
 
     private View eventScreen() {
-        ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);
-        LinearLayout intro=card(); intro.setOrientation(LinearLayout.VERTICAL); b.addView(intro,margin(-1,-2,0,4,0,16));
-        intro.addView(txt("Jahresprogramm",22,TEXT,true));
-        TextView info=txt("Direkt aus dem öffentlichen Google-Kalender des Vereins.",14,MUTED,false); info.setPadding(0,dp(5),0,dp(3)); intro.addView(info); TextView cacheInfo=txt(calendarStatus(),12,eventsUpdated>0?WATER:MUTED,false); cacheInfo.setPadding(0,0,0,dp(11)); intro.addView(cacheInfo);
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout body=body();
+        scroll.addView(body);
+
+        LinearLayout intro=card();
+        intro.setOrientation(LinearLayout.VERTICAL);
+        intro.setPadding(dp(18),dp(17),dp(18),dp(17));
+        body.addView(intro,margin(-1,-2,0,4,0,16));
+        intro.addView(txt("Jahresprogramm",23,TEXT,true));
+        TextView info=txt("Termine aus dem öffentlichen Vereinskalender – lokal gespeichert und auch ohne Verbindung sichtbar.",13,MUTED,false);
+        info.setPadding(0,dp(5),0,dp(4));
+        intro.addView(info);
+        TextView cacheInfo=txt(calendarStatus(),11,eventsUpdated>0?WATER:MUTED,false);
+        cacheInfo.setPadding(0,0,0,dp(12));
+        intro.addView(cacheInfo);
         LinearLayout row=new LinearLayout(this);
-        Button reload=btn("Aktualisieren",NAVY,Color.WHITE); reload.setOnClickListener(v->refreshEvents(true,()->navigate(Screen.EVENTS))); row.addView(reload,new LinearLayout.LayoutParams(0,dp(44),1));
-        Button cal=btn("Kalender öffnen",Color.rgb(232,240,244),NAVY); cal.setOnClickListener(v->external(CALENDAR_WEB)); LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(44),1); cp.setMargins(dp(8),0,0,0); row.addView(cal,cp); intro.addView(row);
-        if(events.isEmpty()) { ProgressBar p=new ProgressBar(this); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(48),dp(48)); lp.gravity=Gravity.CENTER_HORIZONTAL; b.addView(p,lp); TextView wait=txt(eventsLoading?"Kalender wird im Hintergrund geladen …":"Noch kein gespeicherter Kalenderstand vorhanden.",13,MUTED,false); wait.setGravity(Gravity.CENTER); wait.setPadding(0,dp(8),0,0); b.addView(wait); if(!eventsLoading) refreshEvents(false,()->{if(current==Screen.EVENTS) navigate(Screen.EVENTS);}); return scroll; }
+        Button reload=btn("Aktualisieren",NAVY,Color.WHITE);
+        reload.setOnClickListener(v->refreshEvents(true,()->navigate(Screen.EVENTS)));
+        row.addView(reload,new LinearLayout.LayoutParams(0,dp(44),1));
+        Button calendar=btn("Originalkalender",Color.rgb(232,240,244),NAVY);
+        calendar.setOnClickListener(v->external(CALENDAR_WEB));
+        LinearLayout.LayoutParams calendarParams=new LinearLayout.LayoutParams(0,dp(44),1);
+        calendarParams.setMargins(dp(8),0,0,0);
+        row.addView(calendar,calendarParams);
+        intro.addView(row);
+
+        if(events.isEmpty()) {
+            ProgressBar progress=new ProgressBar(this);
+            LinearLayout.LayoutParams progressParams=new LinearLayout.LayoutParams(dp(48),dp(48));
+            progressParams.gravity=Gravity.CENTER_HORIZONTAL;
+            body.addView(progress,progressParams);
+            TextView wait=txt(eventsLoading?"Kalender wird im Hintergrund geladen …":"Noch kein gespeicherter Kalenderstand vorhanden.",13,MUTED,false);
+            wait.setGravity(Gravity.CENTER);
+            wait.setPadding(0,dp(8),0,0);
+            body.addView(wait);
+            if(!eventsLoading)refreshEvents(false,()->{if(current==Screen.EVENTS)navigate(Screen.EVENTS);});
+            return scroll;
+        }
+
         String month="";
-        for(Event e:events) {
-            String m=cap(e.start.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.GERMAN)));
-            if(!m.equals(month)) { TextView mt=txt(m,17,TEXT,true); mt.setPadding(dp(2),dp(9),0,dp(8)); b.addView(mt); month=m; }
-            b.addView(eventCard(e,false));
+        for(Event event:events) {
+            String nextMonth=cap(event.start.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.GERMAN)));
+            if(!nextMonth.equals(month)) {
+                TextView monthTitle=txt(nextMonth,17,TEXT,true);
+                monthTitle.setPadding(dp(2),dp(9),0,dp(8));
+                body.addView(monthTitle);
+                month=nextMonth;
+            }
+            body.addView(eventCard(event,false));
         }
         return scroll;
     }
 
-    private View eventCard(Event e, boolean compact) {
-        LinearLayout c=card(); c.setGravity(Gravity.CENTER_VERTICAL); c.setPadding(dp(14),dp(12),dp(14),dp(12)); c.setLayoutParams(margin(-1,-2,0,0,0,9));
-        LinearLayout date=new LinearLayout(this); date.setOrientation(LinearLayout.VERTICAL); date.setGravity(Gravity.CENTER); date.setBackground(round(Color.rgb(231,242,246),14));
-        TextView day=txt(String.valueOf(e.start.getDayOfMonth()),23,NAVY,true); day.setGravity(Gravity.CENTER); date.addView(day);
-        TextView mon=txt(e.start.format(DateTimeFormatter.ofPattern("MMM",Locale.GERMAN)).replace(".","").toUpperCase(Locale.GERMAN),11,WATER,true); mon.setGravity(Gravity.CENTER); date.addView(mon);
-        c.addView(date,new LinearLayout.LayoutParams(dp(62),dp(62)));
-        LinearLayout d=new LinearLayout(this); d.setOrientation(LinearLayout.VERTICAL); d.setPadding(dp(13),0,0,0); c.addView(d,new LinearLayout.LayoutParams(0,-2,1));
-        d.addView(txt(e.title,compact?15:16,TEXT,true));
-        String when=cap(e.start.format(DateTimeFormatter.ofPattern("EEEE",Locale.GERMAN))); if(!e.allDay) when+=" · "+e.start.format(DateTimeFormatter.ofPattern("HH:mm"))+" Uhr"; d.addView(txt(when,13,MUTED,false));
-        if(!compact && e.location!=null && !e.location.isBlank()) d.addView(txt(e.location,12,WATER,false));
-        return c;
+    private View eventCard(Event event,boolean compact) {
+        boolean cancelled=isCancelledEvent(event);
+        LinearLayout card=card();
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14),dp(12),dp(12),dp(12));
+        card.setLayoutParams(margin(-1,-2,0,0,0,9));
+        card.setContentDescription(event.title+", "+eventWhen(event));
+        card.setOnClickListener(v->showEventDetails(event));
+
+        LinearLayout date=new LinearLayout(this);
+        date.setOrientation(LinearLayout.VERTICAL);
+        date.setGravity(Gravity.CENTER);
+        date.setBackground(round(cancelled?Color.rgb(250,232,232):Color.rgb(231,242,246),14));
+        TextView day=txt(String.valueOf(event.start.getDayOfMonth()),23,cancelled?STATUS_ALARM:NAVY,true);
+        day.setGravity(Gravity.CENTER);
+        date.addView(day);
+        TextView month=txt(event.start.format(DateTimeFormatter.ofPattern("MMM",Locale.GERMAN)).replace(".","").toUpperCase(Locale.GERMAN),11,cancelled?STATUS_ALARM:WATER,true);
+        month.setGravity(Gravity.CENTER);
+        date.addView(month);
+        card.addView(date,new LinearLayout.LayoutParams(dp(62),dp(62)));
+
+        LinearLayout details=new LinearLayout(this);
+        details.setOrientation(LinearLayout.VERTICAL);
+        details.setPadding(dp(13),0,dp(6),0);
+        card.addView(details,new LinearLayout.LayoutParams(0,-2,1));
+
+        LinearLayout titleRow=new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title=txt(event.title,compact?15:16,TEXT,true);
+        if(cancelled)title.setPaintFlags(title.getPaintFlags()|Paint.STRIKE_THRU_TEXT_FLAG);
+        titleRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        if(cancelled){
+            TextView badge=txt("Abgesagt",10,STATUS_ALARM,true);
+            badge.setTextColor(statusTextColor(STATUS_ALARM));
+            badge.setGravity(Gravity.CENTER);
+            badge.setPadding(dp(8),dp(4),dp(8),dp(4));
+            badge.setBackground(statusBadge(STATUS_ALARM));
+            LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(-2,-2);
+            badgeParams.setMargins(dp(8),0,0,0);
+            titleRow.addView(badge,badgeParams);
+        }
+        details.addView(titleRow);
+        details.addView(txt(eventWhenCompact(event),13,MUTED,false));
+        if(!compact&&event.location!=null&&!event.location.isBlank()){
+            TextView location=txt(event.location.replace("\n"," · "),12,WATER,false);
+            location.setMaxLines(2);
+            details.addView(location);
+        }
+
+        TextView arrow=txt("›",28,cancelled?MUTED:WATER,false);
+        arrow.setGravity(Gravity.CENTER);
+        card.addView(arrow,new LinearLayout.LayoutParams(dp(24),dp(52)));
+        return card;
+    }
+
+    private String eventWhenCompact(Event event){
+        String text=cap(event.start.format(DateTimeFormatter.ofPattern("EEEE",Locale.GERMAN)));
+        if(!event.allDay){
+            text+=" · "+event.start.format(DateTimeFormatter.ofPattern("HH:mm"));
+            if(event.end!=null&&event.end.toLocalDate().equals(event.start.toLocalDate()))text+="–"+event.end.format(DateTimeFormatter.ofPattern("HH:mm"));
+            text+=" Uhr";
+        }else text+=" · ganztägig";
+        return text;
+    }
+
+    private String eventWhen(Event event){
+        DateTimeFormatter date=DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy",Locale.GERMAN);
+        DateTimeFormatter time=DateTimeFormatter.ofPattern("HH:mm");
+        String start=cap(event.start.format(date));
+        if(event.allDay)return start+" · ganztägig";
+        if(event.end==null)return start+" · "+event.start.format(time)+" Uhr";
+        if(event.end.toLocalDate().equals(event.start.toLocalDate()))return start+" · "+event.start.format(time)+"–"+event.end.format(time)+" Uhr";
+        return start+" · "+event.start.format(time)+" Uhr\n"+cap(event.end.format(date))+" · "+event.end.format(time)+" Uhr";
+    }
+
+    private void showEventDetails(Event event){
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20),dp(10),dp(20),dp(8));
+        scroll.addView(box);
+
+        if(isCancelledEvent(event)){
+            TextView cancelled=txt("●  Termin abgesagt",12,STATUS_ALARM,true);
+            cancelled.setTextColor(statusTextColor(STATUS_ALARM));
+            cancelled.setPadding(0,0,0,dp(9));
+            box.addView(cancelled);
+        }
+        box.addView(txt(event.title,22,TEXT,true));
+        TextView when=txt(eventWhen(event),14,MUTED,false);
+        when.setPadding(0,dp(7),0,0);
+        box.addView(when);
+
+        if(event.location!=null&&!event.location.isBlank()){
+            TextView location=txt("Ort\n"+event.location,13,WATER,false);
+            location.setPadding(0,dp(14),0,0);
+            box.addView(location);
+            Button route=btn("Route öffnen",Color.rgb(232,240,244),NAVY);
+            route.setOnClickListener(v->openLocation(event.location));
+            LinearLayout.LayoutParams routeParams=new LinearLayout.LayoutParams(-1,dp(44));
+            routeParams.setMargins(0,dp(8),0,0);
+            box.addView(route,routeParams);
+        }
+
+        if(event.description!=null&&!event.description.isBlank()){
+            TextView descriptionLabel=txt("Details",12,MUTED,true);
+            descriptionLabel.setPadding(0,dp(15),0,dp(4));
+            box.addView(descriptionLabel);
+            TextView description=txt(event.description.trim(),14,TEXT,false);
+            description.setTextIsSelectable(true);
+            description.setPadding(0,0,0,dp(4));
+            box.addView(description);
+        }
+
+        LinearLayout actions=new LinearLayout(this);
+        actions.setPadding(0,dp(16),0,0);
+        Button share=btn("Teilen",Color.rgb(232,240,244),NAVY);
+        share.setOnClickListener(v->shareEvent(event));
+        actions.addView(share,new LinearLayout.LayoutParams(0,dp(44),1));
+        Button add=btn("Zum Kalender",NAVY,Color.WHITE);
+        add.setOnClickListener(v->addEventToCalendar(event));
+        LinearLayout.LayoutParams addParams=new LinearLayout.LayoutParams(0,dp(44),1);
+        addParams.setMargins(dp(8),0,0,0);
+        actions.addView(add,addParams);
+        box.addView(actions);
+
+        new AlertDialog.Builder(this,dialogTheme()).setView(scroll).setNegativeButton("Schliessen",null).show();
+    }
+
+    private void shareEvent(Event event){
+        StringBuilder body=new StringBuilder(event.title).append("\n").append(eventWhen(event));
+        if(event.location!=null&&!event.location.isBlank())body.append("\n").append(event.location);
+        Intent share=new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(Intent.EXTRA_SUBJECT,event.title);
+        share.putExtra(Intent.EXTRA_TEXT,body.toString());
+        try{startActivity(Intent.createChooser(share,"Termin teilen"));}catch(Exception ignored){Toast.makeText(this,"Teilen ist auf diesem Gerät nicht verfügbar.",Toast.LENGTH_SHORT).show();}
+    }
+
+    private void addEventToCalendar(Event event){
+        Intent insert=new Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI);
+        insert.putExtra(CalendarContract.Events.TITLE,event.title);
+        insert.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,event.start.toInstant().toEpochMilli());
+        ZonedDateTime end=event.end!=null?event.end:(event.allDay?event.start.plusDays(1):event.start.plusHours(1));
+        insert.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,end.toInstant().toEpochMilli());
+        insert.putExtra(CalendarContract.Events.ALL_DAY,event.allDay);
+        if(event.location!=null&&!event.location.isBlank())insert.putExtra(CalendarContract.Events.EVENT_LOCATION,event.location);
+        if(event.description!=null&&!event.description.isBlank())insert.putExtra(CalendarContract.Events.DESCRIPTION,event.description);
+        try{startActivity(insert);}catch(Exception ignored){Toast.makeText(this,"Keine Kalender-App gefunden.",Toast.LENGTH_SHORT).show();}
+    }
+
+    private void openLocation(String location){
+        Uri geo=Uri.parse("geo:0,0?q="+Uri.encode(location));
+        try{startActivity(new Intent(Intent.ACTION_VIEW,geo));}
+        catch(Exception ignored){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode(location));}
     }
 
     private View cash() {
@@ -651,15 +1315,22 @@ public class MainActivity extends Activity {
         String bankLabel=prefs.getString(PREF_BANK_LABEL,""); Button bank=btn(bankLabel.trim().isEmpty()?"Banking-App auswählen":bankLabel+" öffnen",Color.rgb(232,240,244),NAVY); bankButton=bank; bank.setOnClickListener(v->openPreferred(false,amount)); LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(46)); bp.setMargins(0,dp(8),0,0); amountCard.addView(bank,bp);
         if(!bankLabel.trim().isEmpty()) { TextView change=link("Andere Banking-App wählen"); change.setOnClickListener(v->chooseApp(false,amount)); amountCard.addView(change); }
 
-        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Alternative zur Bankzahlung. Der offizielle Vereinsbeiz-TWINT-QR liegt auf pfvr.ch und kann als PDF geöffnet bzw. gespeichert werden.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti);
-        Button twq=btn("Vereins-TWINT-QR öffnen",NAVY,Color.WHITE); twq.setOnClickListener(v->external(TWINT_QR_PDF)); tw.addView(twq,new LinearLayout.LayoutParams(-1,dp(48)));
-        Button twb=btn("TWINT-App öffnen",Color.rgb(232,240,244),NAVY); twb.setOnClickListener(v->openPreferred(true,amount)); LinearLayout.LayoutParams twbp=new LinearLayout.LayoutParams(-1,dp(44)); twbp.setMargins(0,dp(8),0,0); tw.addView(twb,twbp);
+        LinearLayout tw=card(); tw.setOrientation(LinearLayout.VERTICAL); b.addView(tw,margin(-1,-2,0,0,0,12)); tw.addView(txt("TWINT",16,TEXT,true)); TextView ti=txt("Für die Zahlung auf demselben Handy: Betrag auf der PFVR-Seite eingeben und TWINT wählen. Dort wird der gültige fünfstellige Zahlungscode erzeugt. Der statische QR bleibt zum Scannen vor Ort.",13,MUTED,false); ti.setPadding(0,dp(4),0,dp(10)); tw.addView(ti);
+        Button twDirect=btn("TWINT-Code erzeugen",NAVY,Color.WHITE); twDirect.setOnClickListener(v->openTwintDirect(amount)); tw.addView(twDirect,new LinearLayout.LayoutParams(-1,dp(48)));
+        Button twq=btn("Vereins-TWINT-QR öffnen",Color.rgb(232,240,244),NAVY); twq.setOnClickListener(v->external(TWINT_QR_PDF)); LinearLayout.LayoutParams twqp=new LinearLayout.LayoutParams(-1,dp(44)); twqp.setMargins(0,dp(8),0,0); tw.addView(twq,twqp);
 
         section(b,"Zahlungsdaten","Für E-Banking und manuelle Überweisung");
         LinearLayout details=card(); details.setOrientation(LinearLayout.VERTICAL); b.addView(details,margin(-1,-2,0,0,0,12)); details.addView(txt(CLUB_PAYEE,16,TEXT,true)); details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false)); TextView iban=txt(CLUB_IBAN,19,NAVY,true); iban.setPadding(0,dp(12),0,dp(4)); details.addView(iban); details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
         LinearLayout copies=new LinearLayout(this); copies.setPadding(0,dp(12),0,0); details.addView(copies); Button ci=btn("IBAN kopieren",Color.rgb(232,240,244),NAVY); ci.setOnClickListener(v->copy("PFVR IBAN",CLUB_IBAN.replace(" ",""),"IBAN kopiert")); copies.addView(ci,new LinearLayout.LayoutParams(0,dp(42),1)); Button ca=btn("Alles kopieren",Color.rgb(232,240,244),NAVY); ca.setOnClickListener(v->{String x=CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE; String a=amount(amount.getText().toString()); if(a!=null&&!a.isBlank())x+="\nCHF "+a; copy("PFVR Zahlung",x,"Zahlungsdaten kopiert");}); LinearLayout.LayoutParams cap=new LinearLayout.LayoutParams(0,dp(42),1); cap.setMargins(dp(8),0,0,0); copies.addView(ca,cap);
         LinearLayout future=card(); future.setOrientation(LinearLayout.VERTICAL); b.addView(future,margin(-1,-2,0,0,0,8)); future.addView(txt("Preisliste",16,TEXT,true)); future.addView(txt("Noch nicht hinterlegt. Nach dem Foto der Preise ergänzen wir Artikel, Mengen und automatische Summe; der freie Betrag bleibt.",13,MUTED,false));
         return scroll;
+    }
+
+    private void openTwintDirect(EditText amountInput){
+        String a=amount(amountInput==null?null:amountInput.getText().toString());
+        if(a==null){Toast.makeText(this,"Bitte einen gültigen CHF-Betrag eingeben oder das Feld leer lassen.",Toast.LENGTH_LONG).show();return;}
+        if(!a.isBlank())copy("PFVR TWINT-Betrag",a,"CHF "+a+" kopiert – auf der PFVR-Seite eintragen.");
+        external(TWINT_DIRECT_URL);
     }
 
     private void showPaymentQr(EditText amountInput) {
@@ -794,7 +1465,6 @@ public class MainActivity extends Activity {
         b.addView(action("Vorstand","Ansprechpersonen und Funktionen","Öffnen",v->openInApp(BOARD,"Vorstand")));
         b.addView(action("Jahresprogramm","Originalseite und Kalenderhinweise","Öffnen",v->openInApp(PROGRAM,"Jahresprogramm")));
         b.addView(action("News-Archiv","Beiträge auf pfvr.ch","Öffnen",v->openInApp(NEWS,"News-Archiv")));
-        b.addView(action("Interner Bereich","An-/Abmeldung und interne PFVR-Seite","Öffnen",v->navigate(Screen.INTERNAL)));
 
         section(b,"Kontakt",null); b.addView(contact("Depot","Rheinweg 42\n4310 Rheinfelden","Route",v->openMap())); b.addView(contact("Telefon","076 209 18 96","Anrufen",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))))); b.addView(contact("E-Mail","info@pfvr.ch","Schreiben",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))))); b.addView(contact("Kontaktseite","pfvr.ch/kontakt","Öffnen",v->openInApp(CONTACT,"Kontakt"))); return scroll;
     }
@@ -819,7 +1489,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
-            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();String h=u.getHost()==null?"":u.getHost().toLowerCase(Locale.ROOT);if(h.endsWith("pfvr.ch"))return false;external(u.toString());return true;}
+            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();if("https".equalsIgnoreCase(u.getScheme())&&AppLinkPolicy.isInternalPfvrHost(u.getHost()))return false;external(u.toString());return true;}
             @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false))internalSkin(v);}
             @Override public void onReceivedError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceError e){super.onReceivedError(v,r,e);if(r.isForMainFrame())showInternalLoadError(v,"Ladefehler "+e.getErrorCode()+": "+String.valueOf(e.getDescription()));}
             @Override public void onReceivedHttpError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceResponse e){super.onReceivedHttpError(v,r,e);if(r.isForMainFrame()&&e.getStatusCode()>=400)showInternalLoadError(v,"PFVR antwortet mit HTTP "+e.getStatusCode());}
@@ -861,7 +1531,40 @@ public class MainActivity extends Activity {
     private boolean validInternal(String x){if(x==null||x.isBlank())return false;try{Uri u=Uri.parse(x);return "https".equalsIgnoreCase(u.getScheme())&&"intern.pfvr.ch".equalsIgnoreCase(u.getHost())&&"abmeldung".equals(u.getQueryParameter("what"));}catch(Exception e){return false;}}
 
     private View webScreen(String url,boolean simplify){LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);ProgressBar p=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);p.setMax(100);root.addView(p,new LinearLayout.LayoutParams(-1,dp(2)));WebView w=web(simplify);activeWebView=w;w.setWebChromeClient(new WebChromeClient(){@Override public void onProgressChanged(WebView v,int n){p.setProgress(n);p.setVisibility(n>=100?View.GONE:View.VISIBLE);}});root.addView(w,new LinearLayout.LayoutParams(-1,0,1));w.loadUrl(url);return root;}
-    private WebView web(boolean simplify){WebView w=new WebView(this);w.setBackgroundColor(simplify?Color.WHITE:themeBg(Color.WHITE));WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setDatabaseEnabled(true);s.setCacheMode(WebSettings.LOAD_DEFAULT);s.setLoadsImagesAutomatically(true);s.setLoadWithOverviewMode(true);s.setUseWideViewPort(true);s.setSupportZoom(false);s.setAllowFileAccess(false);s.setAllowContentAccess(true);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);String ua=s.getUserAgentString();if(ua!=null)s.setUserAgentString(ua.replace("; wv","").replace("Version/4.0 ",""));CookieManager.getInstance().setAcceptCookie(true);CookieManager.getInstance().setAcceptThirdPartyCookies(w,true);w.setWebViewClient(new WebViewClient(){@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();String h=u.getHost()==null?"":u.getHost().toLowerCase(Locale.ROOT);if(h.endsWith("pfvr.ch")||h.endsWith("google.com"))return false;external(u.toString());return true;}@Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(simplify&&u.contains("pfvr.ch"))skin(v);}});return w;}
+    private WebView web(boolean simplify){
+        WebView web=new WebView(this);
+        web.setBackgroundColor(simplify?Color.WHITE:themeBg(Color.WHITE));
+        WebSettings settings=web.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(false);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setSupportZoom(false);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setSafeBrowsingEnabled(true);
+        String userAgent=settings.getUserAgentString();
+        if(userAgent!=null)settings.setUserAgentString(userAgent.replace("; wv","").replace("Version/4.0 ",""));
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
+        web.setWebViewClient(new WebViewClient(){
+            @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
+                Uri uri=request.getUrl();
+                if("https".equalsIgnoreCase(uri.getScheme())&&AppLinkPolicy.mayStayInPublicWebView(uri.getHost()))return false;
+                external(uri.toString());
+                return true;
+            }
+            @Override public void onPageFinished(WebView view,String url){
+                super.onPageFinished(view,url);
+                try{if(simplify&&AppLinkPolicy.isPfvrHost(Uri.parse(url).getHost()))skin(view);}catch(Exception ignored){}
+            }
+        });
+        return web;
+    }
     private void skin(WebView v){
         // Keep embedded PFVR content in a controlled light presentation. The native shell may stay dark,
         // but forcing arbitrary WordPress/PDF content dark caused unreadable white-on-white combinations.
@@ -872,18 +1575,212 @@ public class MainActivity extends Activity {
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
     private String calendarStatus(){if(eventsUpdated<=0)return eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.";ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?"heute "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return "Lokal gespeichert · zuletzt aktualisiert "+d+" Uhr";}
-    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.1.1");c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
+    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
-    private List<Event> parseIcs(String raw){List<String> lines=unfold(raw);List<Event> base=new ArrayList<>();Event e=null;for(String line:lines){if(line.equals("BEGIN:VEVENT"))e=new Event();else if(line.equals("END:VEVENT")&&e!=null){if(e.start!=null&&e.title!=null&&!e.title.isBlank())base.add(e);e=null;}else if(e!=null){int p=line.indexOf(':');if(p<0)continue;String k=line.substring(0,p),v=unesc(line.substring(p+1));if(k.startsWith("SUMMARY"))e.title=v;else if(k.startsWith("LOCATION"))e.location=v;else if(k.startsWith("DTSTART")){ParsedDate d=date(k,v);if(d!=null){e.start=d.z;e.allDay=d.allDay;}}else if(k.startsWith("DTEND")){ParsedDate d=date(k,v);if(d!=null)e.end=d.z;}else if(k.startsWith("RRULE"))e.rule=v;else if(k.startsWith("EXDATE"))for(String x:v.split(",")){ParsedDate d=date(k,x);if(d!=null)e.ex.add(d.z.toLocalDate());}}}ZonedDateTime now=ZonedDateTime.now(ZoneId.of("Europe/Zurich")).minusHours(6),limit=now.plusMonths(14);List<Event> out=new ArrayList<>();for(Event x:base)expand(x,limit,out);out.removeIf(x->x.start.isBefore(now)||x.start.isAfter(limit));out.sort(Comparator.comparing(x->x.start));Set<String> seen=new LinkedHashSet<>();List<Event> unique=new ArrayList<>();for(Event x:out){String id=x.start+"|"+x.title;if(seen.add(id))unique.add(x);}return unique;}
-    private List<String> unfold(String raw){List<String> out=new ArrayList<>();for(String l:raw.replace("\r\n","\n").split("\n")){if((l.startsWith(" ")||l.startsWith("\t"))&&!out.isEmpty())out.set(out.size()-1,out.get(out.size()-1)+l.substring(1));else out.add(l);}return out;}
-    private String unesc(String s){return s.replace("\\n","\n").replace("\\N","\n").replace("\\,",",").replace("\\;",";").replace("\\\\","\\");}
-    private ParsedDate date(String key,String v){try{ZoneId z=ZoneId.of("Europe/Zurich");if(key.contains("VALUE=DATE")||v.length()==8)return new ParsedDate(LocalDate.parse(v,DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay(z),true);if(v.endsWith("Z"))return new ParsedDate(ZonedDateTime.parse(v,DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmssX")).withZoneSameInstant(z),false);String tz=null;int t=key.indexOf("TZID=");if(t>=0){tz=key.substring(t+5);int semi=tz.indexOf(';');if(semi>=0)tz=tz.substring(0,semi);}ZoneId zone=tz==null?z:ZoneId.of(tz);DateTimeFormatter f=v.length()>=15?DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"):DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmm");return new ParsedDate(LocalDateTime.parse(v,f).atZone(zone).withZoneSameInstant(z),false);}catch(Exception ex){return null;}}
-    private void expand(Event e,ZonedDateTime limit,List<Event> out){if(e.rule==null||e.rule.isBlank()){out.add(e.copy(e.start));return;}Map<String,String> r=new HashMap<>();for(String p:e.rule.split(";")){int q=p.indexOf('=');if(q>0)r.put(p.substring(0,q),p.substring(q+1));}String f=r.getOrDefault("FREQ","");int interval=intval(r.get("INTERVAL"),1),count=intval(r.get("COUNT"),10000),made=0;ZonedDateTime until=limit;if(r.get("UNTIL")!=null){ParsedDate d=date("DTSTART",r.get("UNTIL"));if(d!=null&&d.z.isBefore(until))until=d.z;}if("WEEKLY".equals(f)){List<DayOfWeek> days=days(r.get("BYDAY"));if(days.isEmpty())days.add(e.start.getDayOfWeek());LocalDate week=e.start.toLocalDate().minusDays(e.start.getDayOfWeek().getValue()-1L);for(int w=0;made<count;w+=interval){LocalDate base=week.plusWeeks(w);if(base.atStartOfDay(e.start.getZone()).isAfter(until))break;for(DayOfWeek d:days){ZonedDateTime o=ZonedDateTime.of(base.plusDays(d.getValue()-1L),e.start.toLocalTime(),e.start.getZone());if(o.isBefore(e.start)||o.isAfter(until))continue;made++;if(!e.ex.contains(o.toLocalDate()))out.add(e.copy(o));if(made>=count)break;}}}else{ZonedDateTime o=e.start;while(made<count&&!o.isAfter(until)){made++;if(!e.ex.contains(o.toLocalDate()))out.add(e.copy(o));if("DAILY".equals(f))o=o.plusDays(interval);else if("MONTHLY".equals(f))o=o.plusMonths(interval);else if("YEARLY".equals(f))o=o.plusYears(interval);else break;}}}
-    private int intval(String x,int d){try{return x==null?d:Integer.parseInt(x);}catch(Exception e){return d;}}
-    private List<DayOfWeek> days(String s){List<DayOfWeek> x=new ArrayList<>();if(s==null)return x;Map<String,DayOfWeek> m=Map.of("MO",DayOfWeek.MONDAY,"TU",DayOfWeek.TUESDAY,"WE",DayOfWeek.WEDNESDAY,"TH",DayOfWeek.THURSDAY,"FR",DayOfWeek.FRIDAY,"SA",DayOfWeek.SATURDAY,"SU",DayOfWeek.SUNDAY);for(String d:s.split(","))if(m.containsKey(d))x.add(m.get(d));x.sort(Comparator.comparingInt(DayOfWeek::getValue));return x;}
+    private List<Event> parseIcs(String raw){
+        List<String> lines=unfold(raw);
+        List<Event> parsed=new ArrayList<>();
+        Event currentEvent=null;
+        for(String line:lines){
+            if("BEGIN:VEVENT".equals(line)){
+                currentEvent=new Event();
+                continue;
+            }
+            if("END:VEVENT".equals(line)){
+                if(currentEvent!=null&&(currentEvent.start!=null||currentEvent.recurrenceId!=null)){
+                    if(currentEvent.start==null)currentEvent.start=currentEvent.recurrenceId;
+                    parsed.add(currentEvent);
+                }
+                currentEvent=null;
+                continue;
+            }
+            if(currentEvent==null)continue;
+            int separator=line.indexOf(':');
+            if(separator<0)continue;
+            String key=line.substring(0,separator);
+            String value=unesc(line.substring(separator+1));
+            if(key.startsWith("SUMMARY"))currentEvent.title=value;
+            else if(key.startsWith("LOCATION"))currentEvent.location=value;
+            else if(key.startsWith("DESCRIPTION"))currentEvent.description=value;
+            else if(key.startsWith("STATUS"))currentEvent.status=value;
+            else if(key.startsWith("UID"))currentEvent.uid=value;
+            else if(key.startsWith("DTSTART")){
+                ParsedDate parsedDate=date(key,value);
+                if(parsedDate!=null){currentEvent.start=parsedDate.z;currentEvent.allDay=parsedDate.allDay;}
+            }else if(key.startsWith("DTEND")){
+                ParsedDate parsedDate=date(key,value);
+                if(parsedDate!=null)currentEvent.end=parsedDate.z;
+            }else if(key.startsWith("RECURRENCE-ID")){
+                ParsedDate parsedDate=date(key,value);
+                if(parsedDate!=null){currentEvent.recurrenceId=parsedDate.z;if(currentEvent.start==null)currentEvent.allDay=parsedDate.allDay;}
+            }else if(key.startsWith("RRULE"))currentEvent.rule=value;
+            else if(key.startsWith("EXDATE")){
+                for(String exception:value.split(",")){
+                    ParsedDate parsedDate=date(key,exception);
+                    if(parsedDate!=null)currentEvent.ex.add(parsedDate.z.toLocalDate());
+                }
+            }
+        }
+
+        ZoneId zone=ZoneId.of("Europe/Zurich");
+        ZonedDateTime now=ZonedDateTime.now(zone).minusHours(6);
+        ZonedDateTime limit=now.plusMonths(14);
+        Map<String,Event> mastersByUid=new HashMap<>();
+        List<Event> overrides=new ArrayList<>();
+        List<Event> expanded=new ArrayList<>();
+
+        for(Event event:parsed){
+            if(event.recurrenceId!=null){overrides.add(event);continue;}
+            if(event.uid!=null&&!event.uid.isBlank())mastersByUid.put(event.uid,event);
+            expand(event,limit,expanded);
+        }
+
+        for(Event override:overrides){
+            Event master=override.uid==null?null:mastersByUid.get(override.uid);
+            ZonedDateTime occurrence=override.recurrenceId!=null?override.recurrenceId:override.start;
+            expanded.removeIf(candidate->sameOccurrence(candidate,override.uid,occurrence));
+            Event replacement=materializeOverride(override,master);
+            if(replacement.start!=null)expanded.add(replacement);
+        }
+
+        expanded.removeIf(event->event.start==null||event.start.isAfter(limit)||eventEnd(event).isBefore(now));
+        expanded.sort(Comparator.comparing(event->event.start));
+
+        Map<String,Event> unique=new LinkedHashMap<>();
+        for(Event event:expanded){
+            if(event.title==null||event.title.isBlank())event.title="Vereinstermin";
+            String identity=(event.uid==null||event.uid.isBlank()?TrainingMatcher.normalize(event.title):event.uid)+"|"+event.start.toInstant();
+            Event previous=unique.get(identity);
+            if(previous==null||(!isCancelledEvent(previous)&&isCancelledEvent(event)))unique.put(identity,event);
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    private Event materializeOverride(Event override,Event master){
+        ZonedDateTime start=override.start!=null?override.start:override.recurrenceId;
+        Event result=override.copy(start);
+        result.rule=null;
+        if(master==null)return result;
+        if(result.title==null||result.title.isBlank())result.title=master.title;
+        if(result.location==null||result.location.isBlank())result.location=master.location;
+        if(result.description==null||result.description.isBlank())result.description=master.description;
+        if(result.status==null||result.status.isBlank())result.status=master.status;
+        if(result.uid==null||result.uid.isBlank())result.uid=master.uid;
+        if(override.start==null)result.allDay=master.allDay;
+        if(result.end==null&&result.start!=null&&master.end!=null&&master.start!=null){
+            result.end=result.start.plus(java.time.Duration.between(master.start,master.end));
+        }
+        return result;
+    }
+
+    private boolean sameOccurrence(Event candidate,String uid,ZonedDateTime occurrence){
+        if(candidate.start==null||occurrence==null)return false;
+        if(uid!=null&&!uid.isBlank()&&!uid.equals(candidate.uid))return false;
+        if(candidate.allDay)return candidate.start.toLocalDate().equals(occurrence.toLocalDate());
+        return Math.abs(java.time.Duration.between(candidate.start,occurrence).toMinutes())<1;
+    }
+
+    private ZonedDateTime eventEnd(Event event){
+        if(event.end!=null)return event.end;
+        return event.allDay?event.start.plusDays(1):event.start.plusHours(1);
+    }
+
+    private List<String> unfold(String raw){
+        List<String> out=new ArrayList<>();
+        for(String line:raw.replace("\r\n","\n").replace('\r','\n').split("\n")){
+            if((line.startsWith(" ")||line.startsWith("\t"))&&!out.isEmpty())out.set(out.size()-1,out.get(out.size()-1)+line.substring(1));
+            else out.add(line);
+        }
+        return out;
+    }
+
+    private String unesc(String value){
+        return value.replace("\\n","\n").replace("\\N","\n").replace("\\,",",").replace("\\;",";").replace("\\\\","\\");
+    }
+
+    private ParsedDate date(String key,String value){
+        try{
+            ZoneId local=ZoneId.of("Europe/Zurich");
+            if(key.contains("VALUE=DATE")||value.length()==8)return new ParsedDate(LocalDate.parse(value,DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay(local),true);
+            boolean utc=value.endsWith("Z");
+            String plain=utc?value.substring(0,value.length()-1):value;
+            DateTimeFormatter formatter=plain.length()>=15?DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"):DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmm");
+            LocalDateTime localDateTime=LocalDateTime.parse(plain,formatter);
+            if(utc)return new ParsedDate(localDateTime.atZone(ZoneId.of("UTC")).withZoneSameInstant(local),false);
+            String tz=null;
+            int tzPosition=key.indexOf("TZID=");
+            if(tzPosition>=0){tz=key.substring(tzPosition+5);int semicolon=tz.indexOf(';');if(semicolon>=0)tz=tz.substring(0,semicolon);tz=tz.replace("\"","");}
+            ZoneId zone=tz==null?local:ZoneId.of(tz);
+            return new ParsedDate(localDateTime.atZone(zone).withZoneSameInstant(local),false);
+        }catch(Exception ignored){return null;}
+    }
+
+    private void expand(Event event,ZonedDateTime limit,List<Event> out){
+        if(event.start==null)return;
+        if(event.rule==null||event.rule.isBlank()){
+            out.add(event.copy(event.start));
+            return;
+        }
+        Map<String,String> rule=new HashMap<>();
+        for(String part:event.rule.split(";")){
+            int separator=part.indexOf('=');
+            if(separator>0)rule.put(part.substring(0,separator),part.substring(separator+1));
+        }
+        String frequency=rule.getOrDefault("FREQ","");
+        int interval=intval(rule.get("INTERVAL"),1);
+        int count=intval(rule.get("COUNT"),10000);
+        int made=0;
+        ZonedDateTime until=limit;
+        if(rule.get("UNTIL")!=null){
+            ParsedDate parsedUntil=date("DTSTART",rule.get("UNTIL"));
+            if(parsedUntil!=null&&parsedUntil.z.isBefore(until))until=parsedUntil.z;
+        }
+        if("WEEKLY".equals(frequency)){
+            List<DayOfWeek> weekdays=days(rule.get("BYDAY"));
+            if(weekdays.isEmpty())weekdays.add(event.start.getDayOfWeek());
+            LocalDate week=event.start.toLocalDate().minusDays(event.start.getDayOfWeek().getValue()-1L);
+            for(int weekOffset=0;made<count;weekOffset+=interval){
+                LocalDate base=week.plusWeeks(weekOffset);
+                if(base.atStartOfDay(event.start.getZone()).isAfter(until))break;
+                for(DayOfWeek weekday:weekdays){
+                    ZonedDateTime occurrence=ZonedDateTime.of(base.plusDays(weekday.getValue()-1L),event.start.toLocalTime(),event.start.getZone());
+                    if(occurrence.isBefore(event.start)||occurrence.isAfter(until))continue;
+                    made++;
+                    if(!event.ex.contains(occurrence.toLocalDate()))out.add(event.copy(occurrence));
+                    if(made>=count)break;
+                }
+            }
+            return;
+        }
+        ZonedDateTime occurrence=event.start;
+        while(made<count&&!occurrence.isAfter(until)){
+            made++;
+            if(!event.ex.contains(occurrence.toLocalDate()))out.add(event.copy(occurrence));
+            if("DAILY".equals(frequency))occurrence=occurrence.plusDays(interval);
+            else if("MONTHLY".equals(frequency))occurrence=occurrence.plusMonths(interval);
+            else if("YEARLY".equals(frequency))occurrence=occurrence.plusYears(interval);
+            else break;
+        }
+    }
+
+    private int intval(String value,int fallback){
+        try{return value==null?fallback:Integer.parseInt(value);}catch(Exception ignored){return fallback;}
+    }
+
+    private List<DayOfWeek> days(String value){
+        List<DayOfWeek> out=new ArrayList<>();
+        if(value==null)return out;
+        Map<String,DayOfWeek> map=Map.of("MO",DayOfWeek.MONDAY,"TU",DayOfWeek.TUESDAY,"WE",DayOfWeek.WEDNESDAY,"TH",DayOfWeek.THURSDAY,"FR",DayOfWeek.FRIDAY,"SA",DayOfWeek.SATURDAY,"SU",DayOfWeek.SUNDAY);
+        for(String day:value.split(",")){
+            String plain=day.replaceAll("^[+-]?\\d+","");
+            if(map.containsKey(plain))out.add(map.get(plain));
+        }
+        out.sort(Comparator.comparingInt(DayOfWeek::getValue));
+        return out;
+    }
 
     private LinearLayout body(){LinearLayout b=new LinearLayout(this);b.setOrientation(LinearLayout.VERTICAL);b.setPadding(dp(14),dp(12),dp(14),dp(28));b.setBackgroundColor(themeBg(SURFACE));return b;}
-    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setPadding(dp(16),dp(14),dp(16),dp(14));c.setBackground(round(Color.WHITE,18));return c;}
+    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setPadding(dp(16),dp(14),dp(16),dp(14));c.setBackground(round(Color.WHITE,18));c.setElevation(dp(1));return c;}
     private View action(String title,String sub,String go,View.OnClickListener l){LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);LinearLayout g=new LinearLayout(this);g.setOrientation(LinearLayout.VERTICAL);g.addView(txt(title,16,TEXT,true));g.addView(txt(sub,13,MUTED,false));c.addView(g,new LinearLayout.LayoutParams(0,-2,1));TextView a=txt(go+"  →",13,WATER,true);a.setGravity(Gravity.CENTER_VERTICAL|Gravity.END);c.addView(a,new LinearLayout.LayoutParams(-2,dp(48)));c.setOnClickListener(l);c.setLayoutParams(margin(-1,-2,0,0,0,9));return c;}
     private View contact(String title,String detail,String action,View.OnClickListener l){LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);LinearLayout g=new LinearLayout(this);g.setOrientation(LinearLayout.VERTICAL);g.addView(txt(title,14,TEXT,true));g.addView(txt(detail,14,MUTED,false));c.addView(g,new LinearLayout.LayoutParams(0,-2,1));Button b=btn(action,Color.rgb(232,240,244),NAVY);b.setOnClickListener(l);c.addView(b,new LinearLayout.LayoutParams(-2,dp(40)));c.setLayoutParams(margin(-1,-2,0,0,0,9));return c;}
     private void section(LinearLayout p,String title,String sub){TextView h=txt(title,20,TEXT,true);h.setPadding(dp(2),dp(2),0,sub==null?dp(10):dp(2));p.addView(h);if(sub!=null){TextView s=txt(sub,12,MUTED,false);s.setPadding(dp(2),0,0,dp(10));p.addView(s);}}
@@ -904,41 +1801,180 @@ public class MainActivity extends Activity {
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}
     private static class RiverStatus {final String label;final int bg,fg;RiverStatus(String l,int b,int f){label=l;bg=b;fg=f;}}
-    private class DualTrendView extends View {
-        private final TrendSeries leftSeries,rightSeries; private final String leftUnit,rightUnit; private final int leftColor,rightColor;
-        private final Paint line=new Paint(Paint.ANTI_ALIAS_FLAG),grid=new Paint(Paint.ANTI_ALIAS_FLAG),label=new Paint(Paint.ANTI_ALIAS_FLAG),axis=new Paint(Paint.ANTI_ALIAS_FLAG);
-        DualTrendView(Context c,TrendSeries l,TrendSeries r,String lu,String ru,int lc,int rc){super(c);leftSeries=l;rightSeries=r;leftUnit=lu;rightUnit=ru;leftColor=lc;rightColor=rc;line.setStrokeWidth(dp(2));line.setStyle(Paint.Style.STROKE);grid.setStrokeWidth(dp(1));label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);axis.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);axis.setTypeface(Typeface.DEFAULT_BOLD);}
-        @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);if(leftSeries.values.size()<2||rightSeries.values.size()<2)return;float w=getWidth(),h=getHeight(),left=dp(50),right=w-dp(54),top=dp(20),bottom=h-dp(28);long minT=Math.min(leftSeries.times.get(0),rightSeries.times.get(0)),maxT=Math.max(leftSeries.times.get(leftSeries.times.size()-1),rightSeries.times.get(rightSeries.times.size()-1));if(maxT<=minT)maxT=minT+1;double[] lr=range(leftSeries.values),rr=range(rightSeries.values);grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));label.setColor(themeText(MUTED));axis.setColor(themeText(MUTED));for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}
-            ZoneId zone=ZoneId.of("Europe/Zurich");ZonedDateTime firstZ=java.time.Instant.ofEpochMilli(minT).atZone(zone),lastZ=java.time.Instant.ofEpochMilli(maxT).atZone(zone);LocalDate tick=firstZ.toLocalDate().plusDays(1);DateTimeFormatter df=DateTimeFormatter.ofPattern("EE",Locale.GERMAN);while(!tick.isAfter(lastZ.toLocalDate())){long tt=tick.atStartOfDay(zone).toInstant().toEpochMilli();if(tt>=minT&&tt<=maxT){float x=left+(right-left)*(tt-minT)/(float)(maxT-minT);canvas.drawLine(x,top,x,bottom,grid);String lab=tick.format(df);canvas.drawText(lab,x-label.measureText(lab)/2f,h-dp(5),label);}tick=tick.plusDays(1);}
-            drawSeries(canvas,leftSeries,leftColor,left,right,top,bottom,minT,maxT,lr[0],lr[1]);drawSeries(canvas,rightSeries,rightColor,left,right,top,bottom,minT,maxT,rr[0],rr[1]);canvas.drawText(fmt(lr[1]),dp(2),top+dp(4),label);canvas.drawText(fmt(lr[0]),dp(2),bottom,label);String rmax=fmt(rr[1]),rmin=fmt(rr[0]);canvas.drawText(rmax,w-dp(2)-label.measureText(rmax),top+dp(4),label);canvas.drawText(rmin,w-dp(2)-label.measureText(rmin),bottom,label);canvas.drawText(leftUnit,dp(2),dp(10),axis);canvas.drawText(rightUnit,w-dp(2)-axis.measureText(rightUnit),dp(10),axis);}
-        private void drawSeries(Canvas c,TrendSeries s,int color,float left,float right,float top,float bottom,long minT,long maxT,double min,double max){Path p=new Path();for(int i=0;i<s.values.size();i++){float x=left+(right-left)*(s.times.get(i)-minT)/(float)(maxT-minT);float y=(float)(bottom-(s.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)p.moveTo(x,y);else p.lineTo(x,y);}line.setColor(color);c.drawPath(p,line);}
-        private double[] range(List<Double> values){double min=Double.POSITIVE_INFINITY,max=Double.NEGATIVE_INFINITY;for(double v:values){min=Math.min(min,v);max=Math.max(max,v);}if(!(max>min)){max=min+1;}double pad=(max-min)*0.06;return new double[]{min-pad,max+pad};}
-        private String fmt(double v){return Math.abs(v)>=100?String.format(Locale.GERMAN,"%.0f",v):String.format(Locale.GERMAN,"%.2f",v);}
+
+    private String axisLabel(double value,double step){
+        double absolute=Math.abs(step);
+        if(absolute>=1)return String.format(Locale.GERMAN,"%.0f",value);
+        if(absolute>=0.1)return String.format(Locale.GERMAN,"%.1f",value);
+        if(absolute>=0.01)return String.format(Locale.GERMAN,"%.2f",value);
+        return String.format(Locale.GERMAN,"%.3f",value);
     }
-    private class TrendView extends View {
-        private final TrendSeries series; private final String unit; private final int lineColor;
-        private final Paint line=new Paint(Paint.ANTI_ALIAS_FLAG), grid=new Paint(Paint.ANTI_ALIAS_FLAG), label=new Paint(Paint.ANTI_ALIAS_FLAG), axis=new Paint(Paint.ANTI_ALIAS_FLAG);
-        TrendView(Context c,TrendSeries s,String u,int color){super(c);series=s;unit=u;lineColor=color;line.setStrokeWidth(dp(2));line.setStyle(Paint.Style.STROKE);grid.setStrokeWidth(dp(1));label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);axis.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);axis.setTypeface(Typeface.DEFAULT_BOLD);setPadding(0,0,0,0);}
-        @Override protected void onDraw(Canvas canvas){
-            super.onDraw(canvas);if(series.values.size()<2||series.times.size()!=series.values.size())return;
-            float w=getWidth(),h=getHeight(),left=dp(50),right=w-dp(7),top=dp(18),bottom=h-dp(30);
-            double min=Double.POSITIVE_INFINITY,max=Double.NEGATIVE_INFINITY;for(double v:series.values){min=Math.min(min,v);max=Math.max(max,v);}if(!(max>min)){max=min+1;}
-            long minT=series.times.get(0),maxT=series.times.get(series.times.size()-1);if(maxT<=minT)maxT=minT+1;
-            grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));
-            label.setColor(themeText(MUTED));axis.setColor(themeText(MUTED));
-            for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}
-            ZoneId zone=ZoneId.of("Europe/Zurich");
-            ZonedDateTime firstZ=java.time.Instant.ofEpochMilli(minT).atZone(zone),lastZ=java.time.Instant.ofEpochMilli(maxT).atZone(zone);
-            LocalDate tickDay=firstZ.toLocalDate().plusDays(1);DateTimeFormatter dayFmt=DateTimeFormatter.ofPattern("EE",Locale.GERMAN);
-            while(!tickDay.isAfter(lastZ.toLocalDate())){long tt=tickDay.atStartOfDay(zone).toInstant().toEpochMilli();if(tt>=minT&&tt<=maxT){float x=left+(right-left)*(tt-minT)/(float)(maxT-minT);canvas.drawLine(x,top,x,bottom,grid);String lab=tickDay.format(dayFmt);float tw=label.measureText(lab);canvas.drawText(lab,x-tw/2f,h-dp(6),label);}tickDay=tickDay.plusDays(1);}
-            Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*(series.times.get(i)-minT)/(float)(maxT-minT);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);
-            canvas.drawText(fmtTrend(max),dp(2),top+dp(4),label);canvas.drawText(fmtTrend(min),dp(2),bottom,label);canvas.drawText(unit,dp(2),dp(10),axis);
-            String xLabel="7 Tage · Stundenmittel";float xw=axis.measureText(xLabel);canvas.drawText(xLabel,left+(right-left-xw)/2f,dp(11),axis);
+
+    private class RiverTrendView extends View {
+        private final TrendSeries series;
+        private final RiverMetric metric;
+        private final RiverRange range;
+        private final Paint grid=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint label=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint line=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fill=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint point=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint threshold=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tooltip=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tooltipText=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private int selectedIndex=-1;
+
+        RiverTrendView(Context context,TrendSeries series,RiverMetric metric,RiverRange range){
+            super(context);
+            this.series=series;this.metric=metric;this.range=range;
+            setClickable(true);setFocusable(true);
+            line.setStyle(Paint.Style.STROKE);line.setStrokeWidth(dp(2.4f));line.setStrokeCap(Paint.Cap.ROUND);line.setStrokeJoin(Paint.Join.ROUND);
+            fill.setStyle(Paint.Style.FILL);point.setStyle(Paint.Style.FILL);grid.setStrokeWidth(dp(1));
+            threshold.setStyle(Paint.Style.STROKE);threshold.setStrokeWidth(dp(1.3f));threshold.setPathEffect(new DashPathEffect(new float[]{dp(6),dp(4)},0));
+            label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);
+            tooltipText.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);tooltipText.setTypeface(Typeface.DEFAULT_BOLD);
+            tooltip.setStyle(Paint.Style.FILL);
+            setContentDescription(metric.label+" der letzten "+range.label);
         }
-        private String fmtTrend(double v){return Math.abs(v)>=100?String.format(Locale.GERMAN,"%.1f",v):String.format(Locale.GERMAN,"%.2f",v);}
+
+        @Override public boolean performClick(){super.performClick();return true;}
+
+        @Override public boolean onTouchEvent(MotionEvent event){
+            if(series.times.size()<2)return super.onTouchEvent(event);
+            if(event.getAction()==MotionEvent.ACTION_DOWN||event.getAction()==MotionEvent.ACTION_MOVE||event.getAction()==MotionEvent.ACTION_UP){
+                float left=dp(52),right=getWidth()-dp(10);
+                float x=Math.max(left,Math.min(right,event.getX()));
+                long minTime=series.times.get(0),maxTime=series.times.get(series.times.size()-1);
+                long target=minTime+Math.round((maxTime-minTime)*(x-left)/Math.max(1f,right-left));
+                selectedIndex=HydroMath.nearestIndex(series.times,target);
+                invalidate();
+                if(event.getAction()==MotionEvent.ACTION_UP)performClick();
+                return true;
+            }
+            if(event.getAction()==MotionEvent.ACTION_CANCEL){selectedIndex=-1;invalidate();return true;}
+            return super.onTouchEvent(event);
+        }
+
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            if(series.values.size()<2||series.times.size()!=series.values.size())return;
+            float width=getWidth(),height=getHeight();
+            float left=dp(52),right=width-dp(10),top=dp(17),bottom=height-dp(30);
+            long minTime=series.times.get(0),maxTime=series.times.get(series.times.size()-1);
+            if(maxTime<=minTime)maxTime=minTime+1;
+            HydroMath.AxisScale scale=HydroMath.niceAxis(series.values);
+
+            grid.setColor(darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234));
+            label.setColor(themeText(MUTED));
+            for(int index=0;index<=4;index++){
+                float y=top+(bottom-top)*index/4f;
+                canvas.drawLine(left,y,right,y,grid);
+                double axisValue=scale.max-(scale.max-scale.min)*index/4d;
+                String axisText=axisLabel(axisValue,scale.step);
+                canvas.drawText(axisText,left-dp(5)-label.measureText(axisText),y+dp(3),label);
+            }
+            drawTimeGrid(canvas,left,right,top,bottom,minTime,maxTime);
+            if(metric==RiverMetric.FLOW)drawFlowThresholds(canvas,scale,left,right,top,bottom);
+
+            Path path=new Path();
+            for(int index=0;index<series.values.size();index++){
+                float x=seriesX(index,left,right,minTime,maxTime);
+                float y=seriesY(series.values.get(index),scale,top,bottom);
+                if(index==0)path.moveTo(x,y);else path.lineTo(x,y);
+            }
+            int actual=themeText(metric.color);
+            Path area=new Path(path);
+            area.lineTo(right,bottom);area.lineTo(left,bottom);area.close();
+            fill.setColor(Color.argb(darkMode?34:24,Color.red(actual),Color.green(actual),Color.blue(actual)));
+            canvas.drawPath(area,fill);
+            line.setColor(actual);canvas.drawPath(path,line);
+
+            int last=series.values.size()-1;
+            float lastX=seriesX(last,left,right,minTime,maxTime),lastY=seriesY(series.values.get(last),scale,top,bottom);
+            point.setColor(actual);canvas.drawCircle(lastX,lastY,dp(3.5f),point);
+            point.setStyle(Paint.Style.STROKE);point.setStrokeWidth(dp(2));point.setColor(themeBg(Color.WHITE));canvas.drawCircle(lastX,lastY,dp(5f),point);point.setStyle(Paint.Style.FILL);
+            if(selectedIndex>=0&&selectedIndex<series.values.size())drawSelection(canvas,scale,left,right,top,bottom,minTime,maxTime,actual);
+        }
+
+        private float seriesX(int index,float left,float right,long minTime,long maxTime){return left+(right-left)*(series.times.get(index)-minTime)/(float)(maxTime-minTime);}
+        private float seriesY(double value,HydroMath.AxisScale scale,float top,float bottom){return (float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));}
+
+        private void drawTimeGrid(Canvas canvas,float left,float right,float top,float bottom,long minTime,long maxTime){
+            int intervals=range==RiverRange.HOUR?3:4;
+            ZoneId zone=ZoneId.of("Europe/Zurich");
+            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
+            for(int index=0;index<=intervals;index++){
+                float fraction=index/(float)intervals;
+                float x=left+(right-left)*fraction;
+                if(index>0&&index<intervals)canvas.drawLine(x,top,x,bottom,grid);
+                long timestamp=minTime+Math.round((maxTime-minTime)*fraction);
+                String value=java.time.Instant.ofEpochMilli(timestamp).atZone(zone).format(formatter);
+                float textWidth=label.measureText(value);
+                float textX=Math.max(left,Math.min(right-textWidth,x-textWidth/2f));
+                canvas.drawText(value,textX,bottom+dp(18),label);
+            }
+        }
+
+        private void drawFlowThresholds(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom){
+            double[] values={riverLow(),riverWarn(),riverAlarm()};
+            String[] names={"Niedrig","Warnung","Alarm"};
+            int[] colors={STATUS_LOW,STATUS_WARN,STATUS_ALARM};
+            double epsilon=Math.max(1e-9,scale.step*1e-6);
+            for(int index=0;index<values.length;index++){
+                double value=values[index];
+                if(value<scale.min-epsilon||value>scale.max+epsilon)continue;
+                float y=seriesY(value,scale,top,bottom);
+                int color=statusTextColor(colors[index]);
+                threshold.setColor(color);canvas.drawLine(left,y,right,y,threshold);
+                String text=names[index]+" "+String.format(Locale.GERMAN,"%.0f",value);
+                tooltipText.setColor(color);
+                float textWidth=tooltipText.measureText(text);
+                float textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
+                float baseline=Math.max(top+textHeight+dp(2),Math.min(bottom-dp(2),y-dp(2)));
+                RectF box=new RectF(right-textWidth-dp(12),baseline-textHeight-dp(5),right,baseline+dp(3));
+                tooltip.setColor(themeBg(Color.WHITE));canvas.drawRoundRect(box,dp(4),dp(4),tooltip);
+                canvas.drawText(text,box.left+dp(6),baseline,tooltipText);
+            }
+        }
+
+        private void drawSelection(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom,long minTime,long maxTime,int color){
+            float x=seriesX(selectedIndex,left,right,minTime,maxTime),y=seriesY(series.values.get(selectedIndex),scale,top,bottom);
+            Paint crosshair=new Paint(Paint.ANTI_ALIAS_FLAG);
+            int muted=themeText(MUTED);
+            crosshair.setColor(Color.argb(darkMode?150:105,Color.red(muted),Color.green(muted),Color.blue(muted)));crosshair.setStrokeWidth(dp(1));
+            canvas.drawLine(x,top,x,bottom,crosshair);
+            point.setColor(color);canvas.drawCircle(x,y,dp(5),point);
+            point.setStyle(Paint.Style.STROKE);point.setStrokeWidth(dp(2));point.setColor(themeBg(Color.WHITE));canvas.drawCircle(x,y,dp(7),point);point.setStyle(Paint.Style.FILL);
+
+            ZonedDateTime timestamp=java.time.Instant.ofEpochMilli(series.times.get(selectedIndex)).atZone(ZoneId.of("Europe/Zurich"));
+            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.MM. · HH:mm",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
+            String text=timestamp.format(formatter)+" · "+formatMetric(metric,series.values.get(selectedIndex))+" "+metric.unit;
+            tooltipText.setColor(darkMode?DARK_TEXT:Color.WHITE);
+            float textWidth=tooltipText.measureText(text),textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
+            float boxWidth=textWidth+dp(16),boxLeft=Math.max(left,Math.min(right-boxWidth,x-boxWidth/2f));
+            RectF box=new RectF(boxLeft,top+dp(4),boxLeft+boxWidth,top+textHeight+dp(14));
+            tooltip.setColor(darkMode?DARK_SOFT:NAVY);canvas.drawRoundRect(box,dp(8),dp(8),tooltip);
+            canvas.drawText(text,box.left+dp(8),box.bottom-dp(6),tooltipText);
+            setContentDescription(metric.label+" "+text);
+        }
     }
 
     private static class AppChoice {final String label,pkg;AppChoice(String l,String p){label=l;pkg=p;}}
     private static class ParsedDate {final ZonedDateTime z;final boolean allDay;ParsedDate(ZonedDateTime z,boolean a){this.z=z;allDay=a;}}
-    private static class Event {String title,location,rule;ZonedDateTime start,end;boolean allDay;Set<LocalDate> ex=new LinkedHashSet<>();Event copy(ZonedDateTime s){Event x=new Event();x.title=title;x.location=location;x.start=s;x.allDay=allDay;if(end!=null&&start!=null)x.end=s.plus(java.time.Duration.between(start,end));return x;}}
+    private static class TrainingSlot {
+        final ZonedDateTime start,end;final boolean fromCalendar;final String title;
+        TrainingSlot(ZonedDateTime start,ZonedDateTime end,boolean fromCalendar,String title){this.start=start;this.end=end;this.fromCalendar=fromCalendar;this.title=title;}
+    }
+    private static class Event {
+        String title,location,rule,description,status,uid;
+        ZonedDateTime start,end,recurrenceId;
+        boolean allDay;Set<LocalDate> ex=new LinkedHashSet<>();
+        Event copy(ZonedDateTime newStart){
+            Event copy=new Event();
+            copy.title=title;copy.location=location;copy.rule=rule;copy.description=description;copy.status=status;copy.uid=uid;
+            copy.start=newStart;copy.allDay=allDay;copy.recurrenceId=recurrenceId;copy.ex=new LinkedHashSet<>(ex);
+            if(end!=null&&start!=null&&newStart!=null)copy.end=newStart.plus(java.time.Duration.between(start,end));
+            return copy;
+        }
+    }
 }

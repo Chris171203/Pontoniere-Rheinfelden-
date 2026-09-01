@@ -12,8 +12,14 @@ android {
         applicationId 'ch.pfvr.app'
         minSdk 26
         targetSdk 36
-        versionCode 11
-        versionName '0.7.0'
+        versionCode 13
+        versionName '0.8.0'
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     if (uploadKeystore) {
@@ -45,4 +51,5 @@ android {
 dependencies {
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.work:work-runtime:2.11.2'
+    testImplementation 'junit:junit:4.13.2'
 }
