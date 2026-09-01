@@ -59,3 +59,53 @@ jobs:
             AGENTS.md
             tools
           if-no-files-found: error
+
+  probe-public-sources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch public PFVR calendar
+        run: |
+          mkdir -p probe
+          curl --fail --silent --show-error --location \
+            'https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics' \
+            -o probe/calendar.ics
+          grep -q 'BEGIN:VCALENDAR' probe/calendar.ics
+
+      - name: Fetch BAFU live, 10-minute and hourly samples
+        run: |
+          mkdir -p probe
+          FROM_24H=$(date -u -d '26 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          FROM_7D=$(date -u -d '8 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          cat > probe/query.graphql <<EOF
+          {
+            water {
+              observations {
+                data_live(where:{stationNo:{_eq:"2091"}}) {
+                  stationNo parameterName timestamp value releaseStatus
+                }
+                data_10min_mean(where:{station:{no:{_eq:"2091"}},timestamp:{_gte:"$FROM_24H"}}) {
+                  parameterName timestamp value unitSymbol
+                }
+                data_1hour_mean(where:{station:{no:{_eq:"2091"}},timestamp:{_gte:"$FROM_7D"}}) {
+                  parameterName timestamp value unitSymbol
+                }
+              }
+            }
+          }
+          EOF
+          jq -Rs '{query:.}' probe/query.graphql > probe/request.json
+          curl --fail --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data-binary @probe/request.json \
+            https://data.bafu.admin.ch/api \
+            -o probe/hydro.json
+          jq -e '.data.water.observations.data_live | length > 0' probe/hydro.json
+          jq -e '.data.water.observations.data_10min_mean | length > 0' probe/hydro.json
+          jq -e '.data.water.observations.data_1hour_mean | length > 0' probe/hydro.json
+          jq '{live:(.data.water.observations.data_live|length), ten_min:(.data.water.observations.data_10min_mean|length), hourly:(.data.water.observations.data_1hour_mean|length)}' probe/hydro.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-public-source-probe-0.8.0
+          path: probe
+          if-no-files-found: error
