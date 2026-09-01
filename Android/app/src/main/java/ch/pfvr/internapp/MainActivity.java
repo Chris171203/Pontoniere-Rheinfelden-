@@ -19,6 +19,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -39,6 +41,12 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -65,6 +73,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -84,8 +93,12 @@ public class MainActivity extends Activity {
     private static final String PREF_WEATHER_SOURCE = "weather_source";
     private static final String PREF_HYDRO_CACHE = "hydro_cache";
     private static final String PREF_HYDRO_UPDATED = "hydro_updated";
+    private static final String PREF_HYDRO_HISTORY_CACHE = "hydro_history_cache";
+    private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
     private static final String PREF_THEME = "theme_mode";
     private static final String PREF_INTERNAL_APP_VIEW = "internal_app_view";
+    private static final String PREF_BACKGROUND_REFRESH = "background_refresh";
+    private static final String BACKGROUND_WORK_NAME = "pfvr-public-data-refresh";
 
     private static final String SITE = "https://www.pfvr.ch/";
     private static final String NEWS = "https://www.pfvr.ch/verein/newsarchiv/";
@@ -130,10 +143,14 @@ public class MainActivity extends Activity {
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
+    private Handler dataRefreshHandler;
+    private final Runnable dataRefreshTick = new Runnable(){@Override public void run(){refreshLive(false);if(eventsUpdated<=0L||System.currentTimeMillis()-eventsUpdated>=60L*60L*1000L)refreshEvents(false,null);if(dataRefreshHandler!=null)dataRefreshHandler.postDelayed(this,5L*60L*1000L);}};
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        dataRefreshHandler = new Handler(Looper.getMainLooper());
+        scheduleBackgroundRefresh();
         darkMode = resolveDarkMode();
         loadCachedEvents();
         applyWindowTheme();
@@ -143,6 +160,26 @@ public class MainActivity extends Activity {
             if (current == Screen.HOME || current == Screen.EVENTS) navigate(current);
         });
         refreshLive(false);
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(prefs!=null){loadCachedEvents();refreshLive(false);if(current==Screen.HOME||current==Screen.EVENTS)navigate(current);}
+        if(dataRefreshHandler!=null){dataRefreshHandler.removeCallbacks(dataRefreshTick);dataRefreshHandler.postDelayed(dataRefreshTick,5L*60L*1000L);}
+    }
+
+    @Override protected void onPause(){
+        if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);
+        super.onPause();
+    }
+
+    private void scheduleBackgroundRefresh(){
+        if(prefs==null)return;
+        WorkManager wm=WorkManager.getInstance(getApplicationContext());
+        if(!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true)){wm.cancelUniqueWork(BACKGROUND_WORK_NAME);return;}
+        Constraints constraints=new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        PeriodicWorkRequest request=new PeriodicWorkRequest.Builder(BackgroundRefreshWorker.class,30,TimeUnit.MINUTES).setConstraints(constraints).build();
+        wm.enqueueUniquePeriodicWork(BACKGROUND_WORK_NAME,ExistingPeriodicWorkPolicy.UPDATE,request);
     }
 
     private View buildShell() {
@@ -302,11 +339,11 @@ public class MainActivity extends Activity {
         c.addView(txt(x[2],13,MUTED,false));
         TrendSeries level=hydroSeries("W"), temp=hydroSeries("WT");
         if(level.values.size()>=2){
-            TextView title=txt("Pegelverlauf",13,TEXT,true); title.setPadding(0,dp(14),0,dp(3)); c.addView(title);
+            TextView title=txt("Pegelverlauf · 7 Tage",13,TEXT,true); title.setPadding(0,dp(14),0,dp(3)); c.addView(title);
             c.addView(new TrendView(this,level,"m ü.M.",WATER),new LinearLayout.LayoutParams(-1,dp(132)));
         }
         if(temp.values.size()>=2){
-            TextView title=txt("Wassertemperatur",13,TEXT,true); title.setPadding(0,dp(12),0,dp(3)); c.addView(title);
+            TextView title=txt("Wassertemperatur · 7 Tage",13,TEXT,true); title.setPadding(0,dp(12),0,dp(3)); c.addView(title);
             c.addView(new TrendView(this,temp,"°C",Color.rgb(220,137,63)),new LinearLayout.LayoutParams(-1,dp(132)));
         }
         TextView src=txt(x[3],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(9),0,0); c.addView(src);
@@ -367,19 +404,37 @@ public class MainActivity extends Activity {
     }
 
     private TrendSeries hydroSeries(String parameter){
-        TrendSeries out=new TrendSeries(); String raw=prefs.getString(PREF_HYDRO_CACHE,""); if(raw.trim().isEmpty())return out;
-        try{
-            JSONArray a=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
-            List<HydroPoint> points=new ArrayList<>();
-            for(int i=0;i<a.length();i++){
-                JSONObject o=a.getJSONObject(i); if(!parameter.equals(o.optString("parameterName","")))continue;
-                double value=o.optDouble("value",Double.NaN); String ts=o.optString("timestamp",""); if(Double.isNaN(value)||ts.isEmpty())continue;
-                try{points.add(new HydroPoint(java.time.Instant.parse(ts).toEpochMilli(),value));}catch(Exception ignored){}
-            }
-            points.sort(Comparator.comparingLong(x->x.time));
-            long newest=points.isEmpty()?Long.MIN_VALUE:points.get(points.size()-1).time; long cutoff=newest==Long.MIN_VALUE?Long.MIN_VALUE:newest-24L*60L*60L*1000L;
-            long last=Long.MIN_VALUE; for(HydroPoint hp:points){if(hp.time<cutoff||hp.time==last)continue;last=hp.time;out.times.add(hp.time);out.values.add(hp.value);}
-        }catch(Exception ignored){}
+        TrendSeries out=new TrendSeries();
+        List<HydroPoint> points=new ArrayList<>();
+        String history=prefs.getString(PREF_HYDRO_HISTORY_CACHE,"");
+        if(!history.trim().isEmpty()){
+            try{
+                JSONArray a=new JSONObject(history).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
+                for(int i=0;i<a.length();i++){
+                    JSONObject o=a.getJSONObject(i); if(!parameter.equals(o.optString("parameterName","")))continue;
+                    double value=o.optDouble("value",Double.NaN); String ts=o.optString("timestamp",""); if(Double.isNaN(value)||ts.isEmpty())continue;
+                    try{points.add(new HydroPoint(java.time.Instant.parse(ts).toEpochMilli(),value));}catch(Exception ignored){}
+                }
+            }catch(Exception ignored){}
+        }
+        String live=prefs.getString(PREF_HYDRO_CACHE,"");
+        if(!live.trim().isEmpty()){
+            try{
+                JSONArray a=new JSONObject(live).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
+                HydroPoint newest=null;
+                for(int i=0;i<a.length();i++){
+                    JSONObject o=a.getJSONObject(i); if(!parameter.equals(o.optString("parameterName","")))continue;
+                    double value=o.optDouble("value",Double.NaN); String ts=o.optString("timestamp",""); if(Double.isNaN(value)||ts.isEmpty())continue;
+                    try{HydroPoint hp=new HydroPoint(java.time.Instant.parse(ts).toEpochMilli(),value);if(newest==null||hp.time>newest.time)newest=hp;}catch(Exception ignored){}
+                }
+                if(newest!=null)points.add(newest);
+            }catch(Exception ignored){}
+        }
+        points.sort(Comparator.comparingLong(x->x.time));
+        long newest=points.isEmpty()?Long.MIN_VALUE:points.get(points.size()-1).time;
+        long cutoff=newest==Long.MIN_VALUE?Long.MIN_VALUE:newest-7L*24L*60L*60L*1000L;
+        long last=Long.MIN_VALUE;
+        for(HydroPoint hp:points){if(hp.time<cutoff||hp.time==last)continue;last=hp.time;out.times.add(hp.time);out.values.add(hp.value);}
         return out;
     }
 
@@ -389,9 +444,53 @@ public class MainActivity extends Activity {
         new Thread(()->{try{String base="https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Europe%2FZurich&forecast_days=8";String raw;String src;try{raw=httpGet(base+"&models=meteoswiss_icon_seamless");src="MeteoSwiss ICON via Open-Meteo";}catch(Exception first){raw=httpGet(base);src="Open-Meteo Best Match";}new JSONObject(raw).getJSONObject("hourly");prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,src).apply();}catch(Exception ignored){}finally{weatherLoading=false;runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});}}).start();
     }
     private void refreshHydro(boolean force){
-        long age=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_UPDATED,0L);if(hydroLoading||(!force&&!prefs.getString(PREF_HYDRO_CACHE,"").isBlank()&&age<10*60000L))return;hydroLoading=true;
-        new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL("https://data.bafu.admin.ch/api").openConnection();c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");String query="{ water { observations { data_live(where:{stationNo:{_eq:\"2091\"}}) { stationNo parameterName timestamp value releaseStatus } } } }";String body=new JSONObject().put("query",query).toString();try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));}if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());String raw=readConnection(c);JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL");j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");prefs.edit().putString(PREF_HYDRO_CACHE,raw).putLong(PREF_HYDRO_UPDATED,System.currentTimeMillis()).apply();}catch(Exception ignored){}finally{if(c!=null)c.disconnect();hydroLoading=false;runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});}}).start();
+        long age=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_UPDATED,0L);
+        long histAge=System.currentTimeMillis()-prefs.getLong(PREF_HYDRO_HISTORY_UPDATED,0L);
+        boolean liveFresh=!prefs.getString(PREF_HYDRO_CACHE,"").isBlank()&&age<10*60000L;
+        boolean histFresh=!prefs.getString(PREF_HYDRO_HISTORY_CACHE,"").isBlank()&&histAge<60*60000L;
+        if(hydroLoading||(!force&&liveFresh&&histFresh))return;
+        hydroLoading=true;
+        new Thread(()->{
+            try{
+                String dq=String.valueOf((char)34);
+                if(force||!liveFresh){
+                    try{
+                        String liveQuery="{ water { observations { data_live(where:{stationNo:{_eq:"+dq+"2091"+dq+"}}) { stationNo parameterName timestamp value releaseStatus } } } }";
+                        String raw=bafuPost(liveQuery);
+                        JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL live");
+                        j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
+                        prefs.edit().putString(PREF_HYDRO_CACHE,raw).putLong(PREF_HYDRO_UPDATED,System.currentTimeMillis()).apply();
+                    }catch(Exception ignored){}
+                }
+                if(force||!histFresh){
+                    try{
+                        String from=java.time.Instant.now().minus(java.time.Duration.ofDays(7)).toString();
+                        String historyQuery="{ water { observations { data_1hour_mean(where:{station:{no:{_eq:"+dq+"2091"+dq+"}},timestamp:{_gte:"+dq+from+dq+"}}) { parameterName timestamp value } } } }";
+                        String raw=bafuPost(historyQuery);
+                        JSONObject j=new JSONObject(raw);if(j.has("errors"))throw new Exception("GraphQL history");
+                        j.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_1hour_mean");
+                        prefs.edit().putString(PREF_HYDRO_HISTORY_CACHE,raw).putLong(PREF_HYDRO_HISTORY_UPDATED,System.currentTimeMillis()).apply();
+                    }catch(Exception ignored){}
+                }
+            }finally{
+                hydroLoading=false;
+                runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});
+            }
+        }).start();
     }
+
+    private String bafuPost(String query) throws Exception{
+        HttpURLConnection c=(HttpURLConnection)new URL("https://data.bafu.admin.ch/api").openConnection();
+        try{
+            c.setRequestMethod("POST");c.setDoOutput(true);c.setConnectTimeout(7000);c.setReadTimeout(12000);
+            c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");
+            String body=new JSONObject().put("query",query).toString();
+            try(OutputStream out=c.getOutputStream()){out.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+            if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());
+            return readConnection(c);
+        }finally{c.disconnect();}
+    }
+
     private String httpGet(String url) throws Exception{HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();try{c.setConnectTimeout(7000);c.setReadTimeout(9000);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.3");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());return readConnection(c);}finally{c.disconnect();}}
     private String readConnection(HttpURLConnection c) throws Exception{BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line);br.close();return sb.toString();}
 
@@ -413,10 +512,15 @@ public class MainActivity extends Activity {
         data.addView(txt("Lokaler Cache",16,TEXT,true)); TextView d=txt("Beim Start wird zuerst der letzte erfolgreiche Stand angezeigt und anschließend im Hintergrund aktualisiert.",13,MUTED,false); d.setPadding(0,dp(4),0,dp(10)); data.addView(d);
         Button reload=btn("Alle Daten aktualisieren",Color.rgb(232,240,244),NAVY); reload.setOnClickListener(v->{refreshEvents(true,()->{});refreshLive(true);Toast.makeText(this,"Aktualisierung gestartet.",Toast.LENGTH_SHORT).show();}); data.addView(reload,new LinearLayout.LayoutParams(-1,dp(44)));
         Button clear=btn("Daten-Cache leeren",Color.rgb(232,240,244),NAVY); clear.setOnClickListener(v->clearDataCache()); LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-1,dp(44)); clp.setMargins(0,dp(8),0,0); data.addView(clear,clp);
+        boolean bgOn=prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
+        Button bgRefresh=btn("Hintergrundaktualisierung: "+(bgOn?"Ein":"Aus"),Color.rgb(232,240,244),NAVY);
+        bgRefresh.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);prefs.edit().putBoolean(PREF_BACKGROUND_REFRESH,next).apply();scheduleBackgroundRefresh();bgRefresh.setText("Hintergrundaktualisierung: "+(next?"Ein":"Aus"));});
+        LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,dp(44));blp.setMargins(0,dp(8),0,0);data.addView(bgRefresh,blp);
+        TextView autoInfo=txt("Live-Daten werden bei geöffneter App regelmäßig geprüft. Im Hintergrund aktualisiert Android bei verfügbarer Verbindung best effort; Energiesparmodi können die Ausführung verzögern.",11,MUTED,false);autoInfo.setPadding(0,dp(8),0,0);data.addView(autoInfo);
 
         section(b,"App",null);
         LinearLayout about=card(); about.setOrientation(LinearLayout.VERTICAL); b.addView(about,margin(-1,-2,0,0,0,8));
-        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion 0.6.0 · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion 0.6.1 · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
         return scroll;
     }
 
@@ -436,7 +540,7 @@ public class MainActivity extends Activity {
     }
     private int themeText(int c){if(!darkMode)return c;if(c==TEXT)return DARK_TEXT;if(c==MUTED||c==Color.rgb(65,82,96)||c==Color.rgb(126,140,150))return DARK_MUTED;if(c==NAVY)return Color.rgb(105,193,218);if(c==WATER)return Color.rgb(91,190,213);return c;}
     private int themeBg(int c){if(!darkMode)return c;if(c==SURFACE)return DARK_SURFACE;if(c==Color.WHITE)return DARK_CARD;if(c==Color.rgb(232,240,244)||c==Color.rgb(238,243,246)||c==Color.rgb(231,242,246)||c==Color.rgb(236,243,247))return DARK_SOFT;return c;}
-    private void clearDataCache(){prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED).remove(PREF_HYDRO_CACHE).remove(PREF_HYDRO_UPDATED).apply();events=new ArrayList<>();eventsUpdated=0L;Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();refreshEvents(false,()->{});refreshLive(true);}
+    private void clearDataCache(){prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED).remove(PREF_HYDRO_CACHE).remove(PREF_HYDRO_UPDATED).remove(PREF_HYDRO_HISTORY_CACHE).remove(PREF_HYDRO_HISTORY_UPDATED).apply();events=new ArrayList<>();eventsUpdated=0L;Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();refreshEvents(false,()->{});refreshLive(true);}
 
     private View eventScreen() {
         ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);
@@ -679,7 +783,7 @@ public class MainActivity extends Activity {
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
     private String calendarStatus(){if(eventsUpdated<=0)return eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.";ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?"heute "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return "Lokal gespeichert · zuletzt aktualisiert "+d+" Uhr";}
-    private void refreshEvents(boolean toast,Runnable done){if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.1.1");c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
+    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/2.1.1");c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
     private List<Event> parseIcs(String raw){List<String> lines=unfold(raw);List<Event> base=new ArrayList<>();Event e=null;for(String line:lines){if(line.equals("BEGIN:VEVENT"))e=new Event();else if(line.equals("END:VEVENT")&&e!=null){if(e.start!=null&&e.title!=null&&!e.title.isBlank())base.add(e);e=null;}else if(e!=null){int p=line.indexOf(':');if(p<0)continue;String k=line.substring(0,p),v=unesc(line.substring(p+1));if(k.startsWith("SUMMARY"))e.title=v;else if(k.startsWith("LOCATION"))e.location=v;else if(k.startsWith("DTSTART")){ParsedDate d=date(k,v);if(d!=null){e.start=d.z;e.allDay=d.allDay;}}else if(k.startsWith("DTEND")){ParsedDate d=date(k,v);if(d!=null)e.end=d.z;}else if(k.startsWith("RRULE"))e.rule=v;else if(k.startsWith("EXDATE"))for(String x:v.split(",")){ParsedDate d=date(k,x);if(d!=null)e.ex.add(d.z.toLocalDate());}}}ZonedDateTime now=ZonedDateTime.now(ZoneId.of("Europe/Zurich")).minusHours(6),limit=now.plusMonths(14);List<Event> out=new ArrayList<>();for(Event x:base)expand(x,limit,out);out.removeIf(x->x.start.isBefore(now)||x.start.isAfter(limit));out.sort(Comparator.comparing(x->x.start));Set<String> seen=new LinkedHashSet<>();List<Event> unique=new ArrayList<>();for(Event x:out){String id=x.start+"|"+x.title;if(seen.add(id))unique.add(x);}return unique;}
     private List<String> unfold(String raw){List<String> out=new ArrayList<>();for(String l:raw.replace("\r\n","\n").split("\n")){if((l.startsWith(" ")||l.startsWith("\t"))&&!out.isEmpty())out.set(out.size()-1,out.get(out.size()-1)+l.substring(1));else out.add(l);}return out;}
@@ -706,7 +810,7 @@ public class MainActivity extends Activity {
 
     private void handleBack(){if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
-    @Override protected void onDestroy(){if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}
@@ -720,11 +824,15 @@ public class MainActivity extends Activity {
             double min=Double.POSITIVE_INFINITY,max=Double.NEGATIVE_INFINITY;for(double v:series.values){min=Math.min(min,v);max=Math.max(max,v);}if(!(max>min)){max=min+1;}
             long minT=series.times.get(0),maxT=series.times.get(series.times.size()-1);if(maxT<=minT)maxT=minT+1;
             grid.setColor(darkMode?Color.rgb(58,72,82):Color.rgb(220,229,234));
-            for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}for(int i=0;i<3;i++){float x=left+(right-left)*i/2f;canvas.drawLine(x,top,x,bottom,grid);}
-            Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*(series.times.get(i)-minT)/(float)(maxT-minT);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);
             label.setColor(themeText(MUTED));axis.setColor(themeText(MUTED));
+            for(int i=0;i<3;i++){float y=top+(bottom-top)*i/2f;canvas.drawLine(left,y,right,y,grid);}
+            ZoneId zone=ZoneId.of("Europe/Zurich");
+            ZonedDateTime firstZ=java.time.Instant.ofEpochMilli(minT).atZone(zone),lastZ=java.time.Instant.ofEpochMilli(maxT).atZone(zone);
+            LocalDate tickDay=firstZ.toLocalDate().plusDays(1);DateTimeFormatter dayFmt=DateTimeFormatter.ofPattern("EE",Locale.GERMAN);
+            while(!tickDay.isAfter(lastZ.toLocalDate())){long tt=tickDay.atStartOfDay(zone).toInstant().toEpochMilli();if(tt>=minT&&tt<=maxT){float x=left+(right-left)*(tt-minT)/(float)(maxT-minT);canvas.drawLine(x,top,x,bottom,grid);String lab=tickDay.format(dayFmt);float tw=label.measureText(lab);canvas.drawText(lab,x-tw/2f,h-dp(6),label);}tickDay=tickDay.plusDays(1);}
+            Path path=new Path();for(int i=0;i<series.values.size();i++){float x=left+(right-left)*(series.times.get(i)-minT)/(float)(maxT-minT);float y=(float)(bottom-(series.values.get(i)-min)/(max-min)*(bottom-top));if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}line.setColor(lineColor);canvas.drawPath(path,line);
             canvas.drawText(fmtTrend(max),dp(2),top+dp(4),label);canvas.drawText(fmtTrend(min),dp(2),bottom,label);canvas.drawText(unit,dp(2),dp(10),axis);
-            ZoneId zone=ZoneId.of("Europe/Zurich");DateTimeFormatter tf=DateTimeFormatter.ofPattern("HH:mm");String first=java.time.Instant.ofEpochMilli(minT).atZone(zone).format(tf),last=java.time.Instant.ofEpochMilli(maxT).atZone(zone).format(tf);canvas.drawText(first,left,h-dp(6),label);float lw=label.measureText(last);canvas.drawText(last,right-lw,h-dp(6),label);String xLabel="Zeit · 24 h";float xw=axis.measureText(xLabel);canvas.drawText(xLabel,left+(right-left-xw)/2f,h-dp(6),axis);
+            String xLabel="7 Tage · Stundenmittel";float xw=axis.measureText(xLabel);canvas.drawText(xLabel,left+(right-left-xw)/2f,dp(11),axis);
         }
         private String fmtTrend(double v){return Math.abs(v)>=100?String.format(Locale.GERMAN,"%.1f",v):String.format(Locale.GERMAN,"%.2f",v);}
     }
