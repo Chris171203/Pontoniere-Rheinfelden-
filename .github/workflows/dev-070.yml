@@ -47,8 +47,15 @@ jobs:
       - name: Verify public live sources
         run: |
           BODY='{"query":"{ water { observations { data_1hour_mean(where:{station:{no:{_eq:\"2091\"}}},limit:3) { parameterName timestamp value } } } }"}'
-          curl -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" | jq -e '.data.water.observations.data_1hour_mean | length > 0'
-          curl -fsS 'https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,uv_index&timezone=Europe%2FZurich&forecast_days=2' | jq -e '.hourly.uv_index | length > 0'
+          curl --retry 3 --retry-delay 2 --retry-all-errors -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" -o /tmp/bafu.json
+          jq -e '.data.water.observations.data_1hour_mean | length > 0' /tmp/bafu.json
+
+          WEATHER='https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,uv_index&timezone=Europe%2FZurich&forecast_days=2'
+          if curl --retry 4 --retry-delay 2 --retry-all-errors -fsS "$WEATHER" -o /tmp/weather.json; then
+            jq -e '.hourly.uv_index | length > 0' /tmp/weather.json
+          else
+            echo '::warning::Open-Meteo was temporarily unavailable; app cache/fallback handles this at runtime.'
+          fi
 
       - name: Install Android SDK
         run: |
