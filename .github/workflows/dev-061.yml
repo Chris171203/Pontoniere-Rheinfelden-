@@ -33,6 +33,7 @@ jobs:
         run: |
           python tools/apply_061.py
           python tools/apply_061_week.py
+          python tools/apply_061_background.py
 
       - name: Reject personal PFVR access links
         run: |
@@ -40,6 +41,11 @@ jobs:
             echo 'Personal PFVR access data found in Android source.' >&2
             exit 1
           fi
+
+      - name: Verify BAFU hourly data source
+        run: |
+          BODY='{"query":"{ water { observations { data_1hour_mean(where:{station:{no:{_eq:\"2091\"}}},limit:3) { parameterName timestamp value } } } }"}'
+          curl -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" | jq -e '.data.water.observations.data_1hour_mean | length > 0'
 
       - name: Install Android SDK
         run: |
@@ -64,6 +70,9 @@ jobs:
           grep -q 'normalizeInternalUrl' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -q 'data_1hour_mean' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           grep -q '7 Tage · Stundenmittel' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'BackgroundRefreshWorker.class' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'Hintergrundaktualisierung' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -q 'androidx.work:work-runtime:2.11.2' Android/app/build.gradle
 
       - name: Persist verified source
         run: |
