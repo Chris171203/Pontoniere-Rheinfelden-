@@ -39,20 +39,29 @@ old_internal = '''    private View internal() {
 '''
 new_internal = '''    private View internal() {
         String url=prefs.getString(PREF_INTERNAL_URL,""); if(!validInternal(url)) return internalMissing();
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(themeBg(Color.WHITE));
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.WHITE);
         LinearLayout tools=new LinearLayout(this); tools.setPadding(dp(9),dp(8),dp(9),dp(8)); tools.setBackgroundColor(themeBg(Color.rgb(236,243,247))); root.addView(tools,new LinearLayout.LayoutParams(-1,dp(56)));
-        WebView web=web(false); activeWebView=web;
+        WebView web=web(false); activeWebView=web; web.setBackgroundColor(Color.WHITE);
+        if(android.os.Build.VERSION.SDK_INT>=33) web.getSettings().setAlgorithmicDarkeningAllowed(false);
         Button back=btn("‹ Zurück",Color.WHITE,NAVY); back.setOnClickListener(v->handleBack()); tools.addView(back,new LinearLayout.LayoutParams(0,dp(40),1));
-        boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
+        boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false);
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->web.reload()); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();String h=u.getHost()==null?"":u.getHost().toLowerCase(Locale.ROOT);if(h.endsWith("pfvr.ch"))return false;external(u.toString());return true;}
-            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))internalSkin(v);}
+            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false))internalSkin(v);}
+            @Override public void onReceivedError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceError e){super.onReceivedError(v,r,e);if(r.isForMainFrame())showInternalLoadError(v,"Ladefehler "+e.getErrorCode()+": "+String.valueOf(e.getDescription()));}
+            @Override public void onReceivedHttpError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceResponse e){super.onReceivedHttpError(v,r,e);if(r.isForMainFrame()&&e.getStatusCode()>=400)showInternalLoadError(v,"PFVR antwortet mit HTTP "+e.getStatusCode());}
         });
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1)); web.loadUrl(url); return root;
+    }
+
+    private void showInternalLoadError(WebView v,String message){
+        String safe=message.replace("\\","\\\\").replace("'","\\'").replace("<","&lt;").replace(">","&gt;");
+        String html="<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head><body style='font-family:sans-serif;background:#fff;color:#15232e;padding:24px'><h2>Interner Bereich konnte nicht geladen werden</h2><p>"+safe+"</p><p>Prüfe den persönlichen Link unter Einstellungen oder tippe oben auf Neu laden.</p></body></html>";
+        v.loadDataWithBaseURL("https://intern.pfvr.ch/",html,"text/html","UTF-8",null);
     }
 
     private void internalSkin(WebView v){
@@ -65,4 +74,4 @@ new_internal = '''    private View internal() {
 repl(old_internal, new_internal, 'internal app view')
 
 p.write_text(s, encoding='utf-8')
-print('Applied 0.6.0 internal app view')
+print('Applied 0.6.0 internal app view + WebView diagnostics')
