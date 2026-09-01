@@ -34,8 +34,13 @@ jobs:
 
       - name: Apply 0.7.0 source patch
         run: |
-          python tools/fix_070_patch.py
-          python tools/apply_070.py
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          if grep -q 'DEFAULT_RIVER_WARN = 2500f' "$SRC" && grep -q 'DualTrendView' "$SRC" && grep -q 'Seit 1896 auf dem Rhein' "$SRC"; then
+            echo '0.7.0 source already applied'
+          else
+            python tools/fix_070_patch.py
+            python tools/apply_070.py
+          fi
 
       - name: Reject personal PFVR access links
         run: |
@@ -86,8 +91,11 @@ jobs:
           git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           if ! git diff --cached --quiet; then
             git commit -m 'Apply verified Android 0.7.0 changes'
+            git restore tools/apply_070.py tools/fix_070_patch.py || true
             git pull --rebase origin dev-0.7.0
             git push origin HEAD:dev-0.7.0
+          else
+            git restore tools/apply_070.py tools/fix_070_patch.py || true
           fi
 
       - uses: actions/upload-artifact@v4
