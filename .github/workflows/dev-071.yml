@@ -1,0 +1,131 @@
+name: Dev Android 0.7.1
+
+on:
+  push:
+    branches:
+      - dev-0.7.1
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pfvr-dev-071
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.7.1
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Apply 0.7.1 source patch
+        run: |
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          if grep -q "versionName '0.7.1'" Android/app/build.gradle \
+             && grep -q 'TWINT-Code erzeugen' "$SRC" \
+             && grep -q 'class AxisScale' "$SRC"; then
+            echo '0.7.1 source already applied'
+          else
+            python tools/apply_071.py
+          fi
+
+      - name: Reject personal PFVR access links
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - name: Verify requested 0.7.1 changes
+        run: |
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -Fq 'TWINT_DIRECT_URL' "$SRC"
+          grep -Fq 'TWINT-Code erzeugen' "$SRC"
+          grep -Fq 'class AxisScale' "$SRC"
+          grep -Fq 'niceAxis(' "$SRC"
+          grep -Fq 'new DashPathEffect' "$SRC"
+          grep -Fq 'drawFlowThresholds' "$SRC"
+          grep -Fq 'riverLegend()' "$SRC"
+          grep -Fq 'statusBadge(' "$SRC"
+          grep -Fq 'versionCode 12' Android/app/build.gradle
+          grep -Fq "versionName '0.7.1'" Android/app/build.gradle
+          if grep -Fq 'action("Depot","Rheinweg 42 · 4310 Rheinfelden"' "$SRC"; then
+            echo 'Depot quick link still present on Home.' >&2
+            exit 1
+          fi
+          if grep -Fq 'action("Interner Bereich","An-/Abmeldung und interne PFVR-Seite"' "$SRC"; then
+            echo 'Duplicate internal link still present under Verein.' >&2
+            exit 1
+          fi
+
+      - name: Check rounded-axis examples
+        run: |
+          python - <<'PY'
+          import math
+
+          def nice_step(raw):
+              exponent = math.floor(math.log10(raw))
+              base = 10 ** exponent
+              fraction = raw / base
+              factor = 1 if fraction <= 1 else 2 if fraction <= 2 else 5 if fraction <= 5 else 10
+              return factor * base
+
+          def axis(lo, hi):
+              step = nice_step((hi - lo) / 4)
+              return math.floor(lo / step + 1e-9) * step, math.ceil(hi / step - 1e-9) * step
+
+          assert axis(406, 686) == (400, 700)
+          assert axis(21.63, 22.93) == (21.5, 23.0)
+          assert axis(261.03, 261.83) == (261.0, 262.0)
+          PY
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Build APK
+        working-directory: Android
+        run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK
+        run: |
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='12' versionName='0.7.1'"
+
+      - name: Persist verified source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
+            Android/app/build.gradle \
+            .github/workflows/android.yml \
+            STATUS.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply verified Android 0.7.1 changes'
+            git pull --rebase origin dev-0.7.1
+            git push origin HEAD:dev-0.7.1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Rheinfelden-test-0.7.1-apk
+          path: Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
