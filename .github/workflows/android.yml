@@ -14,8 +14,11 @@ on:
       - 'Android/**'
       - '.github/workflows/android.yml'
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +34,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Reject personal PFVR access links
+      - name: Reject personal PFVR access data
         run: |
           if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
             echo 'Personal PFVR access data found in Android source.' >&2
@@ -43,18 +46,21 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
-      - name: Build debug APK
+      - name: Unit tests and APK build
         working-directory: Android
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
 
       - name: Verify APK
         run: |
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" Android/app/build.gradle | head -1)
+          VERSION_CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' Android/app/build.gradle | head -1)
+          test -n "$VERSION_NAME" && test -n "$VERSION_CODE"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='9' versionName='0.6.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PFVR-Android-debug-0.6.0
+          name: PFVR-Android-debug
           path: Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
