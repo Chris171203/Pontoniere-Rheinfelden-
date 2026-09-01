@@ -1,7 +1,13 @@
 from pathlib import Path
 
 p = Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
-lines = p.read_text(encoding='utf-8').splitlines()
+text = p.read_text(encoding='utf-8')
+
+if 'JSONObject.quote(css)' in text and 'String safe=message.replace("&","&amp;")' in text:
+    print('0.6.0 Java escaping already fixed')
+    raise SystemExit(0)
+
+lines = text.splitlines()
 out = []
 changed = 0
 
