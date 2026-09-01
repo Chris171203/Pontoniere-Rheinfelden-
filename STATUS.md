@@ -1,6 +1,6 @@
 # Status
 
-Stand: Testversion `0.5.0`.
+Stand: Testversion `0.7.1`.
 
 ## Implementiert / im Test
 
@@ -20,6 +20,10 @@ Stand: Testversion `0.5.0`.
 - Swiss QR mit Betrag; Banking-App vor TWINT.
 - Banking-App-Auswahl mit Schweizer Priorisierung; Buttontext wird nach Auswahl sofort aktualisiert.
 - Offizieller Vereinsbeiz-TWINT-QR von `pfvr.ch` ist aus der Kasse direkt als PDF erreichbar und kann über Browser/PDF-Viewer gespeichert werden.
+- Zusätzlicher TWINT-Code-Zahlungsweg für die Vereinsbeiz.
+- Dynamische, sinnvoll gerundete Diagrammachsen; relevante Abfluss-Grenzen werden als gestrichelte Linien eingeblendet.
+- Rheinstatus auf Home grösser und prominenter dargestellt.
+- Depot-Verlinkung auf Home entfernt; doppelter interner Bereich unter Verein entfernt.
 - Redundanter Vereinsbeiz-Schnellzugriff auf Home entfernt; Kasse bleibt Hauptnavigation.
 - News-Archiv unter Verein.
 - Android 16 / API 36 als Target für Google Play vorbereitet.
@@ -31,7 +35,7 @@ Stand: Testversion `0.5.0`.
 - BAFU Station 2091 liefert Q/W/WT.
 - PFVR RSS und WordPress REST API sind verfügbar; damit kann ein nativer Bereich für aktuelle Beiträge später umgesetzt werden.
 - PFVR WordPress-Medien enthalten einen expliziten Vereinsbeiz-TWINT-QR unter `vereinsbeiz_zahlung/Twint_QR.pdf`.
-- Android 0.5.0 kompiliert mit API 36 als APK und AAB; APK-Signatur und Paket-/Versionsdaten wurden im CI geprüft.
+- Android 0.7.1 kompiliert mit API 36 als APK; APK-Signatur sowie Paket `ch.pfvr.app`, VersionCode `12` und VersionName `0.7.1` wurden im CI geprüft.
 
 ## Google Play
 
@@ -53,7 +57,7 @@ Vor Veröffentlichung fehlen noch Entwicklerkonto/Verifizierung, Upload-Key, fin
 
 ## Nächste Punkte
 
-- 0.5.0 auf realem Android-Gerät testen, insbesondere Achsen, Trainingswetter, öffentliche Webseiten im Dark Mode, Banking-App-Button und TWINT-PDF.
+- 0.7.1 auf realem Android-Gerät testen, insbesondere TWINT-Code, Achsen, Grenzlinien und Rheinstatus.
 - Internes An-/Abmeldeformular technisch untersuchen und entscheiden: native HTTP-Anbindung oder WebView/DOM-Integration.
 - Preisliste fotografieren und Vereinsbeiz-Warenkorb ergänzen.
 - Nativen Bereich `Aktuelles` aus WordPress REST/RSS entwickeln.
