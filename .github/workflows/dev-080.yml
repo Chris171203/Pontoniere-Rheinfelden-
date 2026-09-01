@@ -1,0 +1,61 @@
+name: Dev Android 0.8.0
+
+on:
+  push:
+    branches:
+      - dev-0.8.0
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pfvr-dev-080
+  cancel-in-progress: true
+
+jobs:
+  bootstrap-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.8.0
+
+      - name: Materialize verified 0.7.1 source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tools/apply_071.py')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'text, count = pattern.subn(river_method + "\\n", text, count=1)':
+                  'text, count = pattern.subn(lambda _: river_method + "\\n", text, count=1)',
+              'text, count = chart_pattern.subn(chart_block + "\\n", text, count=1)':
+                  'text, count = chart_pattern.subn(lambda _: chart_block + "\\n", text, count=1)',
+          }
+          for old, new in replacements.items():
+              if old in text:
+                  text = text.replace(old, new, 1)
+              elif new not in text:
+                  raise SystemExit(f'Patch-script anchor missing: {old}')
+          path.write_text(text, encoding='utf-8')
+          PY
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          if grep -q "versionName '0.7.1'" Android/app/build.gradle \
+             && grep -q 'TWINT-Code erzeugen' "$SRC" \
+             && grep -q 'class AxisScale' "$SRC"; then
+            echo '0.7.1 source already materialized'
+          else
+            python tools/apply_071.py
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-source-materialized-0.7.1
+          path: |
+            Android
+            PROJECT.md
+            STATUS.md
+            README.md
+            AGENTS.md
+            tools
+          if-no-files-found: error
