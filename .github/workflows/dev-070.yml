@@ -33,7 +33,9 @@ jobs:
           gradle-version: '8.13'
 
       - name: Apply 0.7.0 source patch
-        run: python tools/apply_070.py
+        run: |
+          python tools/fix_070_patch.py
+          python tools/apply_070.py
 
       - name: Reject personal PFVR access links
         run: |
