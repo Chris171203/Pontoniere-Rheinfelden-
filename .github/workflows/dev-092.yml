@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: pfvr-dev-093-verification
@@ -20,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: dev-0.9.3
+          fetch-depth: 0
 
       - name: Apply 0.9.3 cleanup in workspace
         run: python tools/apply_093.py
@@ -71,14 +72,11 @@ jobs:
       - name: Package verified source and APK
         run: |
           set -euo pipefail
-          mkdir -p dist/source/Android/app/src/main/java/ch/pfvr/internapp
+          mkdir -p dist
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='17' versionName='0.9.3'"
           cp "$APK" dist/PFVR-Rheinfelden-test-0.9.3-debug.apk
-          cp Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java dist/source/Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
-          cp Android/app/build.gradle dist/source/Android/app/build.gradle
-          cp PROJECT.md STATUS.md dist/source/
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
@@ -86,3 +84,13 @@ jobs:
           name: PFVR-Rheinfelden-0.9.3-verified
           path: dist/
           if-no-files-found: error
+
+      - name: Commit verified source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java Android/app/build.gradle PROJECT.md STATUS.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply Android 0.9.3 settings and UI cleanup [skip ci]'
+            git push origin HEAD:dev-0.9.3
+          fi
