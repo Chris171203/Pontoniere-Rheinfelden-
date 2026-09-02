@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "currency": "CHF",
+  "title": "Preisliste Vereinsbeiz Pontoniere Rheinfelden",
+  "validFrom": "2026",
+  "sourceNote": "Preisliste Vereinsbeiz, Stand 2026",
+  "categories": [
+    {
+      "id": "softdrinks",
+      "label": "Alkoholfrei",
+      "items": [
+        {"id": "soft_5dl", "name": "Mineral / Softdrink", "variant": "ca. 5 dl", "price": 3.00},
+        {"id": "soft_3dl", "name": "Mineral / Softdrink", "variant": "ca. 3 dl", "price": 2.00}
+      ]
+    },
+    {
+      "id": "beer",
+      "label": "Bier & Mixgetränke",
+      "items": [
+        {"id": "beer_5dl", "name": "Bier / Somersby / EVE / Smirnoff etc.", "variant": "ca. 5 dl", "price": 4.50},
+        {"id": "beer_3dl", "name": "Bier / Somersby / EVE / Smirnoff etc.", "variant": "ca. 3 dl", "price": 3.00}
+      ]
+    },
+    {
+      "id": "wine_spirits",
+      "label": "Wein & Spirituosen",
+      "items": [
+        {"id": "spirits_1dl", "name": "Spirituosen (≥ 15 % Vol.)", "variant": "pro dl", "price": 2.00},
+        {"id": "wine_1dl", "name": "Wein", "variant": "pro dl", "price": 1.00}
+      ]
+    },
+    {
+      "id": "food",
+      "label": "Essen",
+      "items": [
+        {"id": "food_jp", "name": "Essen normal", "variant": "JP bis 21", "price": 5.00},
+        {"id": "food_other", "name": "Essen normal", "variant": "Andere", "price": 8.00},
+        {"id": "sides_jp", "name": "Nur Beilagen / ohne Fleisch", "variant": "JP bis 21", "price": 3.00},
+        {"id": "sides_other", "name": "Nur Beilagen / ohne Fleisch", "variant": "Andere", "price": 5.00}
+      ]
+    },
+    {
+      "id": "containers",
+      "label": "Fass & Harasse",
+      "items": [
+        {"id": "keg_20l", "name": "Bierfass", "variant": "20 l", "price": 80.00},
+        {"id": "keg_deposit", "name": "Depot Bierfass", "variant": "optional", "price": 50.00, "deposit": true},
+        {"id": "crate_20x5dl", "name": "Bierharasse", "variant": "20 × 5 dl", "price": 45.00},
+        {"id": "crate_deposit", "name": "Depot Bierharasse", "variant": "optional", "price": 15.00, "deposit": true}
+      ]
+    }
+  ]
+}
