@@ -1,41 +1,41 @@
-name: Android 0.9.3 temperature completion
+name: Android CI
 
 on:
   push:
     branches:
-      - dev-0.9.3
+      - main
+      - 'dev-*'
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android-ci.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: pfvr-dev-093-temperature
-  cancel-in-progress: false
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  migrate-test-build:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: dev-0.9.3
-          fetch-depth: 0
 
-      - name: Complete separate temperature chart
-        run: python tools/apply_temperature_chart.py
-
-      - name: Verify source state
+      - name: Reject generated source patchers
         shell: bash
         run: |
-          set -euo pipefail
-          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
-          grep -Fq 'private void addRiverStationCharts' "$SRC"
-          grep -Fq 'private LinearLayout riverTemperatureCard(int slot)' "$SRC"
-          grep -Fq 'SingleSeriesTrendView graph=new SingleSeriesTrendView' "$SRC"
-          grep -Fq 'return share.resolveActivity(getPackageManager())!=null;' "$SRC"
-          test -f Android/app/src/main/java/ch/pfvr/internapp/SingleSeriesTrendView.java
-          grep -Fq 'final class SingleSeriesTrendView extends View' Android/app/src/main/java/ch/pfvr/internapp/SingleSeriesTrendView.java
+          if find tools -maxdepth 1 -type f -name 'apply_*.py' -print -quit | grep -q .; then
+            echo 'Build-time source patchers are not allowed. Commit source changes directly.' >&2
+            exit 1
+          fi
 
       - name: Reject personal PFVR access data
         shell: bash
@@ -70,33 +70,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
+          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" Android/app/build.gradle | head -1)
+          VERSION_CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' Android/app/build.gradle | head -1)
+          test -n "$VERSION_NAME" && test -n "$VERSION_CODE"
+
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > dist/debug-signature.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='17' versionName='0.9.3'"
-          cp "$APK" dist/PFVR-Rheinfelden-test-0.9.3-debug.apk
-          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
+
+          mkdir -p dist
+          OUT="PFVR-Rheinfelden-test-${VERSION_NAME}-debug.apk"
+          cp "$APK" "dist/$OUT"
+          mv signature.txt dist/debug-signature.txt
+          sha256sum "dist/$OUT" > dist/SHA256SUMS.txt
           {
-            echo 'Version: 0.9.3 (17)'
+            echo "Version: $VERSION_NAME ($VERSION_CODE)"
             echo 'Package: ch.pfvr.app.test'
-            echo "Source commit before generated source commit: $GITHUB_SHA"
-            echo 'Contains separate Wassertemperatur trend chart'
+            echo "Commit: $GITHUB_SHA"
             echo 'Signing: ephemeral GitHub runner debug key; not a stable update identity'
           } > dist/build-info.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PFVR-Rheinfelden-0.9.3-temperature-complete
+          name: PFVR-Android-test-${{ github.run_number }}
           path: dist/
           if-no-files-found: error
-
-      - name: Commit verified source
-        shell: bash
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java PROJECT.md STATUS.md
-          if ! git diff --cached --quiet; then
-            git commit -m 'Complete separate river temperature chart [skip ci]'
-            git push origin HEAD:dev-0.9.3
-          fi
