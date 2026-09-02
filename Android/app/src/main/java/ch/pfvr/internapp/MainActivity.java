@@ -409,22 +409,29 @@ public class MainActivity extends Activity {
         stack.addView(rangeLabel);
         stack.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
 
-        stack.addView(riverCard(1),margin(-1,-2,0,10,0,10));
-        if(riverSlotEnabled(2))stack.addView(riverCard(2),margin(-1,-2,0,0,0,4));
+        stack.addView(riverSummaryRow(),margin(-1,-2,0,10,0,10));
+        stack.addView(riverCombinedCard(1),margin(-1,-2,0,0,0,10));
+        if(riverSlotEnabled(2))stack.addView(riverCombinedCard(2),margin(-1,-2,0,0,0,4));
     }
 
     private void refreshHomeLiveViews(){
         if(current!=Screen.HOME||homeLiveStack==null)return;
         final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
         populateHomeLiveStack(homeLiveStack);
-        if(homeScroll!=null)homeScroll.post(()->homeScroll.scrollTo(0,scrollY));
+        if(homeScroll!=null){
+            homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
+            homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
+        }
     }
 
     private void rebuildHomePreservingScroll(){
         if(current!=Screen.HOME)return;
         final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
         navigate(Screen.HOME);
-        if(homeScroll!=null)homeScroll.post(()->homeScroll.scrollTo(0,scrollY));
+        if(homeScroll!=null){
+            homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
+            homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
+        }
     }
 
     private LinearLayout weatherCard(){
@@ -441,115 +448,137 @@ public class MainActivity extends Activity {
         return c;
     }
 
-    private LinearLayout riverCard(int slot){
+    private View riverSummaryRow(){
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.TOP);
+        row.addView(riverSummaryCard(1),new LinearLayout.LayoutParams(0,-2,1));
+        if(riverSlotEnabled(2)){
+            LinearLayout.LayoutParams second=new LinearLayout.LayoutParams(0,-2,1);
+            second.setMargins(dp(8),0,0,0);
+            row.addView(riverSummaryCard(2),second);
+        }
+        return row;
+    }
+
+    private LinearLayout riverSummaryCard(int slot){
         HydroStation station=riverStation(slot);
-        RiverRange range=riverRange();
-        String[] summary=hydroSummary(station);
         double flow=currentHydroValue(station,"Q");
+        double level=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));
+        double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;
         RiverStatus status=riverStatus(station,flow);
         int statusColor=statusTextColor(status.bg);
 
-        LinearLayout card=card();
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16),dp(15),dp(16),dp(15));
+        LinearLayout c=card();
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(dp(12),dp(11),dp(12),dp(11));
+        c.setOnClickListener(v->external(station.stationUrl()));
 
-        LinearLayout eyebrow=new LinearLayout(this);
-        eyebrow.setGravity(Gravity.CENTER_VERTICAL);
-        eyebrow.addView(txt("RHEIN · "+station.label.toUpperCase(Locale.GERMAN)+" · "+station.id,11,WATER,true),new LinearLayout.LayoutParams(0,-2,1));
-        TextView sourceLink=txt("BAFU  ↗",11,WATER,true);
-        sourceLink.setGravity(Gravity.END);
-        sourceLink.setPadding(dp(8),dp(4),0,dp(4));
-        sourceLink.setOnClickListener(v->external(station.stationUrl()));
-        eyebrow.addView(sourceLink,new LinearLayout.LayoutParams(-2,-2));
-        card.addView(eyebrow);
+        TextView stationName=txt(station.label,11,WATER,true);
+        stationName.setMaxLines(1);
+        c.addView(stationName);
 
-        LinearLayout headline=new LinearLayout(this);
-        headline.setGravity(Gravity.CENTER_VERTICAL);
-        headline.setPadding(0,dp(4),0,dp(2));
-        card.addView(headline);
+        LinearLayout valueRow=new LinearLayout(this);
+        valueRow.setGravity(Gravity.CENTER_VERTICAL);
+        valueRow.setPadding(0,dp(5),0,dp(2));
+        TextView flowValue=txt(Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–",27,statusColor,true);
+        flowValue.setTextColor(statusColor);
+        valueRow.addView(flowValue);
+        TextView flowUnit=txt("m³/s",12,statusColor,true);
+        flowUnit.setTextColor(statusColor);
+        flowUnit.setPadding(dp(4),0,0,0);
+        valueRow.addView(flowUnit);
+        valueRow.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
+        valueRow.addView(riverStatusCompact(status));
+        c.addView(valueRow);
 
-        LinearLayout valueBox=new LinearLayout(this);
-        valueBox.setGravity(Gravity.BOTTOM|Gravity.START);
-        TextView value=txt(Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–",34,statusColor,true);
-        value.setTextColor(statusColor);
-        valueBox.addView(value);
-        TextView unit=txt("m³/s",14,statusColor,true);
-        unit.setTextColor(statusColor);
-        unit.setPadding(dp(5),0,0,dp(5));
-        valueBox.addView(unit);
-        headline.addView(valueBox,new LinearLayout.LayoutParams(0,dp(54),1f));
-
-        LinearLayout statusArea=new LinearLayout(this);
-        statusArea.setGravity(Gravity.CENTER|Gravity.END);
-        statusArea.addView(riverStatusPill(status));
-        headline.addView(statusArea,new LinearLayout.LayoutParams(0,dp(54),0.9f));
-
-        TextView thresholdHint=txt(String.format(Locale.GERMAN,"Abflussstatus · Niedrig < %.0f · Warn ab %.0f · Alarm ab %.0f m³/s",riverLow(station),riverWarn(station),riverAlarm(station)),10,MUTED,false);
-        thresholdHint.setPadding(0,0,0,dp(7));
-        card.addView(thresholdHint);
-
-        addRiverChartSection(card,station,RiverMetric.FLOW,range,true);
-        addRiverChartSection(card,station,RiverMetric.LEVEL,range,false);
-        if(station.supportsTemperature)addRiverChartSection(card,station,RiverMetric.TEMPERATURE,range,false);
-
-        TextView hint=txt("Diagramme berühren, um Einzelwerte anzuzeigen.",10,MUTED,false);
-        hint.setGravity(Gravity.CENTER);
-        hint.setPadding(0,dp(5),0,0);
-        card.addView(hint);
-
-        TextView src=txt(summary[3]+" · "+range.sourceLabel,10,Color.rgb(126,140,150),false);
-        src.setPadding(0,dp(9),0,0);
-        card.addView(src);
-        return card;
+        StringBuilder details=new StringBuilder();
+        if(Double.isFinite(level))details.append("Pegel ").append(formatMetric(station,RiverMetric.LEVEL,level)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
+        if(Double.isFinite(temperature)){
+            if(details.length()>0)details.append("\n");
+            details.append("Wasser ").append(formatMetric(station,RiverMetric.TEMPERATURE,temperature)).append(" °C");
+        }
+        TextView secondary=txt(details.length()==0?"Messwerte werden geladen …":details.toString(),11,MUTED,false);
+        secondary.setPadding(0,dp(3),0,0);
+        c.addView(secondary);
+        return c;
     }
 
-    private void addRiverChartSection(LinearLayout card,HydroStation station,RiverMetric metric,RiverRange range,boolean first){
-        if(!first){
-            View divider=new View(this);
-            divider.setBackgroundColor(darkMode?Color.rgb(51,65,74):Color.rgb(226,233,237));
-            LinearLayout.LayoutParams dividerParams=new LinearLayout.LayoutParams(-1,dp(1));
-            dividerParams.setMargins(0,dp(12),0,dp(12));
-            card.addView(divider,dividerParams);
-        }
+    private View riverStatusCompact(RiverStatus status){
+        int color=statusTextColor(status.bg);
+        TextView label=txt(status.label,10,color,true);
+        label.setTextColor(color);
+        label.setGravity(Gravity.CENTER);
+        label.setPadding(dp(8),dp(4),dp(8),dp(4));
+        label.setBackground(statusBadge(status.bg));
+        return label;
+    }
 
-        TrendSeries series=hydroSeries(station,metric.parameter,range);
-        HydroMath.Stats stats=HydroMath.stats(series.values);
-        double currentValue=displayHydroValue(station,metric,currentHydroValue(station,metric.parameter));
-        int valueColor=metric==RiverMetric.FLOW?statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg):themeText(TEXT);
+    private LinearLayout riverCombinedCard(int slot){
+        HydroStation station=riverStation(slot);
+        RiverRange range=riverRange();
+        String[] summary=hydroSummary(station);
+        TrendSeries flow=hydroSeries(station,"Q",range);
+        TrendSeries level=hydroSeries(station,"W",range);
+        double flowNow=currentHydroValue(station,"Q");
+        double levelNow=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));
+        RiverStatus status=riverStatus(station,flowNow);
+        int flowColor=statusTextColor(status.bg);
 
-        LinearLayout titleRow=new LinearLayout(this);
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        titleRow.addView(txt(riverMetricTitle(metric),15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
-        TextView current=txt(Double.isFinite(currentValue)?formatMetric(station,metric,currentValue)+" "+metricUnit(station,metric):"–",14,valueColor,true);
-        current.setTextColor(valueColor);
-        current.setGravity(Gravity.END);
-        titleRow.addView(current,new LinearLayout.LayoutParams(-2,-2));
-        card.addView(titleRow);
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16),dp(14),dp(16),dp(14));
 
-        if(stats.isValid()&&stats.count>=2){
-            String statsText="Ø "+formatMetric(station,metric,stats.mean)
-                    +"  ·  "+formatMetric(station,metric,stats.min)+"–"+formatMetric(station,metric,stats.max)
-                    +"  ·  "+trendText(stats,metric,station);
-            TextView statsView=txt(statsText,11,MUTED,false);
-            statsView.setPadding(0,dp(3),0,dp(3));
-            card.addView(statsView);
-        }
+        LinearLayout header=new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(txt(station.label+" · BAFU "+station.id,12,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView source=txt("BAFU  ↗",11,WATER,true);
+        source.setOnClickListener(v->external(station.stationUrl()));
+        source.setPadding(dp(8),dp(4),0,dp(4));
+        header.addView(source,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(header);
 
-        if(series.values.size()>=2){
-            RiverTrendView chart=new RiverTrendView(this,series,metric,range,station);
-            LinearLayout.LayoutParams chartParams=new LinearLayout.LayoutParams(-1,dp(metric==RiverMetric.TEMPERATURE?158:176));
-            chartParams.setMargins(0,dp(3),0,0);
-            card.addView(chart,chartParams);
+        LinearLayout values=new LinearLayout(this);
+        values.setPadding(0,dp(8),0,dp(6));
+        LinearLayout flowBox=new LinearLayout(this);
+        flowBox.setOrientation(LinearLayout.VERTICAL);
+        flowBox.addView(txt("Abfluss",11,MUTED,true));
+        TextView q=txt(Double.isFinite(flowNow)?formatMetric(station,RiverMetric.FLOW,flowNow)+" m³/s":"–",18,flowColor,true);
+        q.setTextColor(flowColor);
+        flowBox.addView(q);
+        values.addView(flowBox,new LinearLayout.LayoutParams(0,-2,1));
+
+        LinearLayout levelBox=new LinearLayout(this);
+        levelBox.setOrientation(LinearLayout.VERTICAL);
+        levelBox.setGravity(Gravity.END);
+        TextView levelTitle=txt("Pegel",11,MUTED,true);levelTitle.setGravity(Gravity.END);levelBox.addView(levelTitle);
+        TextView w=txt(Double.isFinite(levelNow)?formatMetric(station,RiverMetric.LEVEL,levelNow)+" "+metricUnit(station,RiverMetric.LEVEL):"–",18,WATER,true);
+        w.setGravity(Gravity.END);levelBox.addView(w);
+        values.addView(levelBox,new LinearLayout.LayoutParams(0,-2,1));
+        card.addView(values);
+
+        TextView limits=txt(String.format(Locale.GERMAN,"Abfluss · Niedrig < %.0f · Warn ab %.0f · Alarm ab %.0f m³/s",riverLow(station),riverWarn(station),riverAlarm(station)),10,MUTED,false);
+        limits.setPadding(0,0,0,dp(4));
+        card.addView(limits);
+
+        if(flow.values.size()>=2&&level.values.size()>=2){
+            DualRiverTrendView graph=new DualRiverTrendView(this,flow,level,range,station);
+            card.addView(graph,new LinearLayout.LayoutParams(-1,dp(224)));
+            TextView hint=txt("Abfluss links · Pegel rechts · Diagramm berühren für Einzelwerte",10,MUTED,false);
+            hint.setGravity(Gravity.CENTER);
+            hint.setPadding(0,dp(4),0,0);
+            card.addView(hint);
         }else{
-            String message=range==RiverRange.HOUR?"Für die letzte Stunde liegen noch nicht genug Livewerte vor.":"Für diesen Zeitraum liegen noch nicht genug Messwerte vor.";
-            TextView missing=txt(message,12,MUTED,false);
+            TextView missing=txt("Für diesen Zeitraum liegen noch nicht genug Abfluss- und Pegelwerte vor.",12,MUTED,false);
             missing.setGravity(Gravity.CENTER);
-            missing.setPadding(dp(8),dp(18),dp(8),dp(18));
+            missing.setPadding(dp(8),dp(22),dp(8),dp(22));
             missing.setBackground(round(Color.rgb(238,243,246),14));
-            LinearLayout.LayoutParams missingParams=new LinearLayout.LayoutParams(-1,-2);
-            missingParams.setMargins(0,dp(7),0,0);
-            card.addView(missing,missingParams);
+            card.addView(missing,margin(-1,-2,0,7,0,0));
         }
+
+        TextView src=txt(summary[3]+" · "+range.sourceLabel,10,Color.rgb(126,140,150),false);
+        src.setPadding(0,dp(8),0,0);
+        card.addView(src);
+        return card;
     }
 
     private String riverMetricTitle(RiverMetric metric){return metric==RiverMetric.TEMPERATURE?"Wassertemperatur":metric.label;}
@@ -1568,16 +1597,19 @@ public class MainActivity extends Activity {
         TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);title.setPadding(0,dp(5),0,dp(5));hero.addView(title);
         hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
 
+        section(body,"Banking-App","Einmal festlegen; geöffnet wird sie erst beim Bezahlen.");
+        body.addView(bankChoiceCard(),margin(-1,-2,0,0,0,12));
+
         section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
         LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
         cashSummaryContainer=new LinearLayout(this);cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);cart.addView(cashSummaryContainer);
         cashTotalView=txt("Total CHF 0.00",24,TEXT,true);cashTotalView.setPadding(0,dp(12),0,dp(10));cart.addView(cashTotalView);
-        LinearLayout payRow=new LinearLayout(this);
-        Button cartQr=btn("Swiss QR",NAVY,Color.WHITE);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(46),1));
-        Button cartBank=btn("Direkt Bank",Color.rgb(232,240,244),NAVY);cartBank.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)sharePaymentQr(input);});LinearLayout.LayoutParams cbp=new LinearLayout.LayoutParams(0,dp(46),1);cbp.setMargins(dp(7),0,0,0);payRow.addView(cartBank,cbp);
-        Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(46),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
+        Button cartBank=btn(preferredBankPaymentLabel(),NAVY,Color.WHITE);cartBank.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)payWithPreferredBank(input);});cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
+        LinearLayout payRow=new LinearLayout(this);payRow.setPadding(0,dp(8),0,0);
+        Button cartQr=btn("Swiss QR",Color.rgb(232,240,244),NAVY);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(44),1));
+        Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(44),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
         cart.addView(payRow);
-        TextView directInfo=txt("„Direkt Bank“ übergibt den Swiss-QR temporär an eine kompatible Banking-App – ohne ihn vorher dauerhaft zu speichern. Nicht jede Bank unterstützt diesen Android-Import.",11,MUTED,false);directInfo.setPadding(0,dp(8),0,0);cart.addView(directInfo);
+        TextView directInfo=txt("Die gewählte Banking-App erhält den Swiss QR temporär – ohne vorheriges Speichern. Mit Yuh wurde dieser Weg erfolgreich getestet.",11,MUTED,false);directInfo.setPadding(0,dp(8),0,0);cart.addView(directInfo);
         TextView clearCart=link("Warenkorb leeren");clearCart.setOnClickListener(v->{cashCart.clear();for(TextView quantity:cashQuantityViews.values())quantity.setText("0");updateCashSummary();});cart.addView(clearCart);
         updateCashSummary();
 
@@ -1606,10 +1638,7 @@ public class MainActivity extends Activity {
         EditText amount=new EditText(this);amount.setHint("0.00");amount.setTextSize(25);amount.setSingleLine(true);amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);amount.setTextColor(themeText(TEXT));amount.setHintTextColor(themeText(MUTED));amount.setBackground(round(Color.rgb(238,243,246),14));amount.setPadding(dp(14),0,dp(14),0);amountRow.addView(amount,new LinearLayout.LayoutParams(0,dp(56),1));
         TextView amountInfo=txt("Leer oder 0 erzeugt einen Swiss QR mit offenem Betrag.",12,MUTED,false);amountInfo.setPadding(0,0,0,dp(10));amountCard.addView(amountInfo);
         Button qr=btn("Swiss QR erstellen",NAVY,Color.WHITE);qr.setOnClickListener(v->showPaymentQr(amount));amountCard.addView(qr,new LinearLayout.LayoutParams(-1,dp(48)));
-        Button direct=btn("QR direkt an Banking-App",Color.rgb(232,240,244),NAVY);direct.setOnClickListener(v->sharePaymentQr(amount));LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,dp(44));dlp.setMargins(0,dp(8),0,0);amountCard.addView(direct,dlp);
-        String bankLabel=prefs.getString(PREF_BANK_LABEL,"");
-        Button bank=btn(bankLabel.trim().isEmpty()?"Banking-App auswählen":bankLabel+" öffnen",Color.rgb(232,240,244),NAVY);bankButton=bank;bank.setOnClickListener(v->openPreferred(false,amount));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(44));bp.setMargins(0,dp(8),0,0);amountCard.addView(bank,bp);
-        TextView change=link(bankLabel.trim().isEmpty()?"Banking-App für Direktstart wählen":"Andere Banking-App wählen");change.setOnClickListener(v->chooseApp(false,amount));amountCard.addView(change);
+        Button direct=btn(preferredBankPaymentLabel(),Color.rgb(232,240,244),NAVY);direct.setOnClickListener(v->payWithPreferredBank(amount));LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,dp(44));dlp.setMargins(0,dp(8),0,0);amountCard.addView(direct,dlp);
 
         LinearLayout twint=card();twint.setOrientation(LinearLayout.VERTICAL);body.addView(twint,margin(-1,-2,0,0,0,12));
         twint.addView(txt("TWINT",16,TEXT,true));
@@ -1621,6 +1650,42 @@ public class MainActivity extends Activity {
         LinearLayout details=card();details.setOrientation(LinearLayout.VERTICAL);body.addView(details,margin(-1,-2,0,0,0,12));details.addView(txt(CLUB_PAYEE,16,TEXT,true));details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false));TextView iban=txt(CLUB_IBAN,19,NAVY,true);iban.setPadding(0,dp(12),0,dp(4));details.addView(iban);details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
         LinearLayout copies=new LinearLayout(this);copies.setPadding(0,dp(12),0,0);details.addView(copies);Button copyIban=btn("IBAN kopieren",Color.rgb(232,240,244),NAVY);copyIban.setOnClickListener(v->copy("PFVR IBAN",CLUB_IBAN.replace(" ",""),"IBAN kopiert"));copies.addView(copyIban,new LinearLayout.LayoutParams(0,dp(42),1));Button copyAll=btn("Alles kopieren",Color.rgb(232,240,244),NAVY);copyAll.setOnClickListener(v->{String x=CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE;String a=amount(amount.getText().toString());if(a!=null&&!a.isBlank())x+="\nCHF "+a;copy("PFVR Zahlung",x,"Zahlungsdaten kopiert");});LinearLayout.LayoutParams cap=new LinearLayout.LayoutParams(0,dp(42),1);cap.setMargins(dp(8),0,0,0);copies.addView(copyAll,cap);
         return scroll;
+    }
+
+    private View bankChoiceCard(){
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+        String label=prefs.getString(PREF_BANK_LABEL,"").trim();
+        String pkg=prefs.getString(PREF_BANK_PACKAGE,"").trim();
+        boolean selected=!label.isEmpty()&&!pkg.isEmpty();
+        card.addView(txt(selected?label:"Noch keine Banking-App festgelegt",16,TEXT,true));
+        TextView info=txt(selected?"Wird für die direkte Swiss-QR-Übergabe verwendet.":"Wähle die Banking-App, die beim Tippen auf Bezahlen verwendet werden soll.",12,MUTED,false);
+        info.setPadding(0,dp(4),0,dp(10));
+        card.addView(info);
+        LinearLayout actions=new LinearLayout(this);
+        Button choose=btn(selected?"Ändern":"Bank auswählen",selected?Color.rgb(232,240,244):NAVY,selected?NAVY:Color.WHITE);
+        choose.setOnClickListener(v->chooseApp(false,null));
+        actions.addView(choose,new LinearLayout.LayoutParams(0,dp(44),1));
+        if(selected){
+            Button clear=btn("Entfernen",Color.rgb(232,240,244),NAVY);
+            clear.setOnClickListener(v->{prefs.edit().remove(PREF_BANK_PACKAGE).remove(PREF_BANK_LABEL).apply();navigate(Screen.CASH);});
+            LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(0,dp(44),1);clearParams.setMargins(dp(8),0,0,0);actions.addView(clear,clearParams);
+        }
+        card.addView(actions);
+        return card;
+    }
+
+    private String preferredBankPaymentLabel(){
+        String label=prefs.getString(PREF_BANK_LABEL,"").trim();
+        return label.isEmpty()?"Banking-App auswählen":"Mit "+label+" bezahlen";
+    }
+
+    private void payWithPreferredBank(EditText amountInput){
+        if(prefs.getString(PREF_BANK_PACKAGE,"").trim().isEmpty()){
+            Toast.makeText(this,"Bitte oben zuerst eine Banking-App auswählen.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        sharePaymentQr(amountInput);
     }
 
     private CashCatalog.Catalog cashCatalog(){
@@ -1806,16 +1871,25 @@ public class MainActivity extends Activity {
 
     private void chooseApp(boolean twint, EditText amountInput) {
         PackageManager pm=getPackageManager(); Intent q=new Intent(Intent.ACTION_MAIN); q.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=pm.queryIntentActivities(q,0); List<AppChoice> found=new ArrayList<>();
-        for(ResolveInfo r:all) {
-            if(r.activityInfo==null || r.activityInfo.packageName==null || r.activityInfo.packageName.equals(getPackageName())) continue;
-            String label=String.valueOf(r.loadLabel(pm)); String hay=(label+" "+r.activityInfo.packageName).toLowerCase(Locale.ROOT); boolean isTwint=hay.contains("twint"); boolean isBank=isTwint||any(hay,"bank","banking","neon","yuh","revolut","ubs","raiffeisen","postfinance","kantonal","zkb","bcv","bekb","cler","zak","migros");
-            if((twint&&isTwint)||(!twint&&isBank&&!isTwint)) found.add(new AppChoice(label,r.activityInfo.packageName));
+        for(ResolveInfo r:all){
+            if(r.activityInfo==null||r.activityInfo.packageName==null)continue;
+            String pkg=r.activityInfo.packageName;String label=String.valueOf(r.loadLabel(pm));String h=(label+" "+pkg).toLowerCase(Locale.ROOT);
+            boolean looksTwint=h.contains("twint");
+            boolean looksBank=h.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx).*");
+            if((twint&&looksTwint)||(!twint&&looksBank))found.add(new AppChoice(label,pkg));
         }
         if(found.isEmpty()&&!twint) for(ResolveInfo r:all) if(r.activityInfo!=null && r.activityInfo.packageName!=null && !r.activityInfo.packageName.equals(getPackageName())) found.add(new AppChoice(String.valueOf(r.loadLabel(pm)),r.activityInfo.packageName));
         found.sort((a,b)->{int pa=bankPriority(a),pb=bankPriority(b);if(pa!=pb)return Integer.compare(pa,pb);return a.label.compareToIgnoreCase(b.label);});
         if(found.isEmpty()) { if(twint) { try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("market://search?q=TWINT&c=apps")));}catch(Exception e){external("https://www.twint.ch/privatkunden/");} } else Toast.makeText(this,"Keine passende Banking-App gefunden.",Toast.LENGTH_LONG).show(); return; }
         String[] labels=new String[found.size()]; for(int i=0;i<found.size();i++) labels[i]=found.get(i).label;
-        new AlertDialog.Builder(this,dialogTheme()).setTitle(twint?"TWINT-App auswählen":"Banking-App auswählen").setItems(labels,(d,i)->{AppChoice c=found.get(i); prefs.edit().putString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,c.pkg).putString(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL,c.label).apply(); if(!twint&&bankButton!=null)bankButton.setText(c.label+" öffnen"); copyAmount(amountInput); Intent launch=pm.getLaunchIntentForPackage(c.pkg); if(launch!=null) startActivity(launch);}).setNegativeButton("Abbrechen",null).show();
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(twint?"TWINT-App auswählen":"Banking-App auswählen").setItems(labels,(d,i)->{
+            AppChoice c=found.get(i);
+            prefs.edit().putString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,c.pkg).putString(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL,c.label).apply();
+            if(!twint){
+                Toast.makeText(this,c.label+" festgelegt.",Toast.LENGTH_SHORT).show();
+                if(current==Screen.CASH)navigate(Screen.CASH);
+            }else if(bankButton!=null){bankButton.setText(c.label);}
+        }).setNegativeButton("Abbrechen",null).show();
     }
 
     private int bankPriority(AppChoice app) {
@@ -2204,6 +2278,151 @@ public class MainActivity extends Activity {
         if(absolute>=0.1)return String.format(Locale.GERMAN,"%.1f",value);
         if(absolute>=0.01)return String.format(Locale.GERMAN,"%.2f",value);
         return String.format(Locale.GERMAN,"%.3f",value);
+    }
+
+    private class DualRiverTrendView extends View {
+        private final TrendSeries flow;
+        private final TrendSeries level;
+        private final RiverRange range;
+        private final HydroStation station;
+        private final Paint grid=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint label=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint flowLine=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint levelLine=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint threshold=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint point=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tooltip=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tooltipText=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private long selectedTime=Long.MIN_VALUE;
+
+        DualRiverTrendView(Context context,TrendSeries flow,TrendSeries level,RiverRange range,HydroStation station){
+            super(context);this.flow=flow;this.level=level;this.range=range;this.station=station;
+            setClickable(true);setFocusable(true);
+            grid.setStrokeWidth(dp(1));label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);
+            flowLine.setStyle(Paint.Style.STROKE);flowLine.setStrokeWidth(dp(2.5f));flowLine.setStrokeCap(Paint.Cap.ROUND);flowLine.setStrokeJoin(Paint.Join.ROUND);
+            levelLine.setStyle(Paint.Style.STROKE);levelLine.setStrokeWidth(dp(2.2f));levelLine.setStrokeCap(Paint.Cap.ROUND);levelLine.setStrokeJoin(Paint.Join.ROUND);
+            threshold.setStyle(Paint.Style.STROKE);threshold.setStrokeWidth(dp(1.2f));threshold.setPathEffect(new DashPathEffect(new float[]{dp(6),dp(4)},0));
+            point.setStyle(Paint.Style.FILL);tooltip.setStyle(Paint.Style.FILL);
+            tooltipText.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);tooltipText.setTypeface(Typeface.DEFAULT_BOLD);
+            setContentDescription("Abfluss und Pegel "+station.label+" · "+range.label);
+        }
+
+        @Override public boolean performClick(){super.performClick();return true;}
+
+        @Override public boolean onTouchEvent(MotionEvent event){
+            if(flow.times.size()<2||level.times.size()<2)return super.onTouchEvent(event);
+            if(event.getAction()==MotionEvent.ACTION_DOWN||event.getAction()==MotionEvent.ACTION_MOVE||event.getAction()==MotionEvent.ACTION_UP){
+                float left=dp(53),right=getWidth()-dp(53);
+                float x=Math.max(left,Math.min(right,event.getX()));
+                long minTime=Math.min(flow.times.get(0),level.times.get(0));
+                long maxTime=Math.max(flow.times.get(flow.times.size()-1),level.times.get(level.times.size()-1));
+                selectedTime=minTime+Math.round((maxTime-minTime)*(x-left)/Math.max(1f,right-left));
+                invalidate();
+                if(event.getAction()==MotionEvent.ACTION_UP)performClick();
+                return true;
+            }
+            if(event.getAction()==MotionEvent.ACTION_CANCEL){selectedTime=Long.MIN_VALUE;invalidate();return true;}
+            return super.onTouchEvent(event);
+        }
+
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            if(flow.values.size()<2||level.values.size()<2)return;
+            float left=dp(53),right=getWidth()-dp(53),top=dp(18),bottom=getHeight()-dp(31);
+            long minTime=Math.min(flow.times.get(0),level.times.get(0));
+            long maxTime=Math.max(flow.times.get(flow.times.size()-1),level.times.get(level.times.size()-1));
+            if(maxTime<=minTime)maxTime=minTime+1;
+            HydroMath.AxisScale flowScale=HydroMath.niceAxis(flow.values);
+            HydroMath.AxisScale levelScale=HydroMath.niceAxis(level.values);
+            int flowColor=statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg);
+            int levelColor=themeText(WATER);
+
+            grid.setColor(darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234));
+            label.setColor(themeText(MUTED));
+            for(int i=0;i<=4;i++){
+                float y=top+(bottom-top)*i/4f;
+                canvas.drawLine(left,y,right,y,grid);
+                double q=flowScale.max-(flowScale.max-flowScale.min)*i/4d;
+                double w=levelScale.max-(levelScale.max-levelScale.min)*i/4d;
+                String qText=axisLabel(q,flowScale.step);
+                String wText=axisLabel(w,levelScale.step);
+                label.setColor(flowColor);
+                canvas.drawText(qText,left-dp(5)-label.measureText(qText),y+dp(3),label);
+                label.setColor(levelColor);
+                canvas.drawText(wText,right+dp(5),y+dp(3),label);
+            }
+            drawDualTimeGrid(canvas,left,right,top,bottom,minTime,maxTime);
+            drawDualThresholds(canvas,flowScale,left,right,top,bottom);
+            drawDualSeries(canvas,flow,flowScale,left,right,top,bottom,minTime,maxTime,flowLine,flowColor);
+            drawDualSeries(canvas,level,levelScale,left,right,top,bottom,minTime,maxTime,levelLine,levelColor);
+
+            if(selectedTime!=Long.MIN_VALUE)drawDualSelection(canvas,flowScale,levelScale,left,right,top,bottom,minTime,maxTime,flowColor,levelColor);
+        }
+
+        private void drawDualSeries(Canvas canvas,TrendSeries series,HydroMath.AxisScale scale,float left,float right,float top,float bottom,long minTime,long maxTime,Paint paint,int color){
+            if(series.values.size()<2)return;
+            Path path=new Path();
+            boolean started=false;
+            for(int i=0;i<series.values.size();i++){
+                double value=series.values.get(i);if(!Double.isFinite(value))continue;
+                float x=left+(right-left)*(series.times.get(i)-minTime)/(float)(maxTime-minTime);
+                float y=(float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));
+                if(!started){path.moveTo(x,y);started=true;}else path.lineTo(x,y);
+            }
+            paint.setColor(color);canvas.drawPath(path,paint);
+        }
+
+        private void drawDualTimeGrid(Canvas canvas,float left,float right,float top,float bottom,long minTime,long maxTime){
+            int intervals=range==RiverRange.HOUR?3:4;
+            ZoneId zone=ZoneId.of("Europe/Zurich");
+            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
+            label.setColor(themeText(MUTED));
+            for(int i=0;i<=intervals;i++){
+                float fraction=i/(float)intervals;float x=left+(right-left)*fraction;
+                if(i>0&&i<intervals)canvas.drawLine(x,top,x,bottom,grid);
+                long timestamp=minTime+Math.round((maxTime-minTime)*fraction);
+                String value=java.time.Instant.ofEpochMilli(timestamp).atZone(zone).format(formatter);
+                float width=label.measureText(value);float textX=Math.max(left,Math.min(right-width,x-width/2f));
+                canvas.drawText(value,textX,bottom+dp(18),label);
+            }
+        }
+
+        private void drawDualThresholds(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom){
+            double[] values={riverLow(station),riverWarn(station),riverAlarm(station)};
+            int[] colors={STATUS_LOW,STATUS_WARN,STATUS_ALARM};
+            for(int i=0;i<values.length;i++){
+                double value=values[i];if(value<scale.min||value>scale.max)continue;
+                float y=(float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));
+                threshold.setColor(statusTextColor(colors[i]));canvas.drawLine(left,y,right,y,threshold);
+            }
+        }
+
+        private void drawDualSelection(Canvas canvas,HydroMath.AxisScale flowScale,HydroMath.AxisScale levelScale,float left,float right,float top,float bottom,long minTime,long maxTime,int flowColor,int levelColor){
+            int qi=HydroMath.nearestIndex(flow.times,selectedTime),wi=HydroMath.nearestIndex(level.times,selectedTime);
+            if(qi<0||wi<0)return;
+            float x=left+(right-left)*(selectedTime-minTime)/(float)(maxTime-minTime);
+            Paint cross=new Paint(Paint.ANTI_ALIAS_FLAG);cross.setColor(Color.argb(darkMode?150:100,128,145,155));cross.setStrokeWidth(dp(1));canvas.drawLine(x,top,x,bottom,cross);
+
+            double q=flow.values.get(qi),w=level.values.get(wi);
+            float qx=left+(right-left)*(flow.times.get(qi)-minTime)/(float)(maxTime-minTime);
+            float qy=(float)(bottom-(q-flowScale.min)/(flowScale.max-flowScale.min)*(bottom-top));
+            float wx=left+(right-left)*(level.times.get(wi)-minTime)/(float)(maxTime-minTime);
+            float wy=(float)(bottom-(w-levelScale.min)/(levelScale.max-levelScale.min)*(bottom-top));
+            point.setColor(flowColor);canvas.drawCircle(qx,qy,dp(4.5f),point);
+            point.setColor(levelColor);canvas.drawCircle(wx,wy,dp(4.5f),point);
+
+            long timestamp=Math.max(flow.times.get(qi),level.times.get(wi));
+            ZonedDateTime time=java.time.Instant.ofEpochMilli(timestamp).atZone(ZoneId.of("Europe/Zurich"));
+            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.MM. HH:mm",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
+            String text=time.format(formatter)+" · "+formatMetric(station,RiverMetric.FLOW,q)+" m³/s · "+formatMetric(station,RiverMetric.LEVEL,w)+" "+metricUnit(station,RiverMetric.LEVEL);
+            tooltipText.setColor(darkMode?DARK_TEXT:Color.WHITE);
+            float textWidth=tooltipText.measureText(text),textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
+            float boxWidth=Math.min(right-left,textWidth+dp(16));float boxLeft=Math.max(left,Math.min(right-boxWidth,x-boxWidth/2f));
+            RectF box=new RectF(boxLeft,top+dp(4),boxLeft+boxWidth,top+textHeight+dp(14));
+            tooltip.setColor(darkMode?DARK_SOFT:NAVY);canvas.drawRoundRect(box,dp(8),dp(8),tooltip);
+            canvas.save();canvas.clipRect(box);canvas.drawText(text,box.left+dp(8),box.bottom-dp(6),tooltipText);canvas.restore();
+            setContentDescription(text);
+        }
     }
 
     private class RiverTrendView extends View {
