@@ -2,7 +2,11 @@ package ch.pfvr.internapp;
 
 /** BAFU Rhine stations available as configurable home cards. */
 enum HydroStation {
-    BASEL_RHEINHALLE("2289", "Basel, Rheinhalle", false, 400f, 2550f, 3700f),
+    // Basel defaults are operational navigation thresholds from Port of Switzerland:
+    // ~1800 m³/s = 700 cm / Hochwassermarke I (Voralarm),
+    // ~2500 m³/s = 790 cm / IIb (small craft and ferries Basel–Rheinfelden closed).
+    BASEL_RHEINHALLE("2289", "Basel, Rheinhalle", false, 400f, 1800f, 2500f),
+    // Rheinfelden defaults use BAFU flood danger levels until PFVR-specific limits are available.
     RHEINFELDEN("2091", "Rheinfelden", true, 400f, 2500f, 3600f);
 
     final String id;
