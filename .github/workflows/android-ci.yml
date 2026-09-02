@@ -1,0 +1,97 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'dev-*'
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject generated source patchers
+        shell: bash
+        run: |
+          if find tools -maxdepth 1 -type f -name 'apply_*.py' -print -quit | grep -q .; then
+            echo 'Build-time source patchers are not allowed. Commit source changes directly.' >&2
+            exit 1
+          fi
+
+      - name: Reject personal PFVR access data
+        shell: bash
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Unit tests and debug APK
+        working-directory: Android
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+
+      - name: Verify and package APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" Android/app/build.gradle | head -1)
+          VERSION_CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' Android/app/build.gradle | head -1)
+          test -n "$VERSION_NAME" && test -n "$VERSION_CODE"
+
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
+
+          mkdir -p dist
+          OUT="PFVR-Rheinfelden-test-${VERSION_NAME}-debug.apk"
+          cp "$APK" "dist/$OUT"
+          mv signature.txt dist/debug-signature.txt
+          sha256sum "dist/$OUT" > dist/SHA256SUMS.txt
+          {
+            echo "Version: $VERSION_NAME ($VERSION_CODE)"
+            echo 'Package: ch.pfvr.app.test'
+            echo "Commit: $GITHUB_SHA"
+            echo 'Signing: ephemeral GitHub runner debug key; not a stable update identity'
+          } > dist/build-info.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Android-test-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error

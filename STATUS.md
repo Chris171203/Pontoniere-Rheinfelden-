@@ -12,6 +12,7 @@ Stand: Testversion `0.9.3` · aktualisiert 2026-09-02.
 - Pro aktiver Station bleibt ein gemeinsames Diagramm für Abfluss und Pegel mit zwei dynamischen Y-Achsen erhalten; Rheinfelden zeigt die Wassertemperatur in der Kurzkarte.
 - Live-Aktualisierung baut nur den Live-Bereich neu auf und stellt die Scrollposition nach dem Layout wieder her.
 - Nicht mehr verwendete Einzelgrafik-, Metrik- und generische App-Startlogik wurde entfernt.
+- Die Android-CI baut ausschließlich eingecheckte Quellen; historische versionsgebundene Patch-Workflows und Migrationsskripte wurden entfernt.
 - Vereinsbeiz bleibt in Trinken, Essen und Feiern gegliedert; Warenkorb steht vor der Auswahl, zeigt Positionen und Total und erlaubt direktes Entfernen.
 - Interner Bereich startet standardmäßig in der App-Ansicht und übernimmt Hell-/Dunkelmodus.
 - Android 16 / API 36 als Target.

@@ -15,7 +15,11 @@ def post(query, variables=None):
         ENDPOINT,
         data=payload,
         method="POST",
-        headers={"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "PFVR-CI/0.9.0"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "PFVR-CI",
+        },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         return response.status, json.loads(response.read().decode("utf-8"))
@@ -29,7 +33,6 @@ def retry(query, variables=None):
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             last = RuntimeError(f"HTTP {exc.code}: {body[:500]}")
-            # Client errors indicate our query/request is wrong; do not hide them.
             if 400 <= exc.code < 500:
                 raise last
         except Exception as exc:
@@ -121,7 +124,10 @@ try:
         live_rows = live["data"]["water"]["observations"]["data_live"]
         if not live_rows:
             raise RuntimeError(f"Station {station} returned no live observations")
-        print(f"BAFU {station}: {stations[0].get('name')} · {len(rows)} hourly · {len(live_rows)} live rows")
+        print(
+            f"BAFU {station}: {stations[0].get('name')} · "
+            f"{len(rows)} hourly · {len(live_rows)} live rows"
+        )
 except Exception as exc:
     print(f"BAFU probe failed: {exc}", file=sys.stderr)
     sys.exit(1)
