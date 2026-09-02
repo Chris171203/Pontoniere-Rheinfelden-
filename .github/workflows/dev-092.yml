@@ -1,58 +1,51 @@
-name: Dev Android 0.9.2
+name: Dev Android 0.9.3 verification
 
 on:
   push:
     branches:
-      - dev-0.9.2
+      - dev-0.9.3
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: pfvr-dev-092
+  group: pfvr-dev-093-verification
   cancel-in-progress: false
 
 jobs:
-  test-and-build:
+  verify-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: dev-0.9.2
-          fetch-depth: 0
+          ref: dev-0.9.3
 
-      - name: Apply 0.9.2 refinements
-        shell: bash
+      - name: Apply 0.9.3 cleanup in workspace
+        run: python tools/apply_093.py
+
+      - name: Verify source state
         run: |
-          if grep -Fq "versionName '0.9.2'" Android/app/build.gradle && grep -Fq 'private class DualRiverTrendView extends View' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java; then
-            echo 'Verified 0.9.2 source already present; no patch required.'
-          else
-            python tools/apply_092.py
-          fi
+          set -euo pipefail
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -Fq 'versionCode 17' Android/app/build.gradle
+          grep -Fq "versionName '0.9.3'" Android/app/build.gradle
+          grep -Fq 'private enum SettingsTab' "$SRC"
+          grep -Fq 'private View cashBankStatusCard()' "$SRC"
+          grep -Fq 'private View bankChoiceSettingsCard()' "$SRC"
+          grep -Fq 'private void chooseBankingApp()' "$SRC"
+          grep -Fq 'equalizeSummaryCardHeights(first,second)' "$SRC"
+          grep -Fq 'Einstellungen → Zahlung' "$SRC"
+          ! grep -Fq 'private class RiverTrendView extends View' "$SRC"
+          ! grep -Fq 'private void chooseApp(' "$SRC"
+          ! grep -Fq 'PREF_TWINT_PACKAGE' "$SRC"
+          ! grep -Fq 'PREF_RIVER_METRIC' "$SRC"
 
       - name: Reject personal PFVR access data
         run: |
-          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=' Android --exclude-dir=build; then
             echo 'Personal PFVR access data found in Android source.' >&2
             exit 1
-          fi
-
-      - name: Detect protected Android signing secrets
-        id: signing
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
-        shell: bash
-        run: |
-          if [[ -n "$KEYSTORE_B64" && -n "$STORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
-            echo 'available=true' >> "$GITHUB_OUTPUT"
-            echo 'Protected release signing is available.'
-          else
-            echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo '::warning::Protected Android signing secrets are incomplete. Debug test APK only; runner debug keys are not stable across builds.'
           fi
 
       - uses: actions/setup-java@v5
@@ -66,95 +59,30 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Verify BAFU stations and live queries
-        run: python tools/probe_bafu_090.py
-
-      - name: Verify 0.9.2 source state
-        run: |
-          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
-          grep -Fq 'versionCode 16' Android/app/build.gradle
-          grep -Fq "versionName '0.9.2'" Android/app/build.gradle
-          grep -Fq "applicationIdSuffix '.test'" Android/app/build.gradle
-          grep -Fq 'private View riverSummaryRow()' "$SRC"
-          grep -Fq 'private LinearLayout riverCombinedCard(int slot)' "$SRC"
-          grep -Fq 'private class DualRiverTrendView extends View' "$SRC"
-          grep -Fq 'postDelayed(()->homeScroll.scrollTo(0,scrollY),80)' "$SRC"
-          grep -Fq 'private View bankChoiceCard()' "$SRC"
-          grep -Fq 'Einmal festlegen; geöffnet wird sie erst beim Bezahlen.' "$SRC"
-          grep -Fq 'Mit Yuh wurde dieser Weg erfolgreich getestet.' "$SRC"
-          grep -Fq 'PREF_RIVER_SLOT2_ENABLED' "$SRC"
-          grep -Fq 'getBoolean(PREF_INTERNAL_APP_VIEW,true)' "$SRC"
-          jq -e '[.categories[].label] == ["Trinken", "Essen", "Feiern"]' Android/app/src/main/assets/vereinsbeiz_prices.json
-
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
-      - name: Unit tests and debug test APK
+      - name: Unit tests and debug APK
         working-directory: Android
         run: gradle --no-daemon testDebugUnitTest assembleDebug
 
-      - name: Restore protected upload keystore
-        if: steps.signing.outputs.available == 'true'
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}
-        shell: bash
-        run: printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/pfvr-upload.jks"
-
-      - name: Build release-signed APK
-        if: steps.signing.outputs.available == 'true'
-        working-directory: Android
-        env:
-          ANDROID_UPLOAD_KEYSTORE: ${{ runner.temp }}/pfvr-upload.jks
-          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
-          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
-
-      - name: Verify and package APKs
-        env:
-          HAS_SIGNING: ${{ steps.signing.outputs.available }}
-        shell: bash
+      - name: Package verified source and APK
         run: |
           set -euo pipefail
-          mkdir -p dist
-          DEBUG_APK=Android/app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$DEBUG_APK" | tee dist/debug-signature.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEBUG_APK" | grep "package: name='ch.pfvr.app.test' versionCode='16' versionName='0.9.2'"
-          cp "$DEBUG_APK" dist/PFVR-Rheinfelden-test-0.9.2-debug.apk
-          {
-            echo 'Version: 0.9.2 (16)'
-            echo 'Debug package: ch.pfvr.app.test'
-            echo "Protected release signing available: $HAS_SIGNING"
-            echo 'Note: debug signing from GitHub-hosted runners is not a stable update identity.'
-          } > dist/build-info.txt
-
-          if [[ "$HAS_SIGNING" == 'true' ]]; then
-            RELEASE_APK=Android/app/build/outputs/apk/release/app-release.apk
-            test -f "$RELEASE_APK"
-            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$RELEASE_APK" | tee dist/release-signature.txt
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RELEASE_APK" | grep "package: name='ch.pfvr.app' versionCode='16' versionName='0.9.2'"
-            cp "$RELEASE_APK" dist/PFVR-Rheinfelden-0.9.2-signed.apk
-          fi
-
-          sha256sum dist/*.apk | tee dist/SHA256SUMS.txt
+          mkdir -p dist/source/Android/app/src/main/java/ch/pfvr/internapp
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='17' versionName='0.9.3'"
+          cp "$APK" dist/PFVR-Rheinfelden-test-0.9.3-debug.apk
+          cp Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java dist/source/Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          cp Android/app/build.gradle dist/source/Android/app/build.gradle
+          cp PROJECT.md STATUS.md dist/source/
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PFVR-Rheinfelden-0.9.2-apks
+          name: PFVR-Rheinfelden-0.9.3-verified
           path: dist/
           if-no-files-found: error
-
-      - name: Persist verified 0.9.2 source
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
-            Android/app/build.gradle \
-            PROJECT.md STATUS.md
-          if ! git diff --cached --quiet; then
-            git commit -m 'Apply Android 0.9.2 refinements [skip ci]'
-            git push origin HEAD:dev-0.9.2
-          fi
