@@ -21,7 +21,7 @@
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="false"
         android:icon="@drawable/pfvr_logo"
-        android:label="PFVR Rheinfelden"
+        android:label="${appLabel}"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"

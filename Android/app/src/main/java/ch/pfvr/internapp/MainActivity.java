@@ -119,6 +119,7 @@ public class MainActivity extends Activity {
     private static final String PREF_RIVER_SLOT1_METRIC = "river_slot1_metric";
     private static final String PREF_RIVER_SLOT2_STATION = "river_slot2_station";
     private static final String PREF_RIVER_SLOT2_METRIC = "river_slot2_metric";
+    private static final String PREF_RIVER_SLOT2_ENABLED = "river_slot2_enabled";
     private static final float DEFAULT_RIVER_LOW = 400f;
     private static final float DEFAULT_RIVER_WARN = 2500f;
     private static final float DEFAULT_RIVER_ALARM = 3600f;
@@ -207,12 +208,15 @@ public class MainActivity extends Activity {
     private Bitmap pendingQrBitmap;
     private Button bankButton;
     private final Map<String,Integer> cashCart = new LinkedHashMap<>();
+    private final Map<String,TextView> cashQuantityViews = new HashMap<>();
     private CashCatalog.Catalog cashCatalog;
     private LinearLayout cashSummaryContainer;
     private TextView cashTotalView;
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
+    private ScrollView homeScroll;
+    private LinearLayout homeLiveStack;
     private Handler dataRefreshHandler;
     private final Runnable dataRefreshTick = new Runnable(){@Override public void run(){refreshLive(false);if(eventsUpdated<=0L||System.currentTimeMillis()-eventsUpdated>=60L*60L*1000L)refreshEvents(false,null);if(dataRefreshHandler!=null)dataRefreshHandler.postDelayed(this,5L*60L*1000L);}};
 
@@ -227,14 +231,20 @@ public class MainActivity extends Activity {
         setContentView(buildShell());
         navigate(Screen.HOME);
         refreshEvents(false, () -> {
-            if (current == Screen.HOME || current == Screen.EVENTS) navigate(current);
+            if (current == Screen.HOME) rebuildHomePreservingScroll();
+            else if (current == Screen.EVENTS) navigate(Screen.EVENTS);
         });
         refreshLive(false);
     }
 
     @Override protected void onResume(){
         super.onResume();
-        if(prefs!=null){loadCachedEvents();refreshLive(false);if(current==Screen.HOME||current==Screen.EVENTS)navigate(current);}
+        if(prefs!=null){
+            loadCachedEvents();
+            refreshLive(false);
+            if(current==Screen.HOME)rebuildHomePreservingScroll();
+            else if(current==Screen.EVENTS)navigate(Screen.EVENTS);
+        }
         if(dataRefreshHandler!=null){dataRefreshHandler.removeCallbacks(dataRefreshTick);dataRefreshHandler.postDelayed(dataRefreshTick,5L*60L*1000L);}
     }
 
@@ -326,6 +336,7 @@ public class MainActivity extends Activity {
 
     private void navigate(Screen screen) {
         current = screen; activeWebView = null;
+        if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
         if (headerBack != null) headerBack.setVisibility(screen == Screen.HOME ? View.GONE : View.VISIBLE);
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==screen;
@@ -346,6 +357,7 @@ public class MainActivity extends Activity {
 
     private View home() {
         ScrollView scroll = new ScrollView(this);
+        homeScroll=scroll;
         LinearLayout b = body(); scroll.addView(b);
 
         LinearLayout hero = new LinearLayout(this);
@@ -382,6 +394,13 @@ public class MainActivity extends Activity {
         LinearLayout stack=new LinearLayout(this);
         stack.setOrientation(LinearLayout.VERTICAL);
         stack.setPadding(0,0,0,dp(2));
+        homeLiveStack=stack;
+        populateHomeLiveStack(stack);
+        return stack;
+    }
+
+    private void populateHomeLiveStack(LinearLayout stack){
+        stack.removeAllViews();
         LinearLayout weather=weatherCard();
         stack.addView(weather,margin(-1,-2,0,0,0,10));
 
@@ -390,12 +409,22 @@ public class MainActivity extends Activity {
         stack.addView(rangeLabel);
         stack.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
 
-        LinearLayout first=riverCard(1);
-        LinearLayout.LayoutParams firstParams=margin(-1,-2,0,10,0,10);
-        stack.addView(first,firstParams);
-        LinearLayout second=riverCard(2);
-        stack.addView(second,margin(-1,-2,0,0,0,4));
-        return stack;
+        stack.addView(riverCard(1),margin(-1,-2,0,10,0,10));
+        if(riverSlotEnabled(2))stack.addView(riverCard(2),margin(-1,-2,0,0,0,4));
+    }
+
+    private void refreshHomeLiveViews(){
+        if(current!=Screen.HOME||homeLiveStack==null)return;
+        final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
+        populateHomeLiveStack(homeLiveStack);
+        if(homeScroll!=null)homeScroll.post(()->homeScroll.scrollTo(0,scrollY));
+    }
+
+    private void rebuildHomePreservingScroll(){
+        if(current!=Screen.HOME)return;
+        final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
+        navigate(Screen.HOME);
+        if(homeScroll!=null)homeScroll.post(()->homeScroll.scrollTo(0,scrollY));
     }
 
     private LinearLayout weatherCard(){
@@ -414,14 +443,11 @@ public class MainActivity extends Activity {
 
     private LinearLayout riverCard(int slot){
         HydroStation station=riverStation(slot);
-        RiverMetric metric=riverMetricForSlot(slot);
         RiverRange range=riverRange();
         String[] summary=hydroSummary(station);
-        TrendSeries series=hydroSeries(station,metric.parameter,range);
-        HydroMath.Stats stats=HydroMath.stats(series.values);
         double flow=currentHydroValue(station,"Q");
-        double primary=displayHydroValue(station,metric,currentHydroValue(station,metric.parameter));
         RiverStatus status=riverStatus(station,flow);
+        int statusColor=statusTextColor(status.bg);
 
         LinearLayout card=card();
         card.setOrientation(LinearLayout.VERTICAL);
@@ -439,94 +465,101 @@ public class MainActivity extends Activity {
 
         LinearLayout headline=new LinearLayout(this);
         headline.setGravity(Gravity.CENTER_VERTICAL);
-        headline.setPadding(0,dp(4),0,dp(1));
+        headline.setPadding(0,dp(4),0,dp(2));
         card.addView(headline);
 
         LinearLayout valueBox=new LinearLayout(this);
-        valueBox.setGravity(Gravity.BOTTOM);
-        TextView value=txt(Double.isFinite(primary)?formatMetric(station,metric,primary):"–",34,TEXT,true);
+        valueBox.setGravity(Gravity.BOTTOM|Gravity.START);
+        TextView value=txt(Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–",34,statusColor,true);
+        value.setTextColor(statusColor);
         valueBox.addView(value);
-        TextView unit=txt(metricUnit(station,metric),14,MUTED,true);
+        TextView unit=txt("m³/s",14,statusColor,true);
+        unit.setTextColor(statusColor);
         unit.setPadding(dp(5),0,0,dp(5));
         valueBox.addView(unit);
-        headline.addView(valueBox,new LinearLayout.LayoutParams(0,-2,1));
-        headline.addView(riverStatusPill(status),new LinearLayout.LayoutParams(-2,-2));
+        headline.addView(valueBox,new LinearLayout.LayoutParams(0,dp(54),1f));
 
-        TextView metricName=txt(metric.label+" · Hauptwert dieser Kachel",11,MUTED,true);
-        metricName.setPadding(0,0,0,dp(3));
-        card.addView(metricName);
-        String secondaryText=hydroSecondary(station,metric);
-        if(!secondaryText.isBlank()){
-            TextView secondary=txt(secondaryText,12,MUTED,false);
-            secondary.setPadding(0,0,0,dp(5));
-            card.addView(secondary);
-        }
+        LinearLayout statusArea=new LinearLayout(this);
+        statusArea.setGravity(Gravity.CENTER|Gravity.END);
+        statusArea.addView(riverStatusPill(status));
+        headline.addView(statusArea,new LinearLayout.LayoutParams(0,dp(54),0.9f));
 
         TextView thresholdHint=txt(String.format(Locale.GERMAN,"Abflussstatus · Niedrig < %.0f · Warn ab %.0f · Alarm ab %.0f m³/s",riverLow(station),riverWarn(station),riverAlarm(station)),10,MUTED,false);
-        thresholdHint.setPadding(0,dp(2),0,dp(8));
+        thresholdHint.setPadding(0,0,0,dp(7));
         card.addView(thresholdHint);
 
-        if(stats.isValid()&&stats.count>=2){
-            card.addView(riverMetrics(stats,range,metric,station),margin(-1,-2,0,2,0,10));
-        }
+        addRiverChartSection(card,station,RiverMetric.FLOW,range,true);
+        addRiverChartSection(card,station,RiverMetric.LEVEL,range,false);
+        if(station.supportsTemperature)addRiverChartSection(card,station,RiverMetric.TEMPERATURE,range,false);
 
-        LinearLayout chartTitle=new LinearLayout(this);
-        chartTitle.setGravity(Gravity.CENTER_VERTICAL);
-        chartTitle.addView(txt(metric.label,15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
-        chartTitle.addView(txt(metricUnit(station,metric)+" · "+range.label,10,MUTED,false),new LinearLayout.LayoutParams(-2,-2));
-        card.addView(chartTitle);
-
-        if(series.values.size()>=2){
-            RiverTrendView chart=new RiverTrendView(this,series,metric,range,station);
-            card.addView(chart,new LinearLayout.LayoutParams(-1,dp(190)));
-            TextView hint=txt("Diagramm berühren, um Einzelwerte anzuzeigen.",10,MUTED,false);
-            hint.setGravity(Gravity.CENTER);
-            hint.setPadding(0,dp(2),0,0);
-            card.addView(hint);
-        }else{
-            TextView missing=txt(range==RiverRange.HOUR?"Für die letzte Stunde liegen noch nicht genug Livewerte vor.":"Für diesen Zeitraum liegen noch nicht genug Messwerte vor.",12,MUTED,false);
-            missing.setGravity(Gravity.CENTER);
-            missing.setPadding(dp(8),dp(22),dp(8),dp(22));
-            missing.setBackground(round(Color.rgb(238,243,246),14));
-            LinearLayout.LayoutParams missingParams=new LinearLayout.LayoutParams(-1,-2);
-            missingParams.setMargins(0,dp(8),0,0);
-            card.addView(missing,missingParams);
-        }
+        TextView hint=txt("Diagramme berühren, um Einzelwerte anzuzeigen.",10,MUTED,false);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0,dp(5),0,0);
+        card.addView(hint);
 
         TextView src=txt(summary[3]+" · "+range.sourceLabel,10,Color.rgb(126,140,150),false);
-        src.setPadding(0,dp(10),0,0);
+        src.setPadding(0,dp(9),0,0);
         card.addView(src);
         return card;
     }
+
+    private void addRiverChartSection(LinearLayout card,HydroStation station,RiverMetric metric,RiverRange range,boolean first){
+        if(!first){
+            View divider=new View(this);
+            divider.setBackgroundColor(darkMode?Color.rgb(51,65,74):Color.rgb(226,233,237));
+            LinearLayout.LayoutParams dividerParams=new LinearLayout.LayoutParams(-1,dp(1));
+            dividerParams.setMargins(0,dp(12),0,dp(12));
+            card.addView(divider,dividerParams);
+        }
+
+        TrendSeries series=hydroSeries(station,metric.parameter,range);
+        HydroMath.Stats stats=HydroMath.stats(series.values);
+        double currentValue=displayHydroValue(station,metric,currentHydroValue(station,metric.parameter));
+        int valueColor=metric==RiverMetric.FLOW?statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg):themeText(TEXT);
+
+        LinearLayout titleRow=new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.addView(txt(riverMetricTitle(metric),15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView current=txt(Double.isFinite(currentValue)?formatMetric(station,metric,currentValue)+" "+metricUnit(station,metric):"–",14,valueColor,true);
+        current.setTextColor(valueColor);
+        current.setGravity(Gravity.END);
+        titleRow.addView(current,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(titleRow);
+
+        if(stats.isValid()&&stats.count>=2){
+            String statsText="Ø "+formatMetric(station,metric,stats.mean)
+                    +"  ·  "+formatMetric(station,metric,stats.min)+"–"+formatMetric(station,metric,stats.max)
+                    +"  ·  "+trendText(stats,metric,station);
+            TextView statsView=txt(statsText,11,MUTED,false);
+            statsView.setPadding(0,dp(3),0,dp(3));
+            card.addView(statsView);
+        }
+
+        if(series.values.size()>=2){
+            RiverTrendView chart=new RiverTrendView(this,series,metric,range,station);
+            LinearLayout.LayoutParams chartParams=new LinearLayout.LayoutParams(-1,dp(metric==RiverMetric.TEMPERATURE?158:176));
+            chartParams.setMargins(0,dp(3),0,0);
+            card.addView(chart,chartParams);
+        }else{
+            String message=range==RiverRange.HOUR?"Für die letzte Stunde liegen noch nicht genug Livewerte vor.":"Für diesen Zeitraum liegen noch nicht genug Messwerte vor.";
+            TextView missing=txt(message,12,MUTED,false);
+            missing.setGravity(Gravity.CENTER);
+            missing.setPadding(dp(8),dp(18),dp(8),dp(18));
+            missing.setBackground(round(Color.rgb(238,243,246),14));
+            LinearLayout.LayoutParams missingParams=new LinearLayout.LayoutParams(-1,-2);
+            missingParams.setMargins(0,dp(7),0,0);
+            card.addView(missing,missingParams);
+        }
+    }
+
+    private String riverMetricTitle(RiverMetric metric){return metric==RiverMetric.TEMPERATURE?"Wassertemperatur":metric.label;}
+
+    private boolean riverSlotEnabled(int slot){return slot==1||prefs.getBoolean(PREF_RIVER_SLOT2_ENABLED,true);}
 
     private HydroStation riverStation(int slot){
         String key=slot==1?PREF_RIVER_SLOT1_STATION:PREF_RIVER_SLOT2_STATION;
         HydroStation fallback=slot==1?HydroStation.BASEL_RHEINHALLE:HydroStation.RHEINFELDEN;
         return HydroStation.from(prefs.getString(key,fallback.id),fallback);
-    }
-
-    private RiverMetric riverMetricForSlot(int slot){
-        HydroStation station=riverStation(slot);
-        String key=slot==1?PREF_RIVER_SLOT1_METRIC:PREF_RIVER_SLOT2_METRIC;
-        RiverMetric metric=RiverMetric.from(prefs.getString(key,RiverMetric.FLOW.parameter));
-        if(metric==RiverMetric.TEMPERATURE&&!station.supportsTemperature)return RiverMetric.FLOW;
-        return metric;
-    }
-
-    private String hydroSecondary(HydroStation station,RiverMetric primary){
-        StringBuilder out=new StringBuilder();
-        if(primary!=RiverMetric.FLOW)appendSecondary(out,station,"Abfluss",currentHydroValue(station,"Q"),RiverMetric.FLOW);
-        if(primary!=RiverMetric.LEVEL)appendSecondary(out,station,"Pegel",currentHydroValue(station,"W"),RiverMetric.LEVEL);
-        if(station.supportsTemperature&&primary!=RiverMetric.TEMPERATURE)appendSecondary(out,station,"Wasser",currentHydroValue(station,"WT"),RiverMetric.TEMPERATURE);
-        return out.toString();
-    }
-
-    private void appendSecondary(StringBuilder out,HydroStation station,String label,double rawValue,RiverMetric metric){
-        if(!Double.isFinite(rawValue))return;
-        double value=displayHydroValue(station,metric,rawValue);
-        if(out.length()>0)out.append("   ·   ");
-        out.append(label).append(' ').append(formatMetric(station,metric,value)).append(' ').append(metricUnit(station,metric));
-        if(station==HydroStation.BASEL_RHEINHALLE&&metric==RiverMetric.LEVEL)out.append(" rel.");
     }
 
     private RiverRange riverRange(){return RiverRange.from(prefs.getString(PREF_RIVER_RANGE,RiverRange.DAY.label));}
@@ -539,7 +572,7 @@ public class MainActivity extends Activity {
             option.setContentDescription("Rheinwerte "+range.label);
             option.setOnClickListener(v->{
                 prefs.edit().putString(PREF_RIVER_RANGE,range.label).apply();
-                if(current==Screen.HOME)navigate(Screen.HOME);
+                if(current==Screen.HOME)refreshHomeLiveViews();
             });
             outer.addView(option,segmentParams(outer));
         }
@@ -1029,7 +1062,7 @@ public class MainActivity extends Activity {
             }catch(Exception ignored){}
             finally{
                 weatherLoading=false;
-                runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});
+                runOnUiThread(this::refreshHomeLiveViews);
             }
         }).start();
     }
@@ -1071,7 +1104,7 @@ public class MainActivity extends Activity {
                 }
             }finally{
                 hydroLoading=false;
-                runOnUiThread(()->{if(current==Screen.HOME)navigate(Screen.HOME);});
+                runOnUiThread(this::refreshHomeLiveViews);
             }
         }).start();
     }
@@ -1126,7 +1159,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,dp(44));blp.setMargins(0,dp(8),0,0);data.addView(bgRefresh,blp);
         TextView autoInfo=txt("Live-Daten werden bei geöffneter App regelmäßig geprüft. Im Hintergrund aktualisiert Android bei verfügbarer Verbindung best effort; Energiesparmodi können die Ausführung verzögern.",11,MUTED,false);autoInfo.setPadding(0,dp(8),0,0);data.addView(autoInfo);
 
-        section(b,"Rhein-Anzeige","Zwei frei konfigurierbare Messkacheln auf Home");
+        section(b,"Rhein-Anzeige","Kachel 1 ist immer sichtbar; Kachel 2 kann ein- oder ausgeblendet werden. Jede Kachel zeigt alle verfügbaren Messwerte.");
         b.addView(riverSlotSettingCard(1),margin(-1,-2,0,0,0,9));
         b.addView(riverSlotSettingCard(2),margin(-1,-2,0,0,0,12));
 
@@ -1142,38 +1175,55 @@ public class MainActivity extends Activity {
 
     private View riverSlotSettingCard(int slot){
         HydroStation station=riverStation(slot);
-        RiverMetric metric=riverMetricForSlot(slot);
+        boolean enabled=riverSlotEnabled(slot);
         LinearLayout card=card();
         card.setOrientation(LinearLayout.VERTICAL);
-        card.addView(txt("Rhein-Kachel "+slot,15,TEXT,true));
-        TextView current=txt(station.label+" · BAFU "+station.id+"\nHauptwert: "+metric.label,13,MUTED,false);
+
+        LinearLayout titleRow=new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.addView(txt("Rhein-Kachel "+slot,15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        int stateColor=enabled?STATUS_GOOD:MUTED;
+        TextView state=txt(enabled?"Aktiv":"Aus",11,stateColor,true);
+        state.setTextColor(enabled?statusTextColor(STATUS_GOOD):themeText(MUTED));
+        state.setGravity(Gravity.CENTER);
+        state.setPadding(dp(10),dp(5),dp(10),dp(5));
+        state.setBackground(enabled?statusBadge(STATUS_GOOD):round(Color.rgb(238,243,246),12));
+        titleRow.addView(state,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(titleRow);
+
+        String metrics=station.supportsTemperature?"Abfluss · Pegel · Wassertemperatur":"Abfluss · Pegel";
+        TextView current=txt(station.label+" · BAFU "+station.id+"\n"+metrics,13,MUTED,false);
         current.setPadding(0,dp(5),0,dp(10));
         card.addView(current);
-        Button configure=btn("Kachel konfigurieren",Color.rgb(232,240,244),NAVY);
+
+        LinearLayout actions=new LinearLayout(this);
+        if(slot==2){
+            Button toggle=btn(enabled?"Ausblenden":"Einblenden",enabled?Color.rgb(232,240,244):NAVY,enabled?NAVY:Color.WHITE);
+            toggle.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_RIVER_SLOT2_ENABLED,true);prefs.edit().putBoolean(PREF_RIVER_SLOT2_ENABLED,next).apply();navigate(Screen.SETTINGS);});
+            actions.addView(toggle,new LinearLayout.LayoutParams(0,dp(44),1));
+        }
+        Button configure=btn("Station wählen",Color.rgb(232,240,244),NAVY);
         configure.setOnClickListener(v->configureRiverSlot(slot));
-        card.addView(configure,new LinearLayout.LayoutParams(-1,dp(44)));
+        LinearLayout.LayoutParams configureParams=new LinearLayout.LayoutParams(0,dp(44),slot==2?1:2);
+        if(slot==2)configureParams.setMargins(dp(8),0,0,0);
+        actions.addView(configure,configureParams);
+        card.addView(actions);
         return card;
     }
 
     private void configureRiverSlot(int slot){
-        final HydroStation[] stations={HydroStation.BASEL_RHEINHALLE,HydroStation.BASEL_RHEINHALLE,HydroStation.RHEINFELDEN,HydroStation.RHEINFELDEN,HydroStation.RHEINFELDEN};
-        final RiverMetric[] metrics={RiverMetric.FLOW,RiverMetric.LEVEL,RiverMetric.FLOW,RiverMetric.LEVEL,RiverMetric.TEMPERATURE};
+        final HydroStation[] stations={HydroStation.BASEL_RHEINHALLE,HydroStation.RHEINFELDEN};
         String[] labels={
-                "Basel, Rheinhalle · Abfluss",
-                "Basel, Rheinhalle · Pegel (cm)",
-                "Rheinfelden · Abfluss",
-                "Rheinfelden · Pegel",
-                "Rheinfelden · Wassertemperatur"
+                "Basel, Rheinhalle · Abfluss & Pegel",
+                "Rheinfelden · Abfluss, Pegel & Wassertemperatur"
         };
         HydroStation currentStation=riverStation(slot);
-        RiverMetric currentMetric=riverMetricForSlot(slot);
-        int selected=0;
-        for(int i=0;i<stations.length;i++)if(stations[i]==currentStation&&metrics[i]==currentMetric){selected=i;break;}
+        int selected=currentStation==HydroStation.RHEINFELDEN?1:0;
         new AlertDialog.Builder(this,dialogTheme()).setTitle("Rhein-Kachel "+slot)
                 .setSingleChoiceItems(labels,selected,(dialog,which)->{
                     String stationKey=slot==1?PREF_RIVER_SLOT1_STATION:PREF_RIVER_SLOT2_STATION;
                     String metricKey=slot==1?PREF_RIVER_SLOT1_METRIC:PREF_RIVER_SLOT2_METRIC;
-                    prefs.edit().putString(stationKey,stations[which].id).putString(metricKey,metrics[which].parameter).apply();
+                    prefs.edit().putString(stationKey,stations[which].id).remove(metricKey).apply();
                     dialog.dismiss();
                     navigate(Screen.SETTINGS);
                 }).setNegativeButton("Abbrechen",null).show();
@@ -1505,6 +1555,7 @@ public class MainActivity extends Activity {
     private View cash() {
         ScrollView scroll=new ScrollView(this);
         LinearLayout body=body();
+        cashQuantityViews.clear();
         scroll.addView(body);
 
         LinearLayout hero=new LinearLayout(this);
@@ -1517,8 +1568,22 @@ public class MainActivity extends Activity {
         TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);title.setPadding(0,dp(5),0,dp(5));hero.addView(title);
         hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
 
+        section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
+        LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
+        cashSummaryContainer=new LinearLayout(this);cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);cart.addView(cashSummaryContainer);
+        cashTotalView=txt("Total CHF 0.00",24,TEXT,true);cashTotalView.setPadding(0,dp(12),0,dp(10));cart.addView(cashTotalView);
+        LinearLayout payRow=new LinearLayout(this);
+        Button cartQr=btn("Swiss QR",NAVY,Color.WHITE);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(46),1));
+        Button cartBank=btn("Direkt Bank",Color.rgb(232,240,244),NAVY);cartBank.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)sharePaymentQr(input);});LinearLayout.LayoutParams cbp=new LinearLayout.LayoutParams(0,dp(46),1);cbp.setMargins(dp(7),0,0,0);payRow.addView(cartBank,cbp);
+        Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(46),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
+        cart.addView(payRow);
+        TextView directInfo=txt("„Direkt Bank“ übergibt den Swiss-QR temporär an eine kompatible Banking-App – ohne ihn vorher dauerhaft zu speichern. Nicht jede Bank unterstützt diesen Android-Import.",11,MUTED,false);directInfo.setPadding(0,dp(8),0,0);cart.addView(directInfo);
+        TextView clearCart=link("Warenkorb leeren");clearCart.setOnClickListener(v->{cashCart.clear();for(TextView quantity:cashQuantityViews.values())quantity.setText("0");updateCashSummary();});cart.addView(clearCart);
+        updateCashSummary();
+
+
         CashCatalog.Catalog catalog=cashCatalog();
-        section(body,"Konsumation zusammenstellen",catalog==null?"Preisliste konnte nicht geladen werden.":"Preise gemäss Vereinsbeiz-Preisliste · Stand "+catalog.validFrom);
+        section(body,"Auswahl",catalog==null?"Preisliste konnte nicht geladen werden.":"Trinken, Essen und Feiern · Stand "+catalog.validFrom);
         if(catalog!=null){
             for(CashCatalog.Category category:catalog.categories){
                 TextView categoryTitle=txt(category.label,15,TEXT,true);
@@ -1533,19 +1598,6 @@ public class MainActivity extends Activity {
                 body.addView(categoryCard,margin(-1,-2,0,0,0,10));
             }
         }
-
-        section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
-        LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
-        cashSummaryContainer=new LinearLayout(this);cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);cart.addView(cashSummaryContainer);
-        cashTotalView=txt("Total CHF 0.00",24,TEXT,true);cashTotalView.setPadding(0,dp(12),0,dp(10));cart.addView(cashTotalView);
-        LinearLayout payRow=new LinearLayout(this);
-        Button cartQr=btn("Swiss QR",NAVY,Color.WHITE);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(46),1));
-        Button cartBank=btn("Direkt Bank",Color.rgb(232,240,244),NAVY);cartBank.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)sharePaymentQr(input);});LinearLayout.LayoutParams cbp=new LinearLayout.LayoutParams(0,dp(46),1);cbp.setMargins(dp(7),0,0,0);payRow.addView(cartBank,cbp);
-        Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(46),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
-        cart.addView(payRow);
-        TextView directInfo=txt("„Direkt Bank“ übergibt den Swiss-QR temporär an eine kompatible Banking-App – ohne ihn vorher dauerhaft zu speichern. Nicht jede Bank unterstützt diesen Android-Import.",11,MUTED,false);directInfo.setPadding(0,dp(8),0,0);cart.addView(directInfo);
-        TextView clearCart=link("Warenkorb leeren");clearCart.setOnClickListener(v->{cashCart.clear();navigate(Screen.CASH);});cart.addView(clearCart);
-        updateCashSummary();
 
         section(body,"Freier Betrag","Für Sonderfälle oder Beträge ausserhalb der Preisliste");
         LinearLayout amountCard=card();amountCard.setOrientation(LinearLayout.VERTICAL);body.addView(amountCard,margin(-1,-2,0,0,0,12));
@@ -1584,9 +1636,32 @@ public class MainActivity extends Activity {
         String detail=(item.variant==null||item.variant.isBlank()?"":item.variant+" · ")+formatCashPrice(item.price)+(item.deposit?" · Depot":"");copy.addView(txt(detail,12,item.deposit?WATER:MUTED,false));
         Button minus=btn("−",Color.rgb(232,240,244),NAVY);row.addView(minus,new LinearLayout.LayoutParams(dp(40),dp(40)));
         TextView quantity=txt(String.valueOf(cashCart.getOrDefault(item.id,0)),16,TEXT,true);quantity.setGravity(Gravity.CENTER);row.addView(quantity,new LinearLayout.LayoutParams(dp(38),dp(40)));
+        cashQuantityViews.put(item.id,quantity);
         Button plus=btn("+",NAVY,Color.WHITE);row.addView(plus,new LinearLayout.LayoutParams(dp(40),dp(40)));
-        minus.setOnClickListener(v->{int next=Math.max(0,cashCart.getOrDefault(item.id,0)-1);if(next==0)cashCart.remove(item.id);else cashCart.put(item.id,next);quantity.setText(String.valueOf(next));updateCashSummary();});
-        plus.setOnClickListener(v->{int next=Math.min(99,cashCart.getOrDefault(item.id,0)+1);cashCart.put(item.id,next);quantity.setText(String.valueOf(next));updateCashSummary();});
+        minus.setOnClickListener(v->{int next=Math.max(0,cashCart.getOrDefault(item.id,0)-1);setCashQuantity(item.id,next);updateCashSummary();});
+        plus.setOnClickListener(v->{int next=Math.min(99,cashCart.getOrDefault(item.id,0)+1);setCashQuantity(item.id,next);updateCashSummary();});
+        return row;
+    }
+
+    private void setCashQuantity(String itemId,int quantity){
+        if(quantity<=0)cashCart.remove(itemId);else cashCart.put(itemId,quantity);
+        TextView view=cashQuantityViews.get(itemId);
+        if(view!=null)view.setText(String.valueOf(Math.max(0,quantity)));
+    }
+
+    private View cashSummaryRow(CashCatalog.Item item,int quantity){
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0,dp(4),0,dp(4));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(0,0,dp(8),0);
+        copy.addView(txt(quantity+"× "+item.displayName(),13,TEXT,true));
+        copy.addView(txt(formatCashPrice(item.price*quantity),12,item.deposit?WATER:MUTED,false));
+        row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        Button remove=btn("Entfernen",Color.rgb(232,240,244),NAVY);
+        remove.setOnClickListener(v->{setCashQuantity(item.id,0);updateCashSummary();});
+        row.addView(remove,new LinearLayout.LayoutParams(dp(94),dp(38)));
         return row;
     }
 
@@ -1599,7 +1674,7 @@ public class MainActivity extends Activity {
         for(CashCatalog.Category category:catalog.categories){
             for(CashCatalog.Item item:category.items){
                 int quantity=cashCart.getOrDefault(item.id,0);if(quantity<=0)continue;any=true;
-                TextView line=txt(quantity+"× "+item.displayName()+" · "+formatCashPrice(item.price*quantity),13,TEXT,false);line.setPadding(0,dp(2),0,dp(2));cashSummaryContainer.addView(line);
+                cashSummaryContainer.addView(cashSummaryRow(item,quantity));
             }
         }
         if(!any)cashSummaryContainer.addView(txt("Noch keine Artikel ausgewählt.",13,MUTED,false));
@@ -1797,20 +1872,20 @@ public class MainActivity extends Activity {
 
     private View internal() {
         String url=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,"")); if(!validInternal(url)) return internalMissing(); prefs.edit().putString(PREF_INTERNAL_URL,url).apply();
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.WHITE);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(themeBg(Color.WHITE));
         LinearLayout tools=new LinearLayout(this); tools.setPadding(dp(9),dp(8),dp(9),dp(8)); tools.setBackgroundColor(themeBg(Color.rgb(236,243,247))); root.addView(tools,new LinearLayout.LayoutParams(-1,dp(56)));
-        WebView web=web(false); activeWebView=web; web.setBackgroundColor(Color.WHITE);
+        WebView web=web(false); activeWebView=web; web.setBackgroundColor(themeBg(Color.WHITE));
         if(android.os.Build.VERSION.SDK_INT>=33) web.getSettings().setAlgorithmicDarkeningAllowed(false);
         web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         Button back=btn("‹ Zurück",Color.WHITE,NAVY); back.setOnClickListener(v->handleBack()); tools.addView(back,new LinearLayout.LayoutParams(0,dp(40),1));
-        boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false);
+        boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");web.clearCache(false);web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");web.clearCache(false);web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();if("https".equalsIgnoreCase(u.getScheme())&&AppLinkPolicy.isInternalPfvrHost(u.getHost()))return false;external(u.toString());return true;}
-            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,false))internalSkin(v);}
+            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))internalSkin(v);}
             @Override public void onReceivedError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceError e){super.onReceivedError(v,r,e);if(r.isForMainFrame())showInternalLoadError(v,"Ladefehler "+e.getErrorCode()+": "+String.valueOf(e.getDescription()));}
             @Override public void onReceivedHttpError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceResponse e){super.onReceivedHttpError(v,r,e);if(r.isForMainFrame()&&e.getStatusCode()>=400)showInternalLoadError(v,"PFVR antwortet mit HTTP "+e.getStatusCode());}
         });
@@ -1819,7 +1894,8 @@ public class MainActivity extends Activity {
 
     private void showInternalLoadError(WebView v,String message){
         String safe=message.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
-        String html="<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head><body style='font-family:sans-serif;background:#fff;color:#15232e;padding:24px'><h2>Interner Bereich konnte nicht geladen werden</h2><p>"+safe+"</p><p>Prüfe den persönlichen Link unter Einstellungen oder tippe oben auf Neu laden.</p></body></html>";
+        String bg=darkMode?"#11171C":"#FFFFFF",text=darkMode?"#ECF1F4":"#15232E",muted=darkMode?"#A0B0BA":"#60717E";
+        String html="<html><head><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='color-scheme' content='"+(darkMode?"dark":"light")+"'></head><body style='font-family:sans-serif;background:"+bg+";color:"+text+";padding:24px'><h2>Interner Bereich konnte nicht geladen werden</h2><p>"+safe+"</p><p style='color:"+muted+"'>Prüfe den persönlichen Link unter Einstellungen oder tippe oben auf Neu laden.</p></body></html>";
         v.loadDataWithBaseURL("https://intern.pfvr.ch/",html,"text/html","UTF-8",null);
     }
 
@@ -2203,7 +2279,7 @@ public class MainActivity extends Activity {
                 float y=seriesY(series.values.get(index),scale,top,bottom);
                 if(index==0)path.moveTo(x,y);else path.lineTo(x,y);
             }
-            int actual=themeText(metric.color);
+            int actual=metric==RiverMetric.FLOW?statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg):themeText(metric.color);
             Path area=new Path(path);
             area.lineTo(right,bottom);area.lineTo(left,bottom);area.close();
             fill.setColor(Color.argb(darkMode?34:24,Color.red(actual),Color.green(actual),Color.blue(actual)));

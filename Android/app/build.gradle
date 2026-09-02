@@ -12,8 +12,9 @@ android {
         applicationId 'ch.pfvr.app'
         minSdk 26
         targetSdk 36
-        versionCode 14
-        versionName '0.9.0'
+        versionCode 15
+        versionName '0.9.1'
+        manifestPlaceholders = [appLabel: 'PFVR Rheinfelden']
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -34,6 +35,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix '.test'
+            manifestPlaceholders = [appLabel: 'PFVR Rheinfelden Test']
+        }
         release {
             minifyEnabled false
             if (uploadKeystore) {
