@@ -23,7 +23,13 @@ jobs:
           fetch-depth: 0
 
       - name: Apply 0.9.2 refinements
-        run: python tools/apply_092.py
+        shell: bash
+        run: |
+          if grep -Fq "versionName '0.9.2'" Android/app/build.gradle && grep -Fq 'private class DualRiverTrendView extends View' Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java; then
+            echo 'Verified 0.9.2 source already present; no patch required.'
+          else
+            python tools/apply_092.py
+          fi
 
       - name: Reject personal PFVR access data
         run: |
