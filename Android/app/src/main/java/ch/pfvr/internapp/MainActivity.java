@@ -410,8 +410,16 @@ public class MainActivity extends Activity {
         stack.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
 
         stack.addView(riverSummaryRow(),margin(-1,-2,0,10,0,10));
-        stack.addView(riverCombinedCard(1),margin(-1,-2,0,0,0,10));
-        if(riverSlotEnabled(2))stack.addView(riverCombinedCard(2),margin(-1,-2,0,0,0,4));
+        boolean secondRiver=riverSlotEnabled(2);
+        addRiverStationCharts(stack,1,!secondRiver);
+        if(secondRiver)addRiverStationCharts(stack,2,true);
+    }
+
+    private void addRiverStationCharts(LinearLayout stack,int slot,boolean last){
+        HydroStation station=riverStation(slot);
+        boolean temperature=station.supportsTemperature;
+        stack.addView(riverCombinedCard(slot),margin(-1,-2,0,0,0,temperature?10:(last?4:10)));
+        if(temperature)stack.addView(riverTemperatureCard(slot),margin(-1,-2,0,0,0,last?4:10));
     }
 
     private void refreshHomeLiveViews(){
@@ -531,6 +539,74 @@ public class MainActivity extends Activity {
         label.setPadding(dp(8),dp(4),dp(8),dp(4));
         label.setBackground(statusBadge(status.bg));
         return label;
+    }
+
+    private LinearLayout riverTemperatureCard(int slot){
+        HydroStation station=riverStation(slot);
+        RiverRange range=riverRange();
+        TrendSeries temperature=hydroSeries(station,"WT",range);
+        double temperatureNow=currentHydroValue(station,"WT");
+        HydroMath.Stats stats=HydroMath.stats(temperature.values);
+        int temperatureColor=themeText(RiverMetric.TEMPERATURE.color);
+
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16),dp(14),dp(16),dp(14));
+
+        LinearLayout header=new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(txt("Wassertemperatur · "+station.label,12,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView source=txt("BAFU "+station.id+"  ↗",11,WATER,true);
+        source.setOnClickListener(v->external(station.stationUrl()));
+        source.setPadding(dp(8),dp(4),0,dp(4));
+        header.addView(source,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(header);
+
+        TextView value=txt(Double.isFinite(temperatureNow)?formatMetric(station,RiverMetric.TEMPERATURE,temperatureNow)+" °C":"–",24,temperatureColor,true);
+        value.setTextColor(temperatureColor);
+        value.setPadding(0,dp(7),0,dp(3));
+        card.addView(value);
+
+        if(stats.isValid()){
+            String change=(stats.change()>=0?"+":"")+formatMetric(station,RiverMetric.TEMPERATURE,stats.change());
+            TextView summary=txt(
+                    "Min "+formatMetric(station,RiverMetric.TEMPERATURE,stats.min)+" °C · Max "+formatMetric(station,RiverMetric.TEMPERATURE,stats.max)+" °C · Δ "+change+" °C",
+                    11,
+                    MUTED,
+                    false
+            );
+            summary.setPadding(0,0,0,dp(5));
+            card.addView(summary);
+        }
+
+        if(temperature.values.size()>=2){
+            SingleSeriesTrendView graph=new SingleSeriesTrendView(
+                    this,
+                    temperature.times,
+                    temperature.values,
+                    range==RiverRange.WEEK,
+                    range.label,
+                    "Wassertemperatur",
+                    "°C",
+                    1,
+                    temperatureColor,
+                    darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234),
+                    themeText(MUTED),
+                    themeBg(Color.WHITE),
+                    darkMode?DARK_SOFT:NAVY,
+                    darkMode?DARK_TEXT:Color.WHITE
+            );
+            card.addView(graph,new LinearLayout.LayoutParams(-1,dp(205)));
+            TextView hint=txt("Diagramm berühren für Einzelwerte",10,MUTED,false);
+            hint.setGravity(Gravity.CENTER);
+            hint.setPadding(0,dp(4),0,0);
+            card.addView(hint);
+        }else{
+            TextView unavailable=txt("Für den gewählten Zeitraum liegen noch nicht genügend Temperaturwerte vor.",12,MUTED,false);
+            unavailable.setPadding(0,dp(8),0,dp(3));
+            card.addView(unavailable);
+        }
+        return card;
     }
 
     private LinearLayout riverCombinedCard(int slot){
@@ -1779,8 +1855,13 @@ public class MainActivity extends Activity {
     }
 
     private boolean hasPreferredBank(){
-        return !prefs.getString(PREF_BANK_PACKAGE,"").trim().isEmpty()
-                && !prefs.getString(PREF_BANK_LABEL,"").trim().isEmpty();
+        String packageName=prefs.getString(PREF_BANK_PACKAGE,"").trim();
+        String label=prefs.getString(PREF_BANK_LABEL,"").trim();
+        if(packageName.isEmpty()||label.isEmpty())return false;
+        Intent share=new Intent(Intent.ACTION_SEND);
+        share.setType("image/png");
+        share.setPackage(packageName);
+        return share.resolveActivity(getPackageManager())!=null;
     }
 
     private String selectedBankLabel(){
@@ -1789,7 +1870,7 @@ public class MainActivity extends Activity {
 
     private String preferredBankPaymentLabel(){
         String label=selectedBankLabel();
-        return label.isEmpty()?"Banking-App festlegen":"Mit "+label+" bezahlen";
+        return hasPreferredBank()?"Mit "+label+" bezahlen":"Banking-App festlegen";
     }
 
     private void payWithPreferredBank(EditText amountInput){

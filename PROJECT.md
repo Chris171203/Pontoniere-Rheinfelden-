@@ -9,7 +9,7 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 - Home mit nächstem Training und Wetter für den tatsächlichen Zeitraum.
   - Bevorzugt wird ein passender Termin aus dem öffentlichen Vereinskalender.
   - Der saisonale Trainingsplan dient als Fallback, wenn kein Kalendereintrag vorhanden ist.
-- Rhein: zwei Stationskacheln, davon die zweite optional. Aktuelle Abflüsse stehen kompakt nebeneinander; Rheinfelden zeigt oben zusätzlich die Wassertemperatur. Pro aktiver Station kombiniert ein `1h`/`24h`/`7d`-Diagramm Abfluss und Pegel mit zwei dynamischen Y-Achsen.
+- Rhein: zwei Stationskacheln, davon die zweite optional. Aktuelle Abflüsse stehen kompakt nebeneinander; Rheinfelden zeigt oben zusätzlich die Wassertemperatur. Pro aktiver Station kombiniert ein `1h`/`24h`/`7d`-Diagramm Abfluss und Pegel mit zwei dynamischen Y-Achsen; vorhandene Temperaturdaten werden darunter separat dargestellt.
 - Termine aus dem öffentlichen PFVR-Google-Kalender mit persistentem Cache, Detailansicht, Teilen, Route und Übergabe an die persönliche Kalender-App.
 - Verein und Kontakt inklusive News-Archiv-Verlinkung.
 - Interner Bereich über persönlichen `intern.pfvr.ch`-Link; Konfiguration nur in den Einstellungen und nur lokal gespeichert. App-Ansicht ist Standard und folgt dem nativen Hell-/Dunkelmodus.
