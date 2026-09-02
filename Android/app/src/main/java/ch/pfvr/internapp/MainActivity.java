@@ -93,8 +93,6 @@ public class MainActivity extends Activity {
     private static final String PREF_INTERNAL_URL = "start_url";
     private static final String PREF_BANK_PACKAGE = "bank_package";
     private static final String PREF_BANK_LABEL = "bank_label";
-    private static final String PREF_TWINT_PACKAGE = "twint_package";
-    private static final String PREF_TWINT_LABEL = "twint_label";
     private static final String PREF_ICS_CACHE = "ics_cache";
     private static final String PREF_ICS_UPDATED = "ics_updated";
     private static final int REQ_SAVE_QR = 2401;
@@ -114,15 +112,9 @@ public class MainActivity extends Activity {
     private static final String PREF_RIVER_WARN = "river_warn";
     private static final String PREF_RIVER_ALARM = "river_alarm";
     private static final String PREF_RIVER_RANGE = "river_range";
-    private static final String PREF_RIVER_METRIC = "river_metric";
     private static final String PREF_RIVER_SLOT1_STATION = "river_slot1_station";
-    private static final String PREF_RIVER_SLOT1_METRIC = "river_slot1_metric";
     private static final String PREF_RIVER_SLOT2_STATION = "river_slot2_station";
-    private static final String PREF_RIVER_SLOT2_METRIC = "river_slot2_metric";
     private static final String PREF_RIVER_SLOT2_ENABLED = "river_slot2_enabled";
-    private static final float DEFAULT_RIVER_LOW = 400f;
-    private static final float DEFAULT_RIVER_WARN = 2500f;
-    private static final float DEFAULT_RIVER_ALARM = 3600f;
     private static final String BACKGROUND_WORK_NAME = "pfvr-public-data-refresh";
 
     private static final String SITE = "https://www.pfvr.ch/";
@@ -158,6 +150,18 @@ public class MainActivity extends Activity {
 
     private enum Screen { HOME, EVENTS, CASH, CLUB, SETTINGS, INTERNAL }
 
+    private enum SettingsTab {
+        GENERAL("Allgemein"),
+        RIVER("Rhein"),
+        PAYMENT("Zahlung");
+
+        final String label;
+
+        SettingsTab(String label) {
+            this.label = label;
+        }
+    }
+
     private enum RiverRange {
         HOUR("1h", 60L * 60L * 1000L, "Livewerte"),
         DAY("24h", 24L * 60L * 60L * 1000L, "10-Minuten-Mittel"),
@@ -189,10 +193,6 @@ public class MainActivity extends Activity {
             this.label=label;this.parameter=parameter;this.unit=unit;this.color=color;this.decimals=decimals;
         }
 
-        static RiverMetric from(String value){
-            for(RiverMetric metric:values())if(metric.parameter.equals(value))return metric;
-            return FLOW;
-        }
     }
 
     private FrameLayout content;
@@ -206,7 +206,6 @@ public class MainActivity extends Activity {
     private long eventsUpdated = 0L;
     private volatile boolean eventsLoading = false;
     private Bitmap pendingQrBitmap;
-    private Button bankButton;
     private final Map<String,Integer> cashCart = new LinkedHashMap<>();
     private final Map<String,TextView> cashQuantityViews = new HashMap<>();
     private CashCatalog.Catalog cashCatalog;
@@ -215,6 +214,7 @@ public class MainActivity extends Activity {
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
+    private SettingsTab settingsTab = SettingsTab.GENERAL;
     private ScrollView homeScroll;
     private LinearLayout homeLiveStack;
     private Handler dataRefreshHandler;
@@ -451,13 +451,33 @@ public class MainActivity extends Activity {
     private View riverSummaryRow(){
         LinearLayout row=new LinearLayout(this);
         row.setGravity(Gravity.TOP);
-        row.addView(riverSummaryCard(1),new LinearLayout.LayoutParams(0,-2,1));
+        row.setBaselineAligned(false);
+
+        LinearLayout first=riverSummaryCard(1);
+        row.addView(first,new LinearLayout.LayoutParams(0,-2,1));
+
         if(riverSlotEnabled(2)){
-            LinearLayout.LayoutParams second=new LinearLayout.LayoutParams(0,-2,1);
-            second.setMargins(dp(8),0,0,0);
-            row.addView(riverSummaryCard(2),second);
+            LinearLayout second=riverSummaryCard(2);
+            LinearLayout.LayoutParams secondParams=new LinearLayout.LayoutParams(0,-2,1);
+            secondParams.setMargins(dp(8),0,0,0);
+            row.addView(second,secondParams);
+            row.post(()->equalizeSummaryCardHeights(first,second));
         }
         return row;
+    }
+
+    private void equalizeSummaryCardHeights(View first,View second){
+        int height=Math.max(first.getMeasuredHeight(),second.getMeasuredHeight());
+        if(height<=0)return;
+        setViewHeight(first,height);
+        setViewHeight(second,height);
+    }
+
+    private void setViewHeight(View view,int height){
+        ViewGroup.LayoutParams params=view.getLayoutParams();
+        if(params==null||params.height==height)return;
+        params.height=height;
+        view.setLayoutParams(params);
     }
 
     private LinearLayout riverSummaryCard(int slot){
@@ -581,8 +601,6 @@ public class MainActivity extends Activity {
         return card;
     }
 
-    private String riverMetricTitle(RiverMetric metric){return metric==RiverMetric.TEMPERATURE?"Wassertemperatur":metric.label;}
-
     private boolean riverSlotEnabled(int slot){return slot==1||prefs.getBoolean(PREF_RIVER_SLOT2_ENABLED,true);}
 
     private HydroStation riverStation(int slot){
@@ -592,8 +610,6 @@ public class MainActivity extends Activity {
     }
 
     private RiverRange riverRange(){return RiverRange.from(prefs.getString(PREF_RIVER_RANGE,RiverRange.DAY.label));}
-    private RiverMetric riverMetric(){return RiverMetric.from(prefs.getString(PREF_RIVER_METRIC,RiverMetric.FLOW.parameter));}
-
     private View riverRangeSelector(RiverRange selected){
         LinearLayout outer=segmentedBackground();
         for(RiverRange range:RiverRange.values()){
@@ -602,20 +618,6 @@ public class MainActivity extends Activity {
             option.setOnClickListener(v->{
                 prefs.edit().putString(PREF_RIVER_RANGE,range.label).apply();
                 if(current==Screen.HOME)refreshHomeLiveViews();
-            });
-            outer.addView(option,segmentParams(outer));
-        }
-        return outer;
-    }
-
-    private View riverMetricSelector(RiverMetric selected){
-        LinearLayout outer=segmentedBackground();
-        for(RiverMetric metric:RiverMetric.values()){
-            TextView option=segmentOption(metric.label,metric==selected);
-            option.setContentDescription("Rheinwert "+metric.label);
-            option.setOnClickListener(v->{
-                prefs.edit().putString(PREF_RIVER_METRIC,metric.parameter).apply();
-                if(current==Screen.HOME)navigate(Screen.HOME);
             });
             outer.addView(option,segmentParams(outer));
         }
@@ -644,59 +646,7 @@ public class MainActivity extends Activity {
         return params;
     }
 
-    private View riverStatusPill(RiverStatus status){
-        int color=statusTextColor(status.bg);
-        LinearLayout pill=new LinearLayout(this);
-        pill.setGravity(Gravity.CENTER_VERTICAL);
-        pill.setPadding(dp(10),dp(7),dp(12),dp(7));
-        GradientDrawable bg=new GradientDrawable();
-        bg.setColor(Color.argb(darkMode?48:22,Color.red(color),Color.green(color),Color.blue(color)));
-        bg.setStroke(dp(1),Color.argb(darkMode?140:80,Color.red(color),Color.green(color),Color.blue(color)));
-        bg.setCornerRadius(dp(18));
-        pill.setBackground(bg);
-        View dot=new View(this);
-        dot.setBackground(statusDot(color));
-        pill.addView(dot,new LinearLayout.LayoutParams(dp(8),dp(8)));
-        TextView label=txt(status.label,14,color,true);
-        label.setTextColor(color);
-        label.setPadding(dp(7),0,0,0);
-        pill.addView(label);
-        return pill;
-    }
-
     private GradientDrawable statusDot(int color){GradientDrawable d=new GradientDrawable();d.setShape(GradientDrawable.OVAL);d.setColor(color);return d;}
-
-    private View riverMetrics(HydroMath.Stats stats,RiverRange range,RiverMetric metric,HydroStation station){
-        LinearLayout row=new LinearLayout(this);
-        row.setGravity(Gravity.CENTER);
-        addMetric(row,formatMetric(station,metric,stats.mean),"Ø "+range.label);
-        addMetric(row,formatMetric(station,metric,stats.min)+"–"+formatMetric(station,metric,stats.max),"Min–Max");
-        addMetric(row,trendText(stats,metric,station),"Start → Ende");
-        return row;
-    }
-
-    private void addMetric(LinearLayout row,String value,String label){
-        LinearLayout tile=new LinearLayout(this);
-        tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setGravity(Gravity.CENTER);
-        tile.setPadding(dp(5),dp(8),dp(5),dp(8));
-        tile.setBackground(round(Color.rgb(238,243,246),12));
-        TextView valueView=txt(value,14,TEXT,true);valueView.setGravity(Gravity.CENTER);tile.addView(valueView);
-        TextView labelView=txt(label,10,MUTED,false);labelView.setGravity(Gravity.CENTER);labelView.setPadding(0,dp(2),0,0);tile.addView(labelView);
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
-        if(row.getChildCount()>0)lp.setMargins(dp(6),0,0,0);
-        row.addView(tile,lp);
-    }
-
-    private String trendText(HydroMath.Stats stats,RiverMetric metric,HydroStation station){
-        double change=stats.change();
-        double tolerance;
-        if(metric==RiverMetric.FLOW)tolerance=Math.max(1d,Math.abs(stats.last)*0.0025d);
-        else if(metric==RiverMetric.LEVEL)tolerance=station==HydroStation.BASEL_RHEINHALLE?1d:0.01d;
-        else tolerance=0.1d;
-        if(Math.abs(change)<=tolerance)return "→ stabil";
-        return (change>0?"↗ +":"↘ −")+formatMetric(station,metric,Math.abs(change));
-    }
 
     private String formatMetric(RiverMetric metric,double value){
         if(!Double.isFinite(value))return "–";
@@ -721,8 +671,6 @@ public class MainActivity extends Activity {
     }
 
     private double baselLevelCm(double metres){return (metres-240.0d)*100.0d;}
-
-    private View thresholdGrid(){return thresholdGrid(HydroStation.RHEINFELDEN);}
 
     private View thresholdGrid(HydroStation station){
         LinearLayout stack=new LinearLayout(this);
@@ -923,8 +871,6 @@ public class MainActivity extends Activity {
     private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?" · Cache "+(min/60)+" h":" · vor "+min+" min");}
     private String weatherCode(int c){if(c==0)return "klar";if(c<=2)return "leicht bewölkt";if(c==3)return "bewölkt";if(c==45||c==48)return "Nebel";if(c>=51&&c<=57)return "Nieselregen";if(c>=61&&c<=67)return "Regen";if(c>=71&&c<=77)return "Schnee";if(c>=80&&c<=82)return "Schauer";if(c>=85&&c<=86)return "Schneeschauer";if(c>=95)return "Gewitter";return "Wetter";}
 
-    private double currentHydroValue(String parameter){return currentHydroValue(HydroStation.RHEINFELDEN,parameter);}
-
     private double currentHydroValue(HydroStation station,String parameter){
         String raw=prefs.getString(station.liveCacheKey(),"");
         if(raw.isBlank())return Double.NaN;
@@ -942,10 +888,6 @@ public class MainActivity extends Activity {
         }catch(Exception ignored){return Double.NaN;}
     }
 
-    private float riverLow(){return riverLow(HydroStation.RHEINFELDEN);}
-    private float riverWarn(){return riverWarn(HydroStation.RHEINFELDEN);}
-    private float riverAlarm(){return riverAlarm(HydroStation.RHEINFELDEN);}
-
     private float riverLow(HydroStation station){
         if(prefs.contains(station.lowPreferenceKey()))return prefs.getFloat(station.lowPreferenceKey(),station.defaultLow);
         if(station==HydroStation.RHEINFELDEN&&prefs.contains(PREF_RIVER_LOW))return prefs.getFloat(PREF_RIVER_LOW,station.defaultLow);
@@ -962,7 +904,6 @@ public class MainActivity extends Activity {
         return station.defaultAlarm;
     }
 
-    private RiverStatus riverStatus(double flow){return riverStatus(HydroStation.RHEINFELDEN,flow);}
     private RiverStatus riverStatus(HydroStation station,double flow){
         if(Double.isNaN(flow))return new RiverStatus("Keine Daten",Color.rgb(109,120,128),Color.WHITE);
         if(flow<riverLow(station))return new RiverStatus("Niedrig",STATUS_LOW,Color.WHITE);
@@ -971,7 +912,6 @@ public class MainActivity extends Activity {
         return new RiverStatus("Gut",STATUS_GOOD,Color.WHITE);
     }
 
-    private String[] hydroSummary(){return hydroSummary(HydroStation.RHEINFELDEN);}
     private String[] hydroSummary(HydroStation station){
         String raw=prefs.getString(station.liveCacheKey(),"");
         long cache=prefs.getLong(station.liveUpdatedKey(),0L);
@@ -1001,7 +941,6 @@ public class MainActivity extends Activity {
         }catch(Exception ignored){return new String[]{title,"Gespeicherter Stand","Messdaten nicht lesbar","BAFU · Cache"};}
     }
 
-    private TrendSeries hydroSeries(String parameter,RiverRange range){return hydroSeries(HydroStation.RHEINFELDEN,parameter,range);}
     private TrendSeries hydroSeries(HydroStation station,String parameter,RiverRange range){
         TrendSeries result=new TrendSeries();
         TreeMap<Long,Double> points=new TreeMap<>();
@@ -1164,42 +1103,146 @@ public class MainActivity extends Activity {
     private String readConnection(HttpURLConnection c) throws Exception{BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line);br.close();return sb.toString();}
 
     private View settings(){
-        ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);
-        section(b,"Darstellung","Gilt für die native App-Oberfläche");
-        LinearLayout theme=card(); theme.setOrientation(LinearLayout.VERTICAL); b.addView(theme,margin(-1,-2,0,0,0,12));
-        theme.addView(txt("Farbschema",16,TEXT,true)); TextView currentTheme=txt(themeLabel(),13,MUTED,false); currentTheme.setPadding(0,dp(4),0,dp(10)); theme.addView(currentTheme);
-        Button chooseTheme=btn("System / Hell / Dunkel",Color.rgb(232,240,244),NAVY); chooseTheme.setOnClickListener(v->chooseTheme()); theme.addView(chooseTheme,new LinearLayout.LayoutParams(-1,dp(44)));
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout body=body();
+        scroll.addView(body);
 
-        section(b,"Persönlicher Zugang","Nur lokal auf diesem Gerät gespeichert");
-        LinearLayout access=card(); access.setOrientation(LinearLayout.VERTICAL); b.addView(access,margin(-1,-2,0,0,0,12));
-        access.addView(txt("Interner PFVR-Link",16,TEXT,true)); String internal=prefs.getString(PREF_INTERNAL_URL,"");
-        TextView status=txt(validInternal(internal)?"intern.pfvr.ch · eingerichtet":"Noch nicht eingerichtet",13,validInternal(internal)?WATER:MUTED,false); status.setPadding(0,dp(4),0,dp(10)); access.addView(status);
-        Button edit=btn(validInternal(internal)?"Link ändern":"Link einrichten",NAVY,Color.WHITE); edit.setOnClickListener(v->editInternalSetting()); access.addView(edit,new LinearLayout.LayoutParams(-1,dp(46)));
+        TextView intro=txt("Einstellungen nach Bereich",13,MUTED,false);
+        intro.setPadding(dp(2),0,0,dp(9));
+        body.addView(intro);
+        body.addView(settingsTabSelector(),new LinearLayout.LayoutParams(-1,dp(44)));
 
-        section(b,"Daten","Kalender, Training-Wetter und Rhein-Messwerte");
-        LinearLayout data=card(); data.setOrientation(LinearLayout.VERTICAL); b.addView(data,margin(-1,-2,0,0,0,12));
-        data.addView(txt("Lokaler Cache",16,TEXT,true)); TextView d=txt("Beim Start wird zuerst der letzte erfolgreiche Stand angezeigt und anschließend im Hintergrund aktualisiert.",13,MUTED,false); d.setPadding(0,dp(4),0,dp(10)); data.addView(d);
-        data.addView(dataFreshnessRow(),margin(-1,-2,0,0,0,10));
-        Button reload=btn("Alle Daten aktualisieren",Color.rgb(232,240,244),NAVY); reload.setOnClickListener(v->{refreshEvents(true,()->{});refreshLive(true);Toast.makeText(this,"Aktualisierung gestartet.",Toast.LENGTH_SHORT).show();}); data.addView(reload,new LinearLayout.LayoutParams(-1,dp(44)));
-        Button clear=btn("Daten-Cache leeren",Color.rgb(232,240,244),NAVY); clear.setOnClickListener(v->clearDataCache()); LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-1,dp(44)); clp.setMargins(0,dp(8),0,0); data.addView(clear,clp);
-        boolean bgOn=prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
-        Button bgRefresh=btn("Hintergrundaktualisierung: "+(bgOn?"Ein":"Aus"),Color.rgb(232,240,244),NAVY);
-        bgRefresh.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);prefs.edit().putBoolean(PREF_BACKGROUND_REFRESH,next).apply();scheduleBackgroundRefresh();bgRefresh.setText("Hintergrundaktualisierung: "+(next?"Ein":"Aus"));});
-        LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,dp(44));blp.setMargins(0,dp(8),0,0);data.addView(bgRefresh,blp);
-        TextView autoInfo=txt("Live-Daten werden bei geöffneter App regelmäßig geprüft. Im Hintergrund aktualisiert Android bei verfügbarer Verbindung best effort; Energiesparmodi können die Ausführung verzögern.",11,MUTED,false);autoInfo.setPadding(0,dp(8),0,0);data.addView(autoInfo);
+        View divider=new View(this);
+        body.addView(divider,new LinearLayout.LayoutParams(-1,dp(12)));
 
-        section(b,"Rhein-Anzeige","Kachel 1 ist immer sichtbar; Kachel 2 kann ein- oder ausgeblendet werden. Jede Kachel zeigt alle verfügbaren Messwerte.");
-        b.addView(riverSlotSettingCard(1),margin(-1,-2,0,0,0,9));
-        b.addView(riverSlotSettingCard(2),margin(-1,-2,0,0,0,12));
-
-        section(b,"Rhein-Grenzwerte","Status basiert auf dem Abfluss der jeweiligen BAFU-Station");
-        b.addView(riverThresholdSettingsCard(HydroStation.BASEL_RHEINHALLE),margin(-1,-2,0,0,0,9));
-        b.addView(riverThresholdSettingsCard(HydroStation.RHEINFELDEN),margin(-1,-2,0,0,0,12));
-
-        section(b,"App",null);
-        LinearLayout about=card(); about.setOrientation(LinearLayout.VERTICAL); b.addView(about,margin(-1,-2,0,0,0,8));
-        about.addView(txt("PFVR Rheinfelden",16,TEXT,true)); about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        switch(settingsTab){
+            case RIVER:
+                addRiverSettings(body);
+                break;
+            case PAYMENT:
+                addPaymentSettings(body);
+                break;
+            default:
+                addGeneralSettings(body);
+                break;
+        }
         return scroll;
+    }
+
+    private View settingsTabSelector(){
+        LinearLayout tabs=segmentedBackground();
+        for(SettingsTab tab:SettingsTab.values()){
+            TextView option=segmentOption(tab.label,tab==settingsTab);
+            option.setContentDescription("Einstellungen "+tab.label);
+            option.setOnClickListener(v->{
+                settingsTab=tab;
+                navigate(Screen.SETTINGS);
+            });
+            tabs.addView(option,segmentParams(tabs));
+        }
+        return tabs;
+    }
+
+    private void addGeneralSettings(LinearLayout body){
+        section(body,"Darstellung","Gilt für die native App-Oberfläche");
+        LinearLayout theme=card();
+        theme.setOrientation(LinearLayout.VERTICAL);
+        body.addView(theme,margin(-1,-2,0,0,0,12));
+        theme.addView(txt("Farbschema",16,TEXT,true));
+        TextView currentTheme=txt(themeLabel(),13,MUTED,false);
+        currentTheme.setPadding(0,dp(4),0,dp(10));
+        theme.addView(currentTheme);
+        Button chooseTheme=btn("System / Hell / Dunkel",Color.rgb(232,240,244),NAVY);
+        chooseTheme.setOnClickListener(v->chooseTheme());
+        theme.addView(chooseTheme,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        section(body,"Persönlicher Zugang","Nur lokal auf diesem Gerät gespeichert");
+        LinearLayout access=card();
+        access.setOrientation(LinearLayout.VERTICAL);
+        body.addView(access,margin(-1,-2,0,0,0,12));
+        access.addView(txt("Interner PFVR-Link",16,TEXT,true));
+        String internal=prefs.getString(PREF_INTERNAL_URL,"");
+        TextView status=txt(validInternal(internal)?"intern.pfvr.ch · eingerichtet":"Noch nicht eingerichtet",13,validInternal(internal)?WATER:MUTED,false);
+        status.setPadding(0,dp(4),0,dp(10));
+        access.addView(status);
+        Button edit=btn(validInternal(internal)?"Link ändern":"Link einrichten",NAVY,Color.WHITE);
+        edit.setOnClickListener(v->editInternalSetting());
+        access.addView(edit,new LinearLayout.LayoutParams(-1,dp(46)));
+
+        section(body,"Daten","Kalender, Training-Wetter und Rhein-Messwerte");
+        LinearLayout data=card();
+        data.setOrientation(LinearLayout.VERTICAL);
+        body.addView(data,margin(-1,-2,0,0,0,12));
+        data.addView(txt("Lokaler Cache",16,TEXT,true));
+        TextView description=txt("Beim Start wird zuerst der letzte erfolgreiche Stand angezeigt und anschließend im Hintergrund aktualisiert.",13,MUTED,false);
+        description.setPadding(0,dp(4),0,dp(10));
+        data.addView(description);
+        data.addView(dataFreshnessRow(),margin(-1,-2,0,0,0,10));
+
+        Button reload=btn("Alle Daten aktualisieren",Color.rgb(232,240,244),NAVY);
+        reload.setOnClickListener(v->{
+            refreshEvents(true,()->{});
+            refreshLive(true);
+            Toast.makeText(this,"Aktualisierung gestartet.",Toast.LENGTH_SHORT).show();
+        });
+        data.addView(reload,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        Button clear=btn("Daten-Cache leeren",Color.rgb(232,240,244),NAVY);
+        clear.setOnClickListener(v->clearDataCache());
+        LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(-1,dp(44));
+        clearParams.setMargins(0,dp(8),0,0);
+        data.addView(clear,clearParams);
+
+        boolean backgroundOn=prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
+        Button background=btn("Hintergrundaktualisierung: "+(backgroundOn?"Ein":"Aus"),Color.rgb(232,240,244),NAVY);
+        background.setOnClickListener(v->{
+            boolean next=!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
+            prefs.edit().putBoolean(PREF_BACKGROUND_REFRESH,next).apply();
+            scheduleBackgroundRefresh();
+            background.setText("Hintergrundaktualisierung: "+(next?"Ein":"Aus"));
+        });
+        LinearLayout.LayoutParams backgroundParams=new LinearLayout.LayoutParams(-1,dp(44));
+        backgroundParams.setMargins(0,dp(8),0,0);
+        data.addView(background,backgroundParams);
+
+        TextView autoInfo=txt("Live-Daten werden bei geöffneter App regelmäßig geprüft. Im Hintergrund aktualisiert Android bei verfügbarer Verbindung best effort; Energiesparmodi können die Ausführung verzögern.",11,MUTED,false);
+        autoInfo.setPadding(0,dp(8),0,0);
+        data.addView(autoInfo);
+
+        section(body,"App",null);
+        LinearLayout about=card();
+        about.setOrientation(LinearLayout.VERTICAL);
+        body.addView(about,margin(-1,-2,0,0,0,8));
+        about.addView(txt("PFVR Rheinfelden",16,TEXT,true));
+        about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+    }
+
+    private void addRiverSettings(LinearLayout body){
+        section(body,"Rhein-Anzeige","Kachel 1 ist immer sichtbar; Kachel 2 kann ein- oder ausgeblendet werden.");
+        body.addView(riverSlotSettingCard(1),margin(-1,-2,0,0,0,9));
+        body.addView(riverSlotSettingCard(2),margin(-1,-2,0,0,0,12));
+
+        section(body,"Rhein-Grenzwerte","Status basiert auf dem Abfluss der jeweiligen BAFU-Station");
+        body.addView(riverThresholdSettingsCard(HydroStation.BASEL_RHEINHALLE),margin(-1,-2,0,0,0,9));
+        body.addView(riverThresholdSettingsCard(HydroStation.RHEINFELDEN),margin(-1,-2,0,0,0,12));
+    }
+
+    private void addPaymentSettings(LinearLayout body){
+        section(body,"Banking-App","Für die direkte Übergabe des Swiss QR");
+        body.addView(bankChoiceSettingsCard(),margin(-1,-2,0,0,0,12));
+
+        LinearLayout info=card();
+        info.setOrientation(LinearLayout.VERTICAL);
+        body.addView(info,margin(-1,-2,0,0,0,8));
+        info.addView(txt("So funktioniert die Direktzahlung",16,TEXT,true));
+        TextView explanation=txt("Die App erzeugt beim Bezahlen einen Swiss QR als temporäres Bild und übergibt ihn an die gewählte Banking-App. Die Auswahl allein öffnet keine andere App. Ob der Bildimport verarbeitet wird, hängt von der Banking-App ab.",13,MUTED,false);
+        explanation.setPadding(0,dp(5),0,0);
+        info.addView(explanation);
+    }
+
+    private void openPaymentSettings(){
+        settingsTab=SettingsTab.PAYMENT;
+        navigate(Screen.SETTINGS);
     }
 
     private View riverSlotSettingCard(int slot){
@@ -1251,8 +1294,7 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this,dialogTheme()).setTitle("Rhein-Kachel "+slot)
                 .setSingleChoiceItems(labels,selected,(dialog,which)->{
                     String stationKey=slot==1?PREF_RIVER_SLOT1_STATION:PREF_RIVER_SLOT2_STATION;
-                    String metricKey=slot==1?PREF_RIVER_SLOT1_METRIC:PREF_RIVER_SLOT2_METRIC;
-                    prefs.edit().putString(stationKey,stations[which].id).remove(metricKey).apply();
+                    prefs.edit().putString(stationKey,stations[which].id).apply();
                     dialog.dismiss();
                     navigate(Screen.SETTINGS);
                 }).setNegativeButton("Abbrechen",null).show();
@@ -1352,7 +1394,6 @@ public class MainActivity extends Activity {
         refreshEvents(false,()->{});refreshLive(true);
     }
 
-    private void editRiverThresholds(){editRiverThresholds(HydroStation.RHEINFELDEN);}
     private void editRiverThresholds(HydroStation station){
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(16),dp(4),dp(16),0);
         EditText low=thresholdInput("Niedrig unter m³/s",riverLow(station)),warn=thresholdInput("Warnung ab m³/s",riverWarn(station)),alarm=thresholdInput("Alarm ab m³/s",riverAlarm(station));
@@ -1597,14 +1638,23 @@ public class MainActivity extends Activity {
         TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);title.setPadding(0,dp(5),0,dp(5));hero.addView(title);
         hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
 
-        section(body,"Banking-App","Einmal festlegen; geöffnet wird sie erst beim Bezahlen.");
-        body.addView(bankChoiceCard(),margin(-1,-2,0,0,0,12));
+        section(body,"Zahlungsweg","Banking-App wird zentral in den Einstellungen verwaltet");
+        body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
 
         section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
         LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
         cashSummaryContainer=new LinearLayout(this);cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);cart.addView(cashSummaryContainer);
         cashTotalView=txt("Total CHF 0.00",24,TEXT,true);cashTotalView.setPadding(0,dp(12),0,dp(10));cart.addView(cashTotalView);
-        Button cartBank=btn(preferredBankPaymentLabel(),NAVY,Color.WHITE);cartBank.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)payWithPreferredBank(input);});cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
+        Button cartBank=btn(preferredBankPaymentLabel(),NAVY,Color.WHITE);
+        cartBank.setOnClickListener(v->{
+            if(!hasPreferredBank()){
+                openPaymentSettings();
+                return;
+            }
+            EditText input=cartAmountInput();
+            if(input!=null)payWithPreferredBank(input);
+        });
+        cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
         LinearLayout payRow=new LinearLayout(this);payRow.setPadding(0,dp(8),0,0);
         Button cartQr=btn("Swiss QR",Color.rgb(232,240,244),NAVY);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(44),1));
         Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(44),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
@@ -1652,37 +1702,100 @@ public class MainActivity extends Activity {
         return scroll;
     }
 
-    private View bankChoiceCard(){
+    private View cashBankStatusCard(){
         LinearLayout card=card();
         card.setOrientation(LinearLayout.VERTICAL);
-        String label=prefs.getString(PREF_BANK_LABEL,"").trim();
-        String pkg=prefs.getString(PREF_BANK_PACKAGE,"").trim();
-        boolean selected=!label.isEmpty()&&!pkg.isEmpty();
+
+        boolean selected=hasPreferredBank();
+        String label=selectedBankLabel();
+
+        LinearLayout titleRow=new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.addView(txt(selected?label:"Keine Banking-App gewählt",16,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+
+        int stateColor=selected?STATUS_GOOD:STATUS_WARN;
+        TextView state=txt(selected?"Bereit":"Einrichten",10,stateColor,true);
+        state.setTextColor(statusTextColor(stateColor));
+        state.setGravity(Gravity.CENTER);
+        state.setPadding(dp(9),dp(4),dp(9),dp(4));
+        state.setBackground(statusBadge(stateColor));
+        titleRow.addView(state,new LinearLayout.LayoutParams(-2,-2));
+        card.addView(titleRow);
+
+        TextView info=txt(
+                selected
+                        ?"Diese App wird beim Bezahlen für die direkte Swiss-QR-Übergabe verwendet."
+                        :"Für Direktzahlungen zuerst unter Einstellungen → Zahlung eine Banking-App festlegen.",
+                12,
+                selected?MUTED:statusTextColor(STATUS_WARN),
+                false
+        );
+        info.setTextColor(selected?themeText(MUTED):statusTextColor(STATUS_WARN));
+        info.setPadding(0,dp(5),0,dp(10));
+        card.addView(info);
+
+        Button manage=btn(selected?"In Einstellungen ändern":"Banking-App auswählen",selected?Color.rgb(232,240,244):NAVY,selected?NAVY:Color.WHITE);
+        manage.setOnClickListener(v->openPaymentSettings());
+        card.addView(manage,new LinearLayout.LayoutParams(-1,dp(44)));
+        return card;
+    }
+
+    private View bankChoiceSettingsCard(){
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+
+        boolean selected=hasPreferredBank();
+        String label=selectedBankLabel();
         card.addView(txt(selected?label:"Noch keine Banking-App festgelegt",16,TEXT,true));
-        TextView info=txt(selected?"Wird für die direkte Swiss-QR-Übergabe verwendet.":"Wähle die Banking-App, die beim Tippen auf Bezahlen verwendet werden soll.",12,MUTED,false);
+
+        TextView info=txt(
+                selected
+                        ?"Wird für Zahlungen aus Warenkorb und freiem Betrag verwendet."
+                        :"Es werden nur installierte Apps angeboten, die PNG-Bilder über Androids Teilen-Funktion annehmen und als Banking-App erkannt werden.",
+                12,
+                MUTED,
+                false
+        );
         info.setPadding(0,dp(4),0,dp(10));
         card.addView(info);
+
         LinearLayout actions=new LinearLayout(this);
         Button choose=btn(selected?"Ändern":"Bank auswählen",selected?Color.rgb(232,240,244):NAVY,selected?NAVY:Color.WHITE);
-        choose.setOnClickListener(v->chooseApp(false,null));
+        choose.setOnClickListener(v->chooseBankingApp());
         actions.addView(choose,new LinearLayout.LayoutParams(0,dp(44),1));
+
         if(selected){
             Button clear=btn("Entfernen",Color.rgb(232,240,244),NAVY);
-            clear.setOnClickListener(v->{prefs.edit().remove(PREF_BANK_PACKAGE).remove(PREF_BANK_LABEL).apply();navigate(Screen.CASH);});
-            LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(0,dp(44),1);clearParams.setMargins(dp(8),0,0,0);actions.addView(clear,clearParams);
+            clear.setOnClickListener(v->{
+                prefs.edit().remove(PREF_BANK_PACKAGE).remove(PREF_BANK_LABEL).apply();
+                navigate(Screen.SETTINGS);
+            });
+            LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(0,dp(44),1);
+            clearParams.setMargins(dp(8),0,0,0);
+            actions.addView(clear,clearParams);
         }
         card.addView(actions);
         return card;
     }
 
+    private boolean hasPreferredBank(){
+        return !prefs.getString(PREF_BANK_PACKAGE,"").trim().isEmpty()
+                && !prefs.getString(PREF_BANK_LABEL,"").trim().isEmpty();
+    }
+
+    private String selectedBankLabel(){
+        return prefs.getString(PREF_BANK_LABEL,"").trim();
+    }
+
     private String preferredBankPaymentLabel(){
-        String label=prefs.getString(PREF_BANK_LABEL,"").trim();
-        return label.isEmpty()?"Banking-App auswählen":"Mit "+label+" bezahlen";
+        String label=selectedBankLabel();
+        return label.isEmpty()?"Banking-App festlegen":"Mit "+label+" bezahlen";
     }
 
     private void payWithPreferredBank(EditText amountInput){
-        if(prefs.getString(PREF_BANK_PACKAGE,"").trim().isEmpty()){
-            Toast.makeText(this,"Bitte oben zuerst eine Banking-App auswählen.",Toast.LENGTH_SHORT).show();
+        if(!hasPreferredBank()){
+            Toast.makeText(this,"Bitte unter Einstellungen → Zahlung eine Banking-App festlegen.",Toast.LENGTH_LONG).show();
+            openPaymentSettings();
             return;
         }
         sharePaymentQr(amountInput);
@@ -1861,35 +1974,63 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void openPreferred(boolean twint, EditText amountInput) {
-        String pkg=prefs.getString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,"");
-        if(pkg.isBlank()) { chooseApp(twint,amountInput); return; }
-        Intent launch=getPackageManager().getLaunchIntentForPackage(pkg);
-        if(launch==null) { prefs.edit().remove(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE).remove(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL).apply(); chooseApp(twint,amountInput); return; }
-        copyAmount(amountInput); try { startActivity(launch); } catch(Exception e) { chooseApp(twint,amountInput); }
+    private void chooseBankingApp(){
+        PackageManager packageManager=getPackageManager();
+        Intent shareIntent=new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("image/png");
+
+        List<ResolveInfo> candidates=packageManager.queryIntentActivities(shareIntent,PackageManager.MATCH_DEFAULT_ONLY);
+        Map<String,AppChoice> byPackage=new LinkedHashMap<>();
+        for(ResolveInfo resolveInfo:candidates){
+            if(resolveInfo.activityInfo==null||resolveInfo.activityInfo.packageName==null)continue;
+            String packageName=resolveInfo.activityInfo.packageName;
+            if(packageName.equals(getPackageName()))continue;
+            String label=String.valueOf(resolveInfo.loadLabel(packageManager)).trim();
+            String haystack=(label+" "+packageName).toLowerCase(Locale.ROOT);
+            if(!looksLikeBankingApp(haystack))continue;
+            byPackage.putIfAbsent(packageName,new AppChoice(label,packageName));
+        }
+
+        List<AppChoice> found=new ArrayList<>(byPackage.values());
+        found.sort((first,second)->{
+            int firstPriority=bankPriority(first);
+            int secondPriority=bankPriority(second);
+            if(firstPriority!=secondPriority)return Integer.compare(firstPriority,secondPriority);
+            return first.label.compareToIgnoreCase(second.label);
+        });
+
+        if(found.isEmpty()){
+            Toast.makeText(this,"Keine kompatible Banking-App gefunden. Swiss QR kann weiterhin angezeigt oder gespeichert werden.",Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String currentPackage=prefs.getString(PREF_BANK_PACKAGE,"");
+        int selected=-1;
+        String[] labels=new String[found.size()];
+        for(int index=0;index<found.size();index++){
+            AppChoice app=found.get(index);
+            labels[index]=app.label;
+            if(app.pkg.equals(currentPackage))selected=index;
+        }
+
+        new AlertDialog.Builder(this,dialogTheme())
+                .setTitle("Banking-App auswählen")
+                .setSingleChoiceItems(labels,selected,(dialog,index)->{
+                    AppChoice choice=found.get(index);
+                    prefs.edit()
+                            .putString(PREF_BANK_PACKAGE,choice.pkg)
+                            .putString(PREF_BANK_LABEL,choice.label)
+                            .apply();
+                    dialog.dismiss();
+                    Toast.makeText(this,choice.label+" festgelegt.",Toast.LENGTH_SHORT).show();
+                    if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
+                })
+                .setNegativeButton("Abbrechen",null)
+                .show();
     }
 
-    private void chooseApp(boolean twint, EditText amountInput) {
-        PackageManager pm=getPackageManager(); Intent q=new Intent(Intent.ACTION_MAIN); q.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=pm.queryIntentActivities(q,0); List<AppChoice> found=new ArrayList<>();
-        for(ResolveInfo r:all){
-            if(r.activityInfo==null||r.activityInfo.packageName==null)continue;
-            String pkg=r.activityInfo.packageName;String label=String.valueOf(r.loadLabel(pm));String h=(label+" "+pkg).toLowerCase(Locale.ROOT);
-            boolean looksTwint=h.contains("twint");
-            boolean looksBank=h.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx).*");
-            if((twint&&looksTwint)||(!twint&&looksBank))found.add(new AppChoice(label,pkg));
-        }
-        if(found.isEmpty()&&!twint) for(ResolveInfo r:all) if(r.activityInfo!=null && r.activityInfo.packageName!=null && !r.activityInfo.packageName.equals(getPackageName())) found.add(new AppChoice(String.valueOf(r.loadLabel(pm)),r.activityInfo.packageName));
-        found.sort((a,b)->{int pa=bankPriority(a),pb=bankPriority(b);if(pa!=pb)return Integer.compare(pa,pb);return a.label.compareToIgnoreCase(b.label);});
-        if(found.isEmpty()) { if(twint) { try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("market://search?q=TWINT&c=apps")));}catch(Exception e){external("https://www.twint.ch/privatkunden/");} } else Toast.makeText(this,"Keine passende Banking-App gefunden.",Toast.LENGTH_LONG).show(); return; }
-        String[] labels=new String[found.size()]; for(int i=0;i<found.size();i++) labels[i]=found.get(i).label;
-        new AlertDialog.Builder(this,dialogTheme()).setTitle(twint?"TWINT-App auswählen":"Banking-App auswählen").setItems(labels,(d,i)->{
-            AppChoice c=found.get(i);
-            prefs.edit().putString(twint?PREF_TWINT_PACKAGE:PREF_BANK_PACKAGE,c.pkg).putString(twint?PREF_TWINT_LABEL:PREF_BANK_LABEL,c.label).apply();
-            if(!twint){
-                Toast.makeText(this,c.label+" festgelegt.",Toast.LENGTH_SHORT).show();
-                if(current==Screen.CASH)navigate(Screen.CASH);
-            }else if(bankButton!=null){bankButton.setText(c.label);}
-        }).setNegativeButton("Abbrechen",null).show();
+    private boolean looksLikeBankingApp(String value){
+        return value.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx|bcv|bekb|bkb|blkb|akb|sgkb|luzerner|thurgauer|graub.ndner).*");
     }
 
     private int bankPriority(AppChoice app) {
@@ -1909,9 +2050,7 @@ public class MainActivity extends Activity {
         return 200;
     }
 
-    private void copyAmount(EditText input) { String a=amount(input==null?null:input.getText().toString()); if(a==null||a.isBlank()){Toast.makeText(this,"Banking-App geöffnet. Betrag dort eingeben.",Toast.LENGTH_SHORT).show();return;} copy("PFVR Betrag",a,"CHF "+a+" kopiert"); }
     private String amount(String raw) { if(raw==null||raw.trim().isEmpty())return ""; try{double n=Double.parseDouble(raw.trim().replace(',','.')); if(n<0||n>100000)return null; if(n==0)return ""; return String.format(Locale.US,"%.2f",n);}catch(Exception e){return null;} }
-    private boolean any(String s,String... xs){for(String x:xs)if(s.contains(x))return true;return false;}
     private void copy(String label,String value,String toast){ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE); if(cm!=null)cm.setPrimaryClip(ClipData.newPlainText(label,value)); Toast.makeText(this,toast,Toast.LENGTH_SHORT).show();}
 
     private View club() {
@@ -2422,156 +2561,6 @@ public class MainActivity extends Activity {
             tooltip.setColor(darkMode?DARK_SOFT:NAVY);canvas.drawRoundRect(box,dp(8),dp(8),tooltip);
             canvas.save();canvas.clipRect(box);canvas.drawText(text,box.left+dp(8),box.bottom-dp(6),tooltipText);canvas.restore();
             setContentDescription(text);
-        }
-    }
-
-    private class RiverTrendView extends View {
-        private final TrendSeries series;
-        private final RiverMetric metric;
-        private final RiverRange range;
-        private final HydroStation station;
-        private final Paint grid=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint label=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint line=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint fill=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint point=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint threshold=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint tooltip=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint tooltipText=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private int selectedIndex=-1;
-
-        RiverTrendView(Context context,TrendSeries series,RiverMetric metric,RiverRange range,HydroStation station){
-            super(context);
-            this.series=series;this.metric=metric;this.range=range;this.station=station;
-            setClickable(true);setFocusable(true);
-            line.setStyle(Paint.Style.STROKE);line.setStrokeWidth(dp(2.4f));line.setStrokeCap(Paint.Cap.ROUND);line.setStrokeJoin(Paint.Join.ROUND);
-            fill.setStyle(Paint.Style.FILL);point.setStyle(Paint.Style.FILL);grid.setStrokeWidth(dp(1));
-            threshold.setStyle(Paint.Style.STROKE);threshold.setStrokeWidth(dp(1.3f));threshold.setPathEffect(new DashPathEffect(new float[]{dp(6),dp(4)},0));
-            label.setTextSize(9*getResources().getDisplayMetrics().scaledDensity);
-            tooltipText.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);tooltipText.setTypeface(Typeface.DEFAULT_BOLD);
-            tooltip.setStyle(Paint.Style.FILL);
-            setContentDescription(metric.label+" der letzten "+range.label);
-        }
-
-        @Override public boolean performClick(){super.performClick();return true;}
-
-        @Override public boolean onTouchEvent(MotionEvent event){
-            if(series.times.size()<2)return super.onTouchEvent(event);
-            if(event.getAction()==MotionEvent.ACTION_DOWN||event.getAction()==MotionEvent.ACTION_MOVE||event.getAction()==MotionEvent.ACTION_UP){
-                float left=dp(52),right=getWidth()-dp(10);
-                float x=Math.max(left,Math.min(right,event.getX()));
-                long minTime=series.times.get(0),maxTime=series.times.get(series.times.size()-1);
-                long target=minTime+Math.round((maxTime-minTime)*(x-left)/Math.max(1f,right-left));
-                selectedIndex=HydroMath.nearestIndex(series.times,target);
-                invalidate();
-                if(event.getAction()==MotionEvent.ACTION_UP)performClick();
-                return true;
-            }
-            if(event.getAction()==MotionEvent.ACTION_CANCEL){selectedIndex=-1;invalidate();return true;}
-            return super.onTouchEvent(event);
-        }
-
-        @Override protected void onDraw(Canvas canvas){
-            super.onDraw(canvas);
-            if(series.values.size()<2||series.times.size()!=series.values.size())return;
-            float width=getWidth(),height=getHeight();
-            float left=dp(52),right=width-dp(10),top=dp(17),bottom=height-dp(30);
-            long minTime=series.times.get(0),maxTime=series.times.get(series.times.size()-1);
-            if(maxTime<=minTime)maxTime=minTime+1;
-            HydroMath.AxisScale scale=HydroMath.niceAxis(series.values);
-
-            grid.setColor(darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234));
-            label.setColor(themeText(MUTED));
-            for(int index=0;index<=4;index++){
-                float y=top+(bottom-top)*index/4f;
-                canvas.drawLine(left,y,right,y,grid);
-                double axisValue=scale.max-(scale.max-scale.min)*index/4d;
-                String axisText=axisLabel(axisValue,scale.step);
-                canvas.drawText(axisText,left-dp(5)-label.measureText(axisText),y+dp(3),label);
-            }
-            drawTimeGrid(canvas,left,right,top,bottom,minTime,maxTime);
-            if(metric==RiverMetric.FLOW)drawFlowThresholds(canvas,scale,left,right,top,bottom);
-
-            Path path=new Path();
-            for(int index=0;index<series.values.size();index++){
-                float x=seriesX(index,left,right,minTime,maxTime);
-                float y=seriesY(series.values.get(index),scale,top,bottom);
-                if(index==0)path.moveTo(x,y);else path.lineTo(x,y);
-            }
-            int actual=metric==RiverMetric.FLOW?statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg):themeText(metric.color);
-            Path area=new Path(path);
-            area.lineTo(right,bottom);area.lineTo(left,bottom);area.close();
-            fill.setColor(Color.argb(darkMode?34:24,Color.red(actual),Color.green(actual),Color.blue(actual)));
-            canvas.drawPath(area,fill);
-            line.setColor(actual);canvas.drawPath(path,line);
-
-            int last=series.values.size()-1;
-            float lastX=seriesX(last,left,right,minTime,maxTime),lastY=seriesY(series.values.get(last),scale,top,bottom);
-            point.setColor(actual);canvas.drawCircle(lastX,lastY,dp(3.5f),point);
-            point.setStyle(Paint.Style.STROKE);point.setStrokeWidth(dp(2));point.setColor(themeBg(Color.WHITE));canvas.drawCircle(lastX,lastY,dp(5f),point);point.setStyle(Paint.Style.FILL);
-            if(selectedIndex>=0&&selectedIndex<series.values.size())drawSelection(canvas,scale,left,right,top,bottom,minTime,maxTime,actual);
-        }
-
-        private float seriesX(int index,float left,float right,long minTime,long maxTime){return left+(right-left)*(series.times.get(index)-minTime)/(float)(maxTime-minTime);}
-        private float seriesY(double value,HydroMath.AxisScale scale,float top,float bottom){return (float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));}
-
-        private void drawTimeGrid(Canvas canvas,float left,float right,float top,float bottom,long minTime,long maxTime){
-            int intervals=range==RiverRange.HOUR?3:4;
-            ZoneId zone=ZoneId.of("Europe/Zurich");
-            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
-            for(int index=0;index<=intervals;index++){
-                float fraction=index/(float)intervals;
-                float x=left+(right-left)*fraction;
-                if(index>0&&index<intervals)canvas.drawLine(x,top,x,bottom,grid);
-                long timestamp=minTime+Math.round((maxTime-minTime)*fraction);
-                String value=java.time.Instant.ofEpochMilli(timestamp).atZone(zone).format(formatter);
-                float textWidth=label.measureText(value);
-                float textX=Math.max(left,Math.min(right-textWidth,x-textWidth/2f));
-                canvas.drawText(value,textX,bottom+dp(18),label);
-            }
-        }
-
-        private void drawFlowThresholds(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom){
-            double[] values={riverLow(station),riverWarn(station),riverAlarm(station)};
-            String[] names={"Niedrig","Warnung","Alarm"};
-            int[] colors={STATUS_LOW,STATUS_WARN,STATUS_ALARM};
-            double epsilon=Math.max(1e-9,scale.step*1e-6);
-            for(int index=0;index<values.length;index++){
-                double value=values[index];
-                if(value<scale.min-epsilon||value>scale.max+epsilon)continue;
-                float y=seriesY(value,scale,top,bottom);
-                int color=statusTextColor(colors[index]);
-                threshold.setColor(color);canvas.drawLine(left,y,right,y,threshold);
-                String text=names[index]+" "+String.format(Locale.GERMAN,"%.0f",value);
-                tooltipText.setColor(color);
-                float textWidth=tooltipText.measureText(text);
-                float textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
-                float baseline=Math.max(top+textHeight+dp(2),Math.min(bottom-dp(2),y-dp(2)));
-                RectF box=new RectF(right-textWidth-dp(12),baseline-textHeight-dp(5),right,baseline+dp(3));
-                tooltip.setColor(themeBg(Color.WHITE));canvas.drawRoundRect(box,dp(4),dp(4),tooltip);
-                canvas.drawText(text,box.left+dp(6),baseline,tooltipText);
-            }
-        }
-
-        private void drawSelection(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom,long minTime,long maxTime,int color){
-            float x=seriesX(selectedIndex,left,right,minTime,maxTime),y=seriesY(series.values.get(selectedIndex),scale,top,bottom);
-            Paint crosshair=new Paint(Paint.ANTI_ALIAS_FLAG);
-            int muted=themeText(MUTED);
-            crosshair.setColor(Color.argb(darkMode?150:105,Color.red(muted),Color.green(muted),Color.blue(muted)));crosshair.setStrokeWidth(dp(1));
-            canvas.drawLine(x,top,x,bottom,crosshair);
-            point.setColor(color);canvas.drawCircle(x,y,dp(5),point);
-            point.setStyle(Paint.Style.STROKE);point.setStrokeWidth(dp(2));point.setColor(themeBg(Color.WHITE));canvas.drawCircle(x,y,dp(7),point);point.setStyle(Paint.Style.FILL);
-
-            ZonedDateTime timestamp=java.time.Instant.ofEpochMilli(series.times.get(selectedIndex)).atZone(ZoneId.of("Europe/Zurich"));
-            DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.MM. · HH:mm",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
-            String text=timestamp.format(formatter)+" · "+formatMetric(station,metric,series.values.get(selectedIndex))+" "+metricUnit(station,metric);
-            tooltipText.setColor(darkMode?DARK_TEXT:Color.WHITE);
-            float textWidth=tooltipText.measureText(text),textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
-            float boxWidth=textWidth+dp(16),boxLeft=Math.max(left,Math.min(right-boxWidth,x-boxWidth/2f));
-            RectF box=new RectF(boxLeft,top+dp(4),boxLeft+boxWidth,top+textHeight+dp(14));
-            tooltip.setColor(darkMode?DARK_SOFT:NAVY);canvas.drawRoundRect(box,dp(8),dp(8),tooltip);
-            canvas.drawText(text,box.left+dp(8),box.bottom-dp(6),tooltipText);
-            setContentDescription(metric.label+" "+text);
         }
     }
 

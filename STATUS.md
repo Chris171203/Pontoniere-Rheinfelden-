@@ -1,28 +1,30 @@
 # Status
 
-Stand: Testversion `0.9.2` · aktualisiert 2026-09-02.
+Stand: Testversion `0.9.3` · aktualisiert 2026-09-02.
 
 ## Implementiert / im Test
 
-- Rhein-Übersicht: aktuelle Abflüsse der aktiven Stationen kompakt nebeneinander; Status und Wert folgen Niedrig/Gut/Warn/Alarm.
-- Rheinfelden zeigt die aktuelle Wassertemperatur direkt in der oberen Stationskarte; ein eigener Temperaturgraph entfällt.
-- Pro aktiver Station ein gemeinsames Diagramm für Abfluss und Pegel mit zwei dynamischen Y-Achsen; Basel nutzt für Pegel cm, Rheinfelden m ü.M.
-- Zweite Rhein-Kachel bleibt in den Einstellungen ein- und ausblendbar.
-- Live-Aktualisierung baut nur den Live-Bereich neu auf und stellt die Scrollposition zusätzlich nach dem Layout nochmals her.
-- Banking-App wird oben in der Kasse festgelegt. Die Auswahl speichert nur die App und öffnet sie nicht. Erst der Zahlungsbutton übergibt den temporären Swiss QR.
+- Einstellungen sind in die Bereiche Allgemein, Rhein und Zahlung gegliedert.
+- Die bevorzugte Banking-App wird nur noch unter Einstellungen → Zahlung verwaltet. Die Auswahl speichert die App, startet sie aber nicht.
+- Die Kasse zeigt den gewählten Zahlungsweg kompakt an. Ohne Auswahl erscheint ein deutlicher Hinweis mit direktem Sprung zur passenden Einstellung.
+- Der Banking-Dialog bietet nur installierte, als Banking-App erkennbare Apps an, die PNG-Bilder über Androids Teilen-Funktion annehmen.
+- Die beiden Abfluss-Kurzkarten auf Home werden bei aktiver zweiter Station auf dieselbe Höhe gesetzt; maßgeblich ist die höhere Karte mit allen Zusatzinformationen.
+- Pro aktiver Station bleibt ein gemeinsames Diagramm für Abfluss und Pegel mit zwei dynamischen Y-Achsen erhalten; Rheinfelden zeigt die Wassertemperatur in der Kurzkarte.
+- Live-Aktualisierung baut nur den Live-Bereich neu auf und stellt die Scrollposition nach dem Layout wieder her.
+- Nicht mehr verwendete Einzelgrafik-, Metrik- und generische App-Startlogik wurde entfernt.
 - Vereinsbeiz bleibt in Trinken, Essen und Feiern gegliedert; Warenkorb steht vor der Auswahl, zeigt Positionen und Total und erlaubt direktes Entfernen.
-- Direkte Swiss-QR-Übergabe wurde mit Yuh real erfolgreich geprüft; weitere Banken bleiben geräteabhängig.
 - Interner Bereich startet standardmäßig in der App-Ansicht und übernimmt Hell-/Dunkelmodus.
 - Android 16 / API 36 als Target.
 
 ## Noch zu verifizieren
 
-- Visuelle Prüfung der kombinierten Doppelachsen-Diagramme auf realem Android-Gerät, insbesondere kleine Displays und Dark Mode.
-- Direkte QR-Übergabe mit weiteren Banking-Apps.
-- Updatepfad: 0.9.1 wurde mangels geschützter Signing-Secrets nur als getrenntes Debug-Testpaket gebaut. Für dauerhaft installierbare Updates muss einmalig eine stabile private Test-/Release-Signatur eingerichtet werden; ein wechselnder GitHub-Runner-Debug-Key ist nicht updatefähig.
+- Visuelle Prüfung der gleich hohen Kurzkarten und der Einstellungs-Tabs auf kleinen realen Android-Geräten und im Dark Mode.
+- Direkte QR-Übergabe mit weiteren Banking-Apps; Yuh ist real bestätigt.
+- Updatepfad: Dauerhaft installierbare Updates benötigen einmalig eine stabile private Test-/Release-Signatur. Ein wechselnder GitHub-Runner-Debug-Key ist nicht updatefähig.
 
 ## Spätere Punkte
 
+- Weitere Aufteilung der noch großen `MainActivity` in klar getrennte UI- und Service-Komponenten.
 - Native Vereinsnews aus WordPress REST/RSS.
 - Optionale Trainingsbenachrichtigungen und Homescreen-Widget.
 - iOS-Implementierung.

@@ -13,8 +13,8 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 - Termine aus dem öffentlichen PFVR-Google-Kalender mit persistentem Cache, Detailansicht, Teilen, Route und Übergabe an die persönliche Kalender-App.
 - Verein und Kontakt inklusive News-Archiv-Verlinkung.
 - Interner Bereich über persönlichen `intern.pfvr.ch`-Link; Konfiguration nur in den Einstellungen und nur lokal gespeichert. App-Ansicht ist Standard und folgt dem nativen Hell-/Dunkelmodus.
-- Vereinsbeiz: Warenkorb in den Gruppen Trinken, Essen und Feiern, freier Betrag, Swiss-QR-Zahlung, direkte Android-Übergabe an kompatible Banking-Apps und TWINT-Zahlungsweg.
-- Darstellung: System / Hell / Dunkel.
+- Vereinsbeiz: Warenkorb in den Gruppen Trinken, Essen und Feiern, freier Betrag, Swiss-QR-Zahlung, direkte Android-Übergabe an eine unter Einstellungen → Zahlung gewählte kompatible Banking-App und TWINT-Zahlungsweg.
+- Einstellungen: Bereiche Allgemein, Rhein und Zahlung; Darstellung System / Hell / Dunkel.
 
 ## Datenquellen
 
