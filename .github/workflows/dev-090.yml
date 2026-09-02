@@ -1,0 +1,98 @@
+name: Dev Android 0.9.0
+
+on:
+  push:
+    branches:
+      - dev-0.9.0
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pfvr-dev-090
+  cancel-in-progress: false
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.9.0
+          fetch-depth: 0
+
+      - name: Apply 0.9.0 UI changes
+        run: python tools/apply_090.py
+
+      - name: Reject personal PFVR access data
+        run: |
+          if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' Android --exclude-dir=build; then
+            echo 'Personal PFVR access data found in Android source.' >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Verify public BAFU stations
+        run: |
+          for STATION in 2091 2289; do
+            BODY=$(printf '{"query":"{ water { observations { data_live(where:{stationNo:{_eq:\"%s\"}}) { stationNo parameterName timestamp value } } } }"}' "$STATION")
+            curl --retry 3 --retry-delay 2 --retry-all-errors -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" -o "/tmp/bafu-$STATION.json"
+            jq -e --arg station "$STATION" '[.data.water.observations.data_live[] | select(.stationNo == $station)] | length > 0' "/tmp/bafu-$STATION.json"
+          done
+
+      - name: Verify 0.9.0 source state
+        run: |
+          SRC=Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          grep -Fq 'versionCode 14' Android/app/build.gradle
+          grep -Fq "versionName '0.9.0'" Android/app/build.gradle
+          grep -Fq 'PREF_RIVER_SLOT1_STATION' "$SRC"
+          grep -Fq 'HydroStation.BASEL_RHEINHALLE' "$SRC"
+          grep -Fq 'cashItemRow(CashCatalog.Item item)' "$SRC"
+          grep -Fq 'sharePaymentQr(EditText amountInput)' "$SRC"
+          grep -Fq 'FileProvider.getUriForFile' "$SRC"
+          grep -Fq 'androidx.core.content.FileProvider' Android/app/src/main/AndroidManifest.xml
+          test -f Android/app/src/main/assets/vereinsbeiz_prices.json
+          jq -e '.categories | length == 5' Android/app/src/main/assets/vereinsbeiz_prices.json
+          jq -e '[.categories[].items[]] | length == 14' Android/app/src/main/assets/vereinsbeiz_prices.json
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Unit tests and APK build
+        working-directory: Android
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+
+      - name: Verify APK
+        run: |
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app' versionCode='14' versionName='0.9.0'"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-Rheinfelden-test-0.9.0-apk
+          path: Android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Persist verified MainActivity
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply Android 0.9.0 UI changes'
+            git push origin HEAD:dev-0.9.0
+          fi
