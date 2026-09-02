@@ -26,12 +26,6 @@ public final class BackgroundRefreshWorker extends Worker {
     private static final String PREF_WEATHER_CACHE = "weather_cache";
     private static final String PREF_WEATHER_UPDATED = "weather_updated";
     private static final String PREF_WEATHER_SOURCE = "weather_source";
-    private static final String PREF_HYDRO_CACHE = "hydro_cache";
-    private static final String PREF_HYDRO_UPDATED = "hydro_updated";
-    private static final String PREF_HYDRO_FINE_CACHE = "hydro_fine_cache";
-    private static final String PREF_HYDRO_FINE_UPDATED = "hydro_fine_updated";
-    private static final String PREF_HYDRO_HISTORY_CACHE = "hydro_history_cache";
-    private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
 
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
     private static final String WEATHER_BASE = "https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8";
@@ -46,9 +40,11 @@ public final class BackgroundRefreshWorker extends Worker {
         SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         long now = System.currentTimeMillis();
 
-        if (stale(prefs, PREF_HYDRO_UPDATED, 15L * 60L * 1000L)) refreshHydroLive(prefs, now);
-        if (stale(prefs, PREF_HYDRO_FINE_UPDATED, 30L * 60L * 1000L)) refreshHydroFine(prefs, now);
-        if (stale(prefs, PREF_HYDRO_HISTORY_UPDATED, 60L * 60L * 1000L)) refreshHydroHistory(prefs, now);
+        for (HydroStation station : HydroStation.values()) {
+            if (stale(prefs, station.liveUpdatedKey(), 15L * 60L * 1000L)) refreshHydroLive(prefs, station, now);
+            if (stale(prefs, station.fineUpdatedKey(), 30L * 60L * 1000L)) refreshHydroFine(prefs, station, now);
+            if (stale(prefs, station.historyUpdatedKey(), 60L * 60L * 1000L)) refreshHydroHistory(prefs, station, now);
+        }
         if (stale(prefs, PREF_WEATHER_UPDATED, 60L * 60L * 1000L)) refreshWeather(prefs, now);
         if (stale(prefs, PREF_ICS_UPDATED, 4L * 60L * 60L * 1000L)) refreshCalendar(prefs, now);
 
@@ -85,24 +81,24 @@ public final class BackgroundRefreshWorker extends Worker {
         } catch (Exception ignored) {}
     }
 
-    private void refreshHydroLive(SharedPreferences prefs, long now) {
+    private void refreshHydroLive(SharedPreferences prefs, HydroStation station, long now) {
         String quote = String.valueOf((char) 34);
-        String query = "{ water { observations { data_live(where:{stationNo:{_eq:" + quote + "2091" + quote + "}}) { stationNo parameterName timestamp value releaseStatus } } } }";
-        refreshHydroSeries(prefs, now, query, "data_live", PREF_HYDRO_CACHE, PREF_HYDRO_UPDATED);
+        String query = "{ water { observations { data_live(where:{stationNo:{_eq:" + quote + station.id + quote + "}}) { stationNo parameterName timestamp value releaseStatus } } } }";
+        refreshHydroSeries(prefs, now, query, "data_live", station.liveCacheKey(), station.liveUpdatedKey());
     }
 
-    private void refreshHydroFine(SharedPreferences prefs, long now) {
+    private void refreshHydroFine(SharedPreferences prefs, HydroStation station, long now) {
         String quote = String.valueOf((char) 34);
         String from = Instant.now().minus(Duration.ofHours(26)).toString();
-        String query = "{ water { observations { data_10min_mean(where:{station:{no:{_eq:" + quote + "2091" + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
-        refreshHydroSeries(prefs, now, query, "data_10min_mean", PREF_HYDRO_FINE_CACHE, PREF_HYDRO_FINE_UPDATED);
+        String query = "{ water { observations { data_10min_mean(where:{station:{no:{_eq:" + quote + station.id + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
+        refreshHydroSeries(prefs, now, query, "data_10min_mean", station.fineCacheKey(), station.fineUpdatedKey());
     }
 
-    private void refreshHydroHistory(SharedPreferences prefs, long now) {
+    private void refreshHydroHistory(SharedPreferences prefs, HydroStation station, long now) {
         String quote = String.valueOf((char) 34);
         String from = Instant.now().minus(Duration.ofDays(8)).toString();
-        String query = "{ water { observations { data_1hour_mean(where:{station:{no:{_eq:" + quote + "2091" + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
-        refreshHydroSeries(prefs, now, query, "data_1hour_mean", PREF_HYDRO_HISTORY_CACHE, PREF_HYDRO_HISTORY_UPDATED);
+        String query = "{ water { observations { data_1hour_mean(where:{station:{no:{_eq:" + quote + station.id + quote + "}},timestamp:{_gte:" + quote + from + quote + "}}) { parameterName timestamp value } } } }";
+        refreshHydroSeries(prefs, now, query, "data_1hour_mean", station.historyCacheKey(), station.historyUpdatedKey());
     }
 
     private void refreshHydroSeries(SharedPreferences prefs, long now, String query, String arrayName, String cacheKey, String updatedKey) {
