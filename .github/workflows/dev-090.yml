@@ -43,13 +43,23 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Verify public BAFU stations
+      - name: Probe public BAFU stations
+        shell: bash
         run: |
+          set +e
           for STATION in 2091 2289; do
             BODY=$(printf '{"query":"{ water { observations { data_1hour_mean(where:{station:{no:{_eq:\"%s\"}}},limit:5) { parameterName timestamp value } } } }"}' "$STATION")
-            curl --retry 3 --retry-delay 2 --retry-all-errors -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" -o "/tmp/bafu-$STATION.json"
-            jq -e '.data.water.observations.data_1hour_mean | length > 0' "/tmp/bafu-$STATION.json"
+            if curl --retry 2 --retry-delay 2 --retry-all-errors -fsS -X POST https://data.bafu.admin.ch/api -H 'Content-Type: application/json' --data "$BODY" -o "/tmp/bafu-$STATION.json"; then
+              if jq -e '.data.water.observations.data_1hour_mean | length > 0' "/tmp/bafu-$STATION.json" >/dev/null 2>&1; then
+                echo "BAFU station $STATION probe OK"
+              else
+                echo "::warning::BAFU station $STATION returned no usable hourly data during CI probe."
+              fi
+            else
+              echo "::warning::BAFU station $STATION API probe unavailable during build; runtime cache/fallback remains active."
+            fi
           done
+          exit 0
 
       - name: Verify 0.9.0 source state
         run: |
@@ -90,7 +100,7 @@ jobs:
       - name: Persist verified MainActivity
         run: |
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+Chris171203@users.noreply.github.com'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java
           if ! git diff --cached --quiet; then
             git commit -m 'Apply Android 0.9.0 UI changes'
