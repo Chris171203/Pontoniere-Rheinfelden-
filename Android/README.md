@@ -16,17 +16,15 @@ Aktuelle Android-Testversion: `0.10.4`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.3
+## Gerätetest 0.10.4
 
-- Interne App-Ansicht: Termine vertikal untereinander; Termin-/Kochinfo links, Teilnehmerkarten rechts.
+- Die interne App-Ansicht ist eine gemeinsame Matrix: Termine/Kochinfo links, jede Person als feste Spalte rechts über alle Tage hinweg.
+- Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
 - Nach einer Statusauswahl muss sich die Farbe des echten Buttons/Selects passend aktualisieren: grün `Mit Essen`, gelb `Ohne Essen`, rot `Komme nicht`, grau `Nicht gewählt`.
-- Formulierungen wie `Ich komme, mit Essen` und `Ich komme, ohne Essen` müssen ebenfalls korrekt erkannt werden.
 - Danach einmal `Neu laden` oder `Original` prüfen: bleibt der Status erhalten, ist die Auswahl serverseitig gespeichert.
-- Bei mehreren hinzugefügten Teilnehmern muss die rechte Teilnehmerleiste pro Termin horizontal scrollbar bleiben.
-- Prüfen, dass Köche/Termin-Metadaten nicht als Teilnehmer erscheinen.
-- Termine mit unterschiedlichen angebotenen Optionen prüfen. Die App darf keine Auswahl anzeigen, die in der Originalseite für diesen Tag nicht vorhanden ist.
-- `+ Person`, Personenauswahl und `Alle anzeigen` testen.
-- Nach serverseitiger Navigation soll die vorherige Scrollposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload.
+- Unter `+ / − Person` muss das originale Hinzufügen erreichbar sein. Bei zusätzlich hinzugefügten Personen sollen vorhandene serverseitige Entfernen-/Verwalten-Aktionen aus der Personen-Spalte ebenfalls erscheinen; die App erfindet keine Löschfunktion.
+- Prüfen, dass Köche/Termin-Metadaten nicht als Teilnehmer erscheinen und unterschiedliche zulässige Essens-/Anmeldeoptionen unverändert von der Website übernommen werden.
+- Nach serverseitiger Navigation sollen vertikale Position und gemeinsame horizontale Matrixposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
 
 ## Lokale Daten
