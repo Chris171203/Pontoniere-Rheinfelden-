@@ -27,16 +27,19 @@ public class InternalAttendanceSkinTest {
         assertNull(InternalAttendanceSkin.splitLeadingStatus("Schiffe reinigen"));
     }
 
-    @Test public void generatedScriptBuildsDayRowsWithParticipantsToTheRight(){
+    @Test public void generatedScriptBuildsSharedPersonColumnsAcrossAllDays(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("pfvr-day-section"));
-        assertTrue(script.contains("grid-template-columns:minmax(108px,32%)"));
-        assertTrue(script.contains("pfvr-day-people"));
-        assertTrue(script.contains("pfvr-person-card"));
+        assertTrue(script.contains("pfvr-matrix-scroll"));
+        assertTrue(script.contains("pfvr-attendance-matrix"));
+        assertTrue(script.contains("gridTemplateColumns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))'"));
+        assertTrue(script.contains("pfvr-person-header"));
+        assertTrue(script.contains("pfvr-person-cell"));
+        assertTrue(script.contains("position:sticky"));
         assertTrue(script.contains("overflow-x:auto"));
         assertTrue(script.contains("moveChildren(header.cells[column],meta)"));
         assertTrue(script.contains("moveChildren(row.cells[column],control)"));
-        assertFalse(script.contains("min-width:176px"));
+        assertFalse(script.contains("pfvr-day-people"));
+        assertFalse(script.contains("pfvr-person-card"));
     }
 
     @Test public void generatedScriptUsesRealWebsiteControlsAndGlobalPersonManagement(){
@@ -68,13 +71,16 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("sessionStorage.setItem"));
         assertTrue(script.contains("beforeunload"));
         assertTrue(script.contains("window.scrollTo"));
-        assertTrue(script.contains("scrollLeft"));
+        assertTrue(script.contains("matrixScroll.scrollLeft=state.x||0"));
+        assertTrue(script.contains("x:matrixScroll?(matrixScroll.scrollLeft||0):0"));
+        assertFalse(script.contains("strips:strips"));
         assertFalse(script.contains("window.location.reload"));
     }
 
     @Test public void generatedScriptShowsTwoParticipantsAndReusesPersonManagementActions(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("calc((100% - 6px)/2)"));
+        assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
+        assertTrue(script.contains("--pfvr-day-col:84px;--pfvr-person-col:102px"));
         assertTrue(script.contains("personManagementControls"));
         assertTrue(script.contains("appendExistingPeople"));
         assertTrue(script.contains("pfvr-managed-person"));

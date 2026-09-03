@@ -4,7 +4,7 @@ Stand: Testversion `0.10.4` · aktualisiert 2026-09-03.
 
 ## Implementiert / im Test
 
-- Die mobile interne Terminansicht zeigt mindestens zwei kompakte Teilnehmerkarten gleichzeitig; Termin-Metadaten beanspruchen dafür weniger Breite. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.
+- Die mobile interne Terminansicht verwendet eine gemeinsam horizontal scrollende Matrix: Termin-/Kochinfo bleibt links sticky, jede Person ist über alle Tage dieselbe feste Spalte und mindestens zwei Personenspalten sind gleichzeitig sichtbar. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.
 - Die Statusfarbe in der mobilen An-/Abmeldeansicht folgt dem aktuell ausgewählten Original-Control (Button oder Select) und wird nach Änderungen ohne zusätzlichen Seiten-Reload neu berechnet.
 - Formulierungen wie `Ich komme, mit Essen` / `Ich komme, ohne Essen` werden zusätzlich zur kurzen Form erkannt. Bei Selects wird die tatsächlich ausgewählte Option ausgewertet.
 - Die interne An-/Abmeldeansicht wird mobil aus der vorhandenen Terminmatrix projiziert: Termine stehen untereinander, die Termin-Metadaten links und die tatsächlich hinzugefügten Teilnehmer rechts in horizontal scrollbaren Personenkarten.

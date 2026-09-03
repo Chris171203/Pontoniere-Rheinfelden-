@@ -1,7 +1,7 @@
 # Android Changelog
 
 ## 0.10.4
-- Interne Terminansicht kompakter: Termin-Metadaten schmaler, Teilnehmerkarten so dimensioniert, dass mindestens zwei Personen gleichzeitig im rechten Bereich sichtbar sind.
+- Interne Terminansicht als gemeinsam horizontal scrollende Matrix: Termine/Kochinfo links, jede Person als feste Spalte über alle Tage. Mindestens zwei Personenspalten sind gleichzeitig sichtbar.
 - `+ / − Person` zeigt neben dem Hinzufügen auch vorhandene originale Website-Aktionen aus der Personen-Spalte; vorhandene Entfernen-Aktionen werden dadurch wieder erreichbar.
 - Keine synthetische Löschfunktion: Entfernen wird nur angeboten, wenn die interne Website dafür selbst ein Control liefert.
 
