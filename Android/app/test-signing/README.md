@@ -1,8 +1,10 @@
 # PFVR Android test signing
 
-The committed keystore is an intentionally public test-only signing key for `ch.pfvr.app.test`.
-It exists so test APKs from 0.9.5 onward can be installed as updates when `versionCode` increases.
+`pfvr-test.keystore.b64` ist ein bewusst öffentlicher **Testschlüssel** ausschließlich für `ch.pfvr.app.test`.
+Gradle dekodiert ihn bei jedem Build in das ignorierte `build/`-Verzeichnis. Dadurch lässt sich der gleiche Signierschlüssel reproduzierbar lokal und in GitHub Actions verwenden.
 
-Never use this key for `ch.pfvr.app`, Google Play, or any production/release build.
+Ab Testversion 0.9.5 können spätere Test-APKs bei höherem `versionCode` als Update über die bestehende Test-App installiert werden.
 
-Certificate SHA-256: `0daff6f63ee0a399d6cbcf64c69dc3cf8bc9fd5f0e5b27174be3c23321be4119`
+Dieser Schlüssel darf niemals für `ch.pfvr.app`, Google Play oder andere Produktions-/Release-Builds verwendet werden. Die Produktionssignierung bleibt geheim und separat.
+
+Certificate SHA-256: `0521e6bc43e2868177609dea69d074ed14bb594bad28adee98293e586d3d46bf`
