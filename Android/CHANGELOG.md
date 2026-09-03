@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.3
+- Statusfarben der mobilen An-/Abmeldeansicht werden nach Button-/Select-Änderungen aus dem aktuellen echten Control-Wert neu berechnet.
+- Formulierungen wie `Ich komme, mit Essen` und `Ich komme, ohne Essen` werden ebenfalls korrekt erkannt.
+- Selects werden anhand der tatsächlich gewählten Option gefärbt; MutationObserver und verzögerte Restyles aktualisieren die Darstellung ohne erzwungenen Seiten-Reload.
+
 ## 0.10.2
 - Interne An-/Abmeldematrix mobil transponiert: Termine untereinander, Termin-/Kochinfo links und Teilnehmer rechts.
 - Teilnehmer werden ausschließlich aus der Personen-Spalte übernommen; Namen in Termin-Metadaten bleiben Termin-/Kochinfo.
