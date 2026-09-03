@@ -528,6 +528,10 @@ public class MainActivity extends Activity {
         TextView secondary=txt(details.length()==0?"Messwerte werden geladen …":details.toString(),11,MUTED,false);
         secondary.setPadding(0,dp(3),0,0);
         c.addView(secondary);
+        String[] summary=hydroSummary(station);
+        TextView stand=txt(summary[3],10,Color.rgb(126,140,150),false);
+        stand.setPadding(0,dp(7),0,0);
+        c.addView(stand);
         return c;
     }
 
@@ -1714,8 +1718,10 @@ public class MainActivity extends Activity {
         TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);title.setPadding(0,dp(5),0,dp(5));hero.addView(title);
         hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
 
-        section(body,"Zahlungsweg","Banking-App wird zentral in den Einstellungen verwaltet");
-        body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
+        if(!hasPreferredBank()){
+            section(body,"Zahlungsweg","Für Direktzahlungen einmalig eine Banking-App festlegen");
+            body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
+        }
 
         section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
         LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
@@ -1826,8 +1832,8 @@ public class MainActivity extends Activity {
 
         TextView info=txt(
                 selected
-                        ?"Wird für Zahlungen aus Warenkorb und freiem Betrag verwendet."
-                        :"Es werden nur installierte Apps angeboten, die PNG-Bilder über Androids Teilen-Funktion annehmen und als Banking-App erkannt werden.",
+                        ?"Wird für Zahlungen aus Warenkorb und freiem Betrag verwendet. Direkter QR-Import wird versucht; sonst wird die App geöffnet und die Zahlungsdaten werden kopiert."
+                        :"Installierte Banking-Apps werden auch dann angeboten, wenn sie keinen PNG-Import registrieren. Falls eine App nicht automatisch erkannt wird, steht im Auswahldialog zusätzlich „Alle Apps“ bereit.",
                 12,
                 MUTED,
                 false
@@ -1858,10 +1864,12 @@ public class MainActivity extends Activity {
         String packageName=prefs.getString(PREF_BANK_PACKAGE,"").trim();
         String label=prefs.getString(PREF_BANK_LABEL,"").trim();
         if(packageName.isEmpty()||label.isEmpty())return false;
+        PackageManager packageManager=getPackageManager();
+        if(packageManager.getLaunchIntentForPackage(packageName)!=null)return true;
         Intent share=new Intent(Intent.ACTION_SEND);
         share.setType("image/png");
         share.setPackage(packageName);
-        return share.resolveActivity(getPackageManager())!=null;
+        return share.resolveActivity(packageManager)!=null;
     }
 
     private String selectedBankLabel(){
@@ -1966,25 +1974,80 @@ public class MainActivity extends Activity {
             File file=new File(directory,value.isBlank()?"PFVR-Zahlung-offen.png":"PFVR-Zahlung-CHF-"+value.replace('.','_')+".png");
             try(FileOutputStream out=new FileOutputStream(file)){if(!qr.compress(Bitmap.CompressFormat.PNG,100,out))throw new Exception("png");}
             Uri uri=FileProvider.getUriForFile(this,getPackageName()+".fileprovider",file);
+            String paymentText=paymentShareText(value);
             Intent send=new Intent(Intent.ACTION_SEND);
             send.setType("image/png");
+            send.putExtra(Intent.EXTRA_SUBJECT,"PFVR Zahlung");
+            send.putExtra(Intent.EXTRA_TEXT,paymentText);
             send.putExtra(Intent.EXTRA_STREAM,uri);
             send.setClipData(ClipData.newUri(getContentResolver(),"PFVR Swiss QR",uri));
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             String preferred=prefs.getString(PREF_BANK_PACKAGE,"");
+            PackageManager packageManager=getPackageManager();
             if(!preferred.isBlank()){
-                send.setPackage(preferred);
-                if(send.resolveActivity(getPackageManager())!=null){startActivity(send);Toast.makeText(this,"Swiss QR temporär an Banking-App übergeben.",Toast.LENGTH_SHORT).show();return;}
-                send.setPackage(null);
-                Toast.makeText(this,"Die gewählte Banking-App nimmt keinen direkten Bild-Import an. Kompatible Apps werden angezeigt.",Toast.LENGTH_LONG).show();
+                Intent direct=new Intent(send).setPackage(preferred);
+                if(direct.resolveActivity(packageManager)!=null){
+                    startActivity(direct);
+                    Toast.makeText(this,"Swiss QR an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent imageView=new Intent(Intent.ACTION_VIEW);
+                imageView.setDataAndType(uri,"image/png");
+                imageView.setClipData(ClipData.newUri(getContentResolver(),"PFVR Swiss QR",uri));
+                imageView.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                imageView.setPackage(preferred);
+                if(imageView.resolveActivity(packageManager)!=null){
+                    startActivity(imageView);
+                    Toast.makeText(this,"Swiss QR mit "+selectedBankLabel()+" geöffnet.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent genericImage=new Intent(send);
+                genericImage.setType("image/*");
+                genericImage.setPackage(preferred);
+                if(genericImage.resolveActivity(packageManager)!=null){
+                    startActivity(genericImage);
+                    Toast.makeText(this,"Zahlungsbild an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent textShare=new Intent(Intent.ACTION_SEND);
+                textShare.setType("text/plain");
+                textShare.putExtra(Intent.EXTRA_SUBJECT,"PFVR Zahlung");
+                textShare.putExtra(Intent.EXTRA_TEXT,paymentText);
+                textShare.setPackage(preferred);
+                if(textShare.resolveActivity(packageManager)!=null){
+                    startActivity(textShare);
+                    Toast.makeText(this,"Zahlungsdaten an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent launch=packageManager.getLaunchIntentForPackage(preferred);
+                if(launch!=null){
+                    copy("PFVR Zahlung",paymentText,"Zahlungsdaten kopiert");
+                    startActivity(launch);
+                    Toast.makeText(this,selectedBankLabel()+" unterstützt keinen erkennbaren QR-Import – App geöffnet, Zahlungsdaten sind kopiert.",Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Toast.makeText(this,"Die gewählte Banking-App ist nicht mehr verfügbar.",Toast.LENGTH_LONG).show();
+                openPaymentSettings();
+                return;
             }
-            if(getPackageManager().queryIntentActivities(send,0).isEmpty()){
+            if(packageManager.queryIntentActivities(send,0).isEmpty()){
                 Toast.makeText(this,"Keine App unterstützt die direkte QR-Übergabe. QR wird stattdessen angezeigt.",Toast.LENGTH_LONG).show();
                 showPaymentQr(amountInput);
                 return;
             }
             startActivity(Intent.createChooser(send,"Swiss QR an Banking-App übergeben"));
         }catch(Exception e){Toast.makeText(this,"Direkte QR-Übergabe nicht möglich. QR wird stattdessen angezeigt.",Toast.LENGTH_LONG).show();showPaymentQr(amountInput);}
+    }
+
+    private String paymentShareText(String value){
+        StringBuilder text=new StringBuilder();
+        text.append(CLUB_PAYEE).append("\n").append(CLUB_IBAN).append("\n").append(CLUB_PAYMENT_NOTE);
+        if(value!=null&&!value.isBlank())text.append("\nCHF ").append(value);
+        return text.toString();
     }
 
     private void showPaymentQr(EditText amountInput) {
@@ -2057,19 +2120,31 @@ public class MainActivity extends Activity {
 
     private void chooseBankingApp(){
         PackageManager packageManager=getPackageManager();
+        Map<String,AppChoice> byPackage=new LinkedHashMap<>();
+        Set<String> directPackages=new LinkedHashSet<>();
+
         Intent shareIntent=new Intent(Intent.ACTION_SEND);
         shareIntent.setType("image/png");
+        for(ResolveInfo resolveInfo:packageManager.queryIntentActivities(shareIntent,PackageManager.MATCH_DEFAULT_ONLY)){
+            if(resolveInfo.activityInfo==null||resolveInfo.activityInfo.packageName==null)continue;
+            String packageName=resolveInfo.activityInfo.packageName;
+            if(packageName.equals(getPackageName()))continue;
+            directPackages.add(packageName);
+            String label=String.valueOf(resolveInfo.loadLabel(packageManager)).trim();
+            String haystack=(label+" "+packageName).toLowerCase(Locale.ROOT);
+            if(looksLikeBankingApp(haystack))byPackage.putIfAbsent(packageName,new AppChoice(label,packageName,true));
+        }
 
-        List<ResolveInfo> candidates=packageManager.queryIntentActivities(shareIntent,PackageManager.MATCH_DEFAULT_ONLY);
-        Map<String,AppChoice> byPackage=new LinkedHashMap<>();
-        for(ResolveInfo resolveInfo:candidates){
+        Intent launcherIntent=new Intent(Intent.ACTION_MAIN);
+        launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        for(ResolveInfo resolveInfo:packageManager.queryIntentActivities(launcherIntent,PackageManager.MATCH_DEFAULT_ONLY)){
             if(resolveInfo.activityInfo==null||resolveInfo.activityInfo.packageName==null)continue;
             String packageName=resolveInfo.activityInfo.packageName;
             if(packageName.equals(getPackageName()))continue;
             String label=String.valueOf(resolveInfo.loadLabel(packageManager)).trim();
             String haystack=(label+" "+packageName).toLowerCase(Locale.ROOT);
             if(!looksLikeBankingApp(haystack))continue;
-            byPackage.putIfAbsent(packageName,new AppChoice(label,packageName));
+            byPackage.put(packageName,new AppChoice(label,packageName,directPackages.contains(packageName)));
         }
 
         List<AppChoice> found=new ArrayList<>(byPackage.values());
@@ -2077,11 +2152,12 @@ public class MainActivity extends Activity {
             int firstPriority=bankPriority(first);
             int secondPriority=bankPriority(second);
             if(firstPriority!=secondPriority)return Integer.compare(firstPriority,secondPriority);
+            if(first.directShare!=second.directShare)return first.directShare?-1:1;
             return first.label.compareToIgnoreCase(second.label);
         });
 
         if(found.isEmpty()){
-            Toast.makeText(this,"Keine kompatible Banking-App gefunden. Swiss QR kann weiterhin angezeigt oder gespeichert werden.",Toast.LENGTH_LONG).show();
+            chooseAnyInstalledApp();
             return;
         }
 
@@ -2090,38 +2166,78 @@ public class MainActivity extends Activity {
         String[] labels=new String[found.size()];
         for(int index=0;index<found.size();index++){
             AppChoice app=found.get(index);
-            labels[index]=app.label;
+            labels[index]=app.label+(app.directShare?" · QR-Import":" · App öffnen");
             if(app.pkg.equals(currentPackage))selected=index;
         }
 
         new AlertDialog.Builder(this,dialogTheme())
                 .setTitle("Banking-App auswählen")
                 .setSingleChoiceItems(labels,selected,(dialog,index)->{
-                    AppChoice choice=found.get(index);
-                    prefs.edit()
-                            .putString(PREF_BANK_PACKAGE,choice.pkg)
-                            .putString(PREF_BANK_LABEL,choice.label)
-                            .apply();
+                    saveBankChoice(found.get(index));
                     dialog.dismiss();
-                    Toast.makeText(this,choice.label+" festgelegt.",Toast.LENGTH_SHORT).show();
-                    if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
+                })
+                .setNeutralButton("Alle Apps",(dialog,which)->chooseAnyInstalledApp())
+                .setNegativeButton("Abbrechen",null)
+                .show();
+    }
+
+    private void chooseAnyInstalledApp(){
+        PackageManager packageManager=getPackageManager();
+        Intent launcherIntent=new Intent(Intent.ACTION_MAIN);
+        launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        Map<String,AppChoice> byPackage=new LinkedHashMap<>();
+        for(ResolveInfo resolveInfo:packageManager.queryIntentActivities(launcherIntent,PackageManager.MATCH_DEFAULT_ONLY)){
+            if(resolveInfo.activityInfo==null||resolveInfo.activityInfo.packageName==null)continue;
+            String packageName=resolveInfo.activityInfo.packageName;
+            if(packageName.equals(getPackageName()))continue;
+            String label=String.valueOf(resolveInfo.loadLabel(packageManager)).trim();
+            Intent direct=new Intent(Intent.ACTION_SEND);direct.setType("image/png");direct.setPackage(packageName);
+            byPackage.putIfAbsent(packageName,new AppChoice(label,packageName,direct.resolveActivity(packageManager)!=null));
+        }
+        List<AppChoice> apps=new ArrayList<>(byPackage.values());
+        apps.sort(Comparator.comparing(app->app.label.toLowerCase(Locale.ROOT)));
+        if(apps.isEmpty()){
+            Toast.makeText(this,"Keine weitere installierte App gefunden.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        String[] labels=new String[apps.size()];
+        String currentPackage=prefs.getString(PREF_BANK_PACKAGE,"");
+        int selected=-1;
+        for(int index=0;index<apps.size();index++){
+            AppChoice app=apps.get(index);
+            labels[index]=app.label+(app.directShare?" · QR-Import":"");
+            if(app.pkg.equals(currentPackage))selected=index;
+        }
+        new AlertDialog.Builder(this,dialogTheme())
+                .setTitle("Installierte App auswählen")
+                .setSingleChoiceItems(labels,selected,(dialog,index)->{
+                    saveBankChoice(apps.get(index));
+                    dialog.dismiss();
                 })
                 .setNegativeButton("Abbrechen",null)
                 .show();
     }
 
+    private void saveBankChoice(AppChoice choice){
+        prefs.edit()
+                .putString(PREF_BANK_PACKAGE,choice.pkg)
+                .putString(PREF_BANK_LABEL,choice.label)
+                .apply();
+        Toast.makeText(this,choice.label+" festgelegt.",Toast.LENGTH_SHORT).show();
+        if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
+    }
+
     private boolean looksLikeBankingApp(String value){
-        return value.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx|bcv|bekb|bkb|blkb|akb|sgkb|luzerner|thurgauer|graub.ndner).*");
+        return value.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|banque|banca|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx|bcv|bcf|bcge|bcj|bcju|bcn|bcne|bcvs|bekb|bkb|blkb|akb|sgkb|gkb|glkb|lukb|nkb|owkb|shkb|szkb|tgkb|tkb|urkb|zuger|alpian|radicant|willbe|cembra|valiant|hypothekar|acrevis|clientis|obwaldner|nidwaldner|schaffhauser|thurgauer|graub.ndner).*");
     }
 
     private int bankPriority(AppChoice app) {
         String h=(app.label+" "+app.pkg).toLowerCase(Locale.ROOT);
-        // Large and commonly used Swiss retail banks first; niche/fintech apps follow.
         if(h.contains("ubs")) return 10;
         if(h.contains("postfinance")) return 20;
         if(h.contains("raiffeisen")) return 30;
         if(h.contains("zkb")||h.contains("zürcher kantonal")||h.contains("zuercher kantonal")) return 40;
-        if(h.contains("kantonal")||h.contains("bcv")||h.contains("bekb")||h.contains("bkb")||h.contains("blkb")||h.contains("akb")||h.contains("sgkb")||h.contains("luzerner")||h.contains("thurgauer")||h.contains("graubündner")||h.contains("graubuendner")) return 50;
+        if(h.contains("kantonal")||h.contains("bcv")||h.contains("bekb")||h.contains("bkb")||h.contains("blkb")||h.contains("akb")||h.contains("sgkb")||h.contains("gkb")||h.contains("lukb")||h.contains("tkb")) return 50;
         if(h.contains("migros")) return 60;
         if(h.contains("cler")||h.contains("zak")) return 70;
         if(h.contains("neon")) return 100;
@@ -2645,7 +2761,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static class AppChoice {final String label,pkg;AppChoice(String l,String p){label=l;pkg=p;}}
+    private static class AppChoice {final String label,pkg;final boolean directShare;AppChoice(String l,String p,boolean d){label=l;pkg=p;directShare=d;}}
     private static class ParsedDate {final ZonedDateTime z;final boolean allDay;ParsedDate(ZonedDateTime z,boolean a){this.z=z;allDay=a;}}
     private static class TrainingSlot {
         final ZonedDateTime start,end;final boolean fromCalendar;final String title;

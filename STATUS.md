@@ -1,14 +1,17 @@
 # Status
 
-Stand: Testversion `0.9.3` · aktualisiert 2026-09-02.
+Stand: Testversion `0.9.4` · aktualisiert 2026-09-03.
 
 ## Implementiert / im Test
 
 - Einstellungen sind in die Bereiche Allgemein, Rhein und Zahlung gegliedert.
 - Die bevorzugte Banking-App wird nur noch unter Einstellungen → Zahlung verwaltet. Die Auswahl speichert die App, startet sie aber nicht.
 - Die Kasse zeigt den gewählten Zahlungsweg kompakt an. Ohne Auswahl erscheint ein deutlicher Hinweis mit direktem Sprung zur passenden Einstellung.
-- Der Banking-Dialog bietet nur installierte, als Banking-App erkennbare Apps an, die PNG-Bilder über Androids Teilen-Funktion annehmen.
+- Die Banking-Auswahl berücksichtigt installierte Banking-Apps unabhängig davon, ob sie einen PNG-Share-Import registrieren; nicht automatisch erkannte Apps können über „Alle Apps“ manuell gewählt werden.
+- Beim Bezahlen werden nacheinander direkter Swiss-QR-Bildimport, Bild-Öffnen, generisches Bild-Teilen und Textübergabe an die gewählte App versucht; als letzter Fallback wird die Banking-App geöffnet und die Zahlungsdaten werden kopiert.
+- Die Kasse zeigt die Zahlungsweg-Kachel nur noch, solange keine Banking-App gewählt ist; danach beginnt der Zahlungsbereich direkt mit dem Warenkorb.
 - Die beiden Abfluss-Kurzkarten auf Home werden bei aktiver zweiter Station auf dieselbe Höhe gesetzt; maßgeblich ist die höhere Karte mit allen Zusatzinformationen.
+- Die Rhein-Kurzkarten zeigen wieder direkt den BAFU-Messdatenstand (Uhrzeit) und kennzeichnen alte Cache-Daten.
 - Pro aktiver Station bleibt ein gemeinsames Diagramm für Abfluss und Pegel mit zwei dynamischen Y-Achsen erhalten; Stationen mit Temperaturdaten erhalten darunter eine separate Wassertemperaturgrafik.
 - Live-Aktualisierung baut nur den Live-Bereich neu auf und stellt die Scrollposition nach dem Layout wieder her.
 - Nicht mehr verwendete Einzelgrafik-, Metrik- und generische App-Startlogik wurde entfernt.
