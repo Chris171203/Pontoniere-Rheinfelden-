@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.4
+- Interne Terminansicht kompakter: Termin-Metadaten schmaler, Teilnehmerkarten so dimensioniert, dass mindestens zwei Personen gleichzeitig im rechten Bereich sichtbar sind.
+- `+ / − Person` zeigt neben dem Hinzufügen auch vorhandene originale Website-Aktionen aus der Personen-Spalte; vorhandene Entfernen-Aktionen werden dadurch wieder erreichbar.
+- Keine synthetische Löschfunktion: Entfernen wird nur angeboten, wenn die interne Website dafür selbst ein Control liefert.
+
 ## 0.10.3
 - Statusfarben der mobilen An-/Abmeldeansicht werden nach Button-/Select-Änderungen aus dem aktuellen echten Control-Wert neu berechnet.
 - Formulierungen wie `Ich komme, mit Essen` und `Ich komme, ohne Essen` werden ebenfalls korrekt erkannt.

@@ -30,7 +30,7 @@ public class InternalAttendanceSkinTest {
     @Test public void generatedScriptBuildsDayRowsWithParticipantsToTheRight(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("pfvr-day-section"));
-        assertTrue(script.contains("grid-template-columns:minmax(140px,42%)"));
+        assertTrue(script.contains("grid-template-columns:minmax(108px,32%)"));
         assertTrue(script.contains("pfvr-day-people"));
         assertTrue(script.contains("pfvr-person-card"));
         assertTrue(script.contains("overflow-x:auto"));
@@ -42,7 +42,7 @@ public class InternalAttendanceSkinTest {
     @Test public void generatedScriptUsesRealWebsiteControlsAndGlobalPersonManagement(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("person zur liste hinzuzufügen"));
-        assertTrue(script.contains("+ Person"));
+        assertTrue(script.contains("+ / − Person"));
         assertTrue(script.contains("body.appendChild(select)"));
         assertTrue(script.contains("Keine Auswahl für diesen Termin"));
         assertFalse(script.contains("option.value='Mit Essen'"));
@@ -70,6 +70,17 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("window.scrollTo"));
         assertTrue(script.contains("scrollLeft"));
         assertFalse(script.contains("window.location.reload"));
+    }
+
+    @Test public void generatedScriptShowsTwoParticipantsAndReusesPersonManagementActions(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("calc((100% - 6px)/2)"));
+        assertTrue(script.contains("personManagementControls"));
+        assertTrue(script.contains("appendExistingPeople"));
+        assertTrue(script.contains("pfvr-managed-person"));
+        assertTrue(script.contains("looksLikeRemoveAction"));
+        assertTrue(script.contains("actionBox.appendChild(control)"));
+        assertFalse(script.contains("document.createElement('button').textContent='Entfernen'"));
     }
 
     @Test public void generatedScriptKeepsStatusRepairAndMobileViewport(){

@@ -71,27 +71,34 @@ final class InternalAttendanceSkin {
                   select,input[type=text],input[type=number]{background:${COLORS.soft}!important;color:${COLORS.text}!important;border:1px solid ${COLORS.border}!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;box-sizing:border-box!important;}
                   button,input[type=submit],input[type=button],a.btn,.btn{min-height:46px!important;border:0!important;border-radius:12px!important;padding:9px 12px!important;font-size:15px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-attendance-source{display:none!important;}
-                  .pfvr-attendance-mobile{display:flex!important;flex-direction:column!important;gap:12px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
-                  .pfvr-person-tools{display:flex!important;flex-direction:column!important;gap:8px!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:12px!important;box-sizing:border-box!important;}
+                  .pfvr-attendance-mobile{display:flex!important;flex-direction:column!important;gap:8px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
+                  .pfvr-person-tools{display:flex!important;flex-direction:column!important;gap:6px!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:14px!important;padding:10px!important;box-sizing:border-box!important;}
                   .pfvr-person-tools-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;}
                   .pfvr-person-tools-title{font-size:17px!important;font-weight:700!important;}
                   .pfvr-person-tools-toggle{min-height:40px!important;padding:7px 11px!important;background:${COLORS.link}!important;color:#fff!important;}
-                  .pfvr-person-tools-body{display:none!important;flex-direction:column!important;gap:8px!important;padding-top:2px!important;}
+                  .pfvr-person-tools-body{display:none!important;flex-direction:column!important;gap:6px!important;padding-top:2px!important;}
                   .pfvr-person-tools.open .pfvr-person-tools-body{display:flex!important;}
                   .pfvr-person-tools-body select{width:100%!important;max-width:100%!important;}
-                  .pfvr-day-section{display:grid!important;grid-template-columns:minmax(140px,42%) minmax(0,1fr)!important;gap:9px!important;align-items:stretch!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
-                  .pfvr-day-meta{min-width:0!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:12px!important;box-sizing:border-box!important;overflow-wrap:break-word!important;word-break:normal!important;}
+                  .pfvr-managed-people{display:flex!important;flex-direction:column!important;gap:4px!important;border-top:1px solid ${COLORS.border}!important;padding-top:7px!important;margin-top:2px!important;}
+                  .pfvr-managed-people-title{font-size:12px!important;font-weight:700!important;color:${COLORS.muted}!important;}
+                  .pfvr-managed-person{display:flex!important;align-items:center!important;gap:6px!important;min-width:0!important;padding:4px 0!important;}
+                  .pfvr-managed-person-name{flex:1 1 auto!important;min-width:0!important;font-size:13px!important;font-weight:600!important;overflow-wrap:break-word!important;}
+                  .pfvr-managed-person-actions{display:flex!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;}
+                  .pfvr-managed-person-actions button,.pfvr-managed-person-actions input[type=submit],.pfvr-managed-person-actions input[type=button],.pfvr-managed-person-actions a{min-height:34px!important;min-width:34px!important;padding:5px 7px!important;font-size:12px!important;border-radius:9px!important;}
+                  .pfvr-managed-action-label{font-size:10px!important;color:${COLORS.muted}!important;}
+                  .pfvr-day-section{display:grid!important;grid-template-columns:minmax(108px,32%) minmax(0,1fr)!important;gap:6px!important;align-items:stretch!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
+                  .pfvr-day-meta{min-width:0!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;padding:9px!important;font-size:13px!important;box-sizing:border-box!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-day-meta>*{max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
-                  .pfvr-day-people{display:flex!important;gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;min-width:0!important;padding:0 0 3px!important;box-sizing:border-box!important;scroll-snap-type:x proximity!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
-                  .pfvr-person-card{flex:0 0 clamp(148px,48vw,190px)!important;min-width:0!important;min-height:100%!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:11px!important;box-sizing:border-box!important;scroll-snap-align:start!important;display:flex!important;flex-direction:column!important;gap:9px!important;}
-                  .pfvr-person-name{font-size:14px!important;font-weight:700!important;line-height:1.25!important;overflow-wrap:break-word!important;word-break:normal!important;}
-                  .pfvr-person-control{display:flex!important;flex-direction:column!important;gap:7px!important;margin-top:auto!important;min-width:0!important;}
+                  .pfvr-day-people{display:flex!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;min-width:0!important;padding:0 0 3px!important;box-sizing:border-box!important;scroll-snap-type:x proximity!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
+                  .pfvr-person-card{flex:0 0 calc((100% - 6px)/2)!important;min-width:0!important;min-height:100%!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;padding:8px!important;box-sizing:border-box!important;scroll-snap-align:start!important;display:flex!important;flex-direction:column!important;gap:6px!important;}
+                  .pfvr-person-name{font-size:13px!important;font-weight:700!important;line-height:1.25!important;overflow-wrap:break-word!important;word-break:normal!important;}
+                  .pfvr-person-control{display:flex!important;flex-direction:column!important;gap:4px!important;margin-top:auto!important;min-width:0!important;}
                   .pfvr-person-control>*{max-width:100%!important;box-sizing:border-box!important;}
-                  .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;}
+                  .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:38px!important;padding:6px 7px!important;font-size:12px!important;border-radius:9px!important;}
                   .pfvr-empty-status{font-size:12px!important;color:${COLORS.muted}!important;}
-                  .pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:6px 9px!important;margin:0 0 7px!important;border-radius:10px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
+                  .pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:5px 7px!important;margin:0 0 5px!important;font-size:12px!important;border-radius:10px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-attendance-detail{display:block!important;margin:0 0 4px!important;line-height:1.35!important;color:${COLORS.text}!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
-                  @media(max-width:320px){.pfvr-day-section{grid-template-columns:minmax(125px,42%) minmax(0,1fr)!important;}.pfvr-person-card{flex-basis:145px!important;}.pfvr-day-meta{padding:10px!important;}}
+                  @media(max-width:340px){.pfvr-day-section{grid-template-columns:100px minmax(0,1fr)!important;}.pfvr-day-meta{padding:8px!important;font-size:12px!important;}.pfvr-person-card{padding:7px!important;}.pfvr-person-name{font-size:12px!important;}.pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{font-size:11px!important;padding:5px!important;}}
                   `;
                   var style=document.getElementById('pfvr-internal-style');
                   if(!style){style=document.createElement('style');style.id='pfvr-internal-style';document.head.appendChild(style);}
@@ -170,7 +177,42 @@ final class InternalAttendanceSkin {
                   var cleanPersonName=function(value){return (value||'').replace(/[\\u{1F300}-\\u{1FAFF}]/gu,' ').replace(/\\s+/g,' ').trim();};
                   var moveChildren=function(from,to){while(from&&from.firstChild)to.appendChild(from.firstChild);};
 
-                  var findPersonTools=function(table){
+                  var personManagementControls=function(cell,name){
+                    if(!cell)return [];
+                    var normalizedName=norm(name);
+                    return Array.from(cell.querySelectorAll('button,input[type=submit],input[type=button],a')).filter(function(control){
+                      if(control.closest('.pfvr-person-control'))return false;
+                      var descriptor=norm((control.innerText||control.value||'')+' '+(control.getAttribute('title')||'')+' '+(control.getAttribute('aria-label')||'')+' '+(control.getAttribute('href')||''));
+                      if(descriptor.indexOf('alle anzeigen')>=0)return false;
+                      if(normalizedName&&descriptor===normalizedName)return false;
+                      return !!(descriptor||control.querySelector('img,svg,i'));
+                    });
+                  };
+                  var looksLikeRemoveAction=function(control){
+                    var descriptor=norm((control.innerText||control.value||'')+' '+(control.getAttribute('title')||'')+' '+(control.getAttribute('aria-label')||'')+' '+(control.getAttribute('href')||'')+' '+(control.getAttribute('name')||''));
+                    return /entfern|löschen|loeschen|remove|delete|austrag|del[_-]?person|person[_-]?del/.test(descriptor);
+                  };
+                  var appendExistingPeople=function(body,participantRows,names){
+                    var list=element('div','pfvr-managed-people'),count=0;
+                    var title=element('div','pfvr-managed-people-title');title.textContent='Aktuelle Personen';list.appendChild(title);
+                    participantRows.forEach(function(row,index){
+                      var actions=personManagementControls(row.cells&&row.cells[0],names[index]);
+                      if(!actions.length)return;
+                      count++;
+                      var line=element('div','pfvr-managed-person');
+                      var name=element('div','pfvr-managed-person-name');name.textContent=names[index];line.appendChild(name);
+                      var actionBox=element('div','pfvr-managed-person-actions');
+                      actions.forEach(function(control){
+                        var remove=looksLikeRemoveAction(control);
+                        if(!control.getAttribute('aria-label'))control.setAttribute('aria-label',(remove?'Person entfernen: ':'Person verwalten: ')+names[index]);
+                        actionBox.appendChild(control);
+                        var label=element('span','pfvr-managed-action-label');label.textContent=remove?'Entfernen':'Aktion';actionBox.appendChild(label);
+                      });
+                      line.appendChild(actionBox);list.appendChild(line);
+                    });
+                    if(count)body.appendChild(list);
+                  };
+                  var findPersonTools=function(table,participantRows,names){
                     var candidates=Array.from(document.querySelectorAll('label,p,span,div')).filter(function(el){var value=norm(text(el));return value.indexOf('person zur liste hinzuzufügen')===0&&value.length<120;});
                     if(!candidates.length)return null;
                     var anchor=candidates[0],scope=anchor.parentElement;
@@ -181,13 +223,14 @@ final class InternalAttendanceSkin {
                       var panel=element('div','pfvr-person-tools');
                       var head=element('div','pfvr-person-tools-head');
                       var title=element('div','pfvr-person-tools-title');title.textContent='Teilnehmende';
-                      var toggle=element('button','pfvr-person-tools-toggle');toggle.type='button';toggle.textContent='+ Person';
+                      var toggle=element('button','pfvr-person-tools-toggle');toggle.type='button';toggle.textContent='+ / − Person';
                       head.appendChild(title);head.appendChild(toggle);panel.appendChild(head);
                       var body=element('div','pfvr-person-tools-body');
-                      var hint=element('div');hint.textContent='Person zur Liste hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
+                      var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
                       body.appendChild(select);
                       var buttons=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return norm(control.innerText||control.value).indexOf('alle anzeigen')>=0;});
                       buttons.forEach(function(control){body.appendChild(control);});
+                      appendExistingPeople(body,participantRows,names);
                       panel.appendChild(body);
                       toggle.addEventListener('click',function(){panel.classList.toggle('open');});
                       anchor.style.display='none';
@@ -240,9 +283,9 @@ final class InternalAttendanceSkin {
                     var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells||rows[0].cells.length<2)return false;
                     var header=rows[0],mobile=element('div','pfvr-attendance-mobile');
                     table.parentNode.insertBefore(mobile,table);
-                    var tools=findPersonTools(table);if(tools)mobile.appendChild(tools);
                     var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
                     var names=participantRows.map(function(row,index){var value=cleanPersonName(text(row.cells[0]));return value||('Person '+(index+1));});
+                    var tools=findPersonTools(table,participantRows,names);if(tools)mobile.appendChild(tools);
                     for(var column=1;column<header.cells.length;column++){
                       var section=element('section','pfvr-day-section');
                       var meta=element('div','pfvr-day-meta');moveChildren(header.cells[column],meta);section.appendChild(meta);
