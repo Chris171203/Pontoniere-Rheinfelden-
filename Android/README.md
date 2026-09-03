@@ -16,6 +16,13 @@ Aktuelle Android-Testversion: `0.10.0`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
+## Gerätetest 0.10.0
+
+- Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
+- App neu starten und kontrollieren, ob die lokale Anordnung erhalten bleibt.
+- Im internen App-Modus insbesondere Termine mit `Mit Essen`, `Ohne Essen` und `Nicht gewählt` prüfen; Status und Termintext müssen getrennt umbrechen.
+- Kasse mit ausgeblendeten Kategorien testen; der Warenkorb muss trotzdem sichtbar und bedienbar bleiben.
+
 ## Lokale Daten
 
 Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellungen auf dem Endgerät gespeichert und darf nicht ins Repository eingecheckt werden. Auch Kachelreihenfolge, ausgeblendete Kacheln und die bevorzugte Banking-App bleiben lokal.
