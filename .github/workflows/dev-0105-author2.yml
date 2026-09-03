@@ -1,0 +1,53 @@
+name: PFVR 0.10.5 persistent people
+
+on:
+  push:
+    branches: [dev-0.10.5-author2]
+
+permissions:
+  contents: write
+
+jobs:
+  author-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply source changes
+        run: python3 tools/author_0105_persistent_people.py
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Unit tests and APK
+        working-directory: Android
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify package and stable signature
+        working-directory: Android
+        shell: bash
+        run: |
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          "$AAPT" dump badging "$APK" | grep -F "package: name='ch.pfvr.app.test' versionCode='29' versionName='0.10.5'"
+          "$APKSIGNER" verify --print-certs "$APK" | grep -Fi '0521e6bc43e2868177609dea69d074ed14bb594bad28adee98293e586d3d46bf'
+      - name: Commit exact source to target branch
+        shell: bash
+        run: |
+          rm -f .github/workflows/dev-0105-author2.yml tools/author_0105_persistent_people.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Persist and manage participant view in 0.10.5'
+          git push origin HEAD:dev-0.10.5
+      - name: Remove temporary author branch
+        if: always()
+        shell: bash
+        run: git push origin --delete dev-0.10.5-author2 || true
