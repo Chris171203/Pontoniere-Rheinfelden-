@@ -2089,7 +2089,7 @@ public class MainActivity extends Activity {
             pendingQrBitmap=qr;
             File directory=new File(getCacheDir(),"shared");
             if(!directory.exists()&&!directory.mkdirs())throw new Exception("cache directory");
-            File file=new File(directory,value.isBlank()?"PFVR-Zahlung-offen.png":"PFVR-Zahlung-CHF-"+value.replace('.','_')+".png");
+            File file=new File(directory,PaymentQrFileName.forAmount(value));
             try(FileOutputStream out=new FileOutputStream(file)){if(!qr.compress(Bitmap.CompressFormat.PNG,100,out))throw new Exception("png");}
             Uri uri=FileProvider.getUriForFile(this,getPackageName()+".fileprovider",file);
             String paymentText=paymentShareText(value);
@@ -2279,7 +2279,7 @@ public class MainActivity extends Activity {
         if(pendingQrBitmap==null){Toast.makeText(this,"Kein QR-Code vorhanden.",Toast.LENGTH_SHORT).show();return;}
         Intent save=new Intent(Intent.ACTION_CREATE_DOCUMENT);
         save.addCategory(Intent.CATEGORY_OPENABLE); save.setType("image/png");
-        save.putExtra(Intent.EXTRA_TITLE,amount.isBlank()?"PFVR-Zahlung-offener-Betrag.png":"PFVR-Zahlung-CHF-"+amount.replace('.','_')+".png");
+        save.putExtra(Intent.EXTRA_TITLE,PaymentQrFileName.forAmount(amount));
         try{startActivityForResult(save,REQ_SAVE_QR);}catch(Exception e){Toast.makeText(this,"Speichern ist auf diesem Gerät nicht verfügbar.",Toast.LENGTH_LONG).show();}
     }
 
