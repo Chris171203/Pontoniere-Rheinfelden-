@@ -150,7 +150,7 @@ public class MainActivity extends Activity {
     private static final int STATUS_WARN = Color.rgb(242,201,76);
     private static final int STATUS_ALARM = Color.rgb(200,55,55);
 
-    private enum Screen { HOME, EVENTS, CASH, CLUB, NEWS, SETTINGS, INTERNAL }
+    private enum Screen { HOME, EVENTS, CASH, CLUB, NEWS, SETTINGS, TILE_SETTINGS, INTERNAL }
 
     private enum SettingsTab {
         GENERAL("Allgemein"),
@@ -216,10 +216,13 @@ public class MainActivity extends Activity {
     private CashCatalog.Catalog cashCatalog;
     private LinearLayout cashSummaryContainer;
     private TextView cashTotalView;
+    private EditText cashFreeAmountInput;
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
     private SettingsTab settingsTab = SettingsTab.GENERAL;
+    private TileLayoutStore tileLayoutStore;
+    private TileLayoutStore.Area tileSettingsArea = TileLayoutStore.Area.HOME;
     private ScrollView homeScroll;
     private LinearLayout homeLiveStack;
     private Handler dataRefreshHandler;
@@ -228,6 +231,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        tileLayoutStore = new TileLayoutStore(prefs);
         dataRefreshHandler = new Handler(Looper.getMainLooper());
         scheduleBackgroundRefresh();
         darkMode = resolveDarkMode();
@@ -362,107 +366,225 @@ public class MainActivity extends Activity {
             case CLUB: headerSubtitle.setText("Verein & Kontakt"); content.addView(club()); break;
             case NEWS: headerSubtitle.setText("Vereinsnews"); content.addView(newsScreen()); break;
             case SETTINGS: headerSubtitle.setText("Einstellungen"); content.addView(settings()); break;
+            case TILE_SETTINGS: headerSubtitle.setText("Kacheln anordnen"); content.addView(tileSettingsScreen()); break;
             case INTERNAL: headerSubtitle.setText("Interner Bereich"); content.addView(internal()); break;
         }
     }
 
-    private View home() {
-        ScrollView scroll = new ScrollView(this);
-        homeScroll=scroll;
-        LinearLayout b = body(); scroll.addView(b);
+    private interface TileViewFactory {
+    View create(TileLayoutStore.Spec spec);
+}
 
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(20),dp(19),dp(20),dp(19));
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{NAVY,Color.rgb(20,91,115),WATER});
-        bg.setCornerRadius(dp(22)); hero.setBackground(bg);
-        b.addView(hero,margin(-1,-2,0,4,0,18));
-        hero.addView(txt("RHEINFELDEN  •  SEIT 1896",12,Color.rgb(208,231,239),true));
-        TextView h = txt("Gemeinsam auf dem Rhein.",29,Color.WHITE,true); h.setPadding(0,dp(8),0,dp(5)); hero.addView(h);
-        hero.addView(txt("Training, Wettfahren und Vereinsleben – alles Wichtige direkt griffbereit.",15,Color.rgb(232,243,247),false));
-        LinearLayout actions = new LinearLayout(this); actions.setPadding(0,dp(17),0,0); hero.addView(actions);
-        Button internal = btn("An-/Abmelden",Color.WHITE,NAVY); internal.setOnClickListener(v->navigate(Screen.INTERNAL)); actions.addView(internal,new LinearLayout.LayoutParams(0,dp(46),1));
-        Button pay = btn("Bezahlen",Color.argb(45,255,255,255),Color.WHITE); pay.setOnClickListener(v->navigate(Screen.CASH));
-        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(0,dp(46),1); pp.setMargins(dp(9),0,0,0); actions.addView(pay,pp);
+private View home() {
+    ScrollView scroll = new ScrollView(this);
+    homeScroll=scroll;
+    LinearLayout body = body();
+    scroll.addView(body);
 
-        section(b,"Training & Rhein","Aktuelle Prognose und Messwerte");
-        b.addView(liveInfoRow());
-        TextView liveReload=link("Live-Daten aktualisieren  ↻"); liveReload.setOnClickListener(v->{Toast.makeText(this,"Wetter und Rhein werden aktualisiert …",Toast.LENGTH_SHORT).show();refreshLive(true);}); b.addView(liveReload);
+    LinearLayout hero = new LinearLayout(this);
+    hero.setOrientation(LinearLayout.VERTICAL);
+    hero.setPadding(dp(20),dp(19),dp(20),dp(19));
+    GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{NAVY,Color.rgb(20,91,115),WATER});
+    background.setCornerRadius(dp(22));
+    hero.setBackground(background);
+    body.addView(hero,margin(-1,-2,0,4,0,14));
+    hero.addView(txt("RHEINFELDEN  •  SEIT 1896",12,Color.rgb(208,231,239),true));
+    TextView heading = txt("Gemeinsam auf dem Rhein.",29,Color.WHITE,true);
+    heading.setPadding(0,dp(8),0,dp(5));
+    hero.addView(heading);
+    hero.addView(txt("Training, Wettfahren und Vereinsleben – alles Wichtige direkt griffbereit.",15,Color.rgb(232,243,247),false));
+    LinearLayout actions = new LinearLayout(this);
+    actions.setPadding(0,dp(17),0,0);
+    hero.addView(actions);
+    Button internal = btn("An-/Abmelden",Color.WHITE,NAVY);
+    internal.setOnClickListener(v->navigate(Screen.INTERNAL));
+    actions.addView(internal,new LinearLayout.LayoutParams(0,dp(46),1));
+    Button pay = btn("Bezahlen",Color.argb(45,255,255,255),Color.WHITE);
+    pay.setOnClickListener(v->navigate(Screen.CASH));
+    LinearLayout.LayoutParams payParams = new LinearLayout.LayoutParams(0,dp(46),1);
+    payParams.setMargins(dp(9),0,0,0);
+    actions.addView(pay,payParams);
 
-        section(b,"Als Nächstes","Aus dem öffentlichen Vereinskalender");
-        if(events.isEmpty()) {
-            LinearLayout c=card(); c.addView(new ProgressBar(this),new LinearLayout.LayoutParams(dp(34),dp(34)));
-            TextView t=txt("Termine werden geladen …",14,MUTED,false); t.setPadding(dp(12),0,0,0); c.addView(t); b.addView(c,margin(-1,-2,0,0,0,10));
-        } else {
-            for(int i=0;i<Math.min(3,events.size());i++) b.addView(eventCard(events.get(i),true));
-        }
-        TextView all=link("Alle Termine anzeigen  →"); all.setOnClickListener(v->navigate(Screen.EVENTS)); b.addView(all);
+    body.addView(tileControlRow(TileLayoutStore.Area.HOME,true),margin(-1,-2,0,0,0,12));
+    homeLiveStack=new LinearLayout(this);
+    homeLiveStack.setOrientation(LinearLayout.VERTICAL);
+    body.addView(homeLiveStack,new LinearLayout.LayoutParams(-1,-2));
+    populateHomeTileStack(homeLiveStack);
+    return scroll;
+}
 
-        section(b,"Aktuell vom Verein","News von pfvr.ch · "+newsStatus());
-        if(news.isEmpty()){
-            LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);
-            c.addView(new ProgressBar(this),new LinearLayout.LayoutParams(dp(34),dp(34)));
-            TextView t=txt(newsLoading?"News werden geladen …":"Noch kein gespeicherter News-Stand.",14,MUTED,false);t.setPadding(dp(12),0,0,0);c.addView(t);
-            b.addView(c,margin(-1,-2,0,0,0,10));
+private View tileControlRow(TileLayoutStore.Area area,boolean refreshLiveData){
+    LinearLayout row=card();
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(dp(12),dp(9),dp(12),dp(9));
+    TextView label=txt(area.label+"-Kacheln",13,TEXT,true);
+    row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+    if(refreshLiveData){
+        Button refresh=btn("Aktualisieren",Color.rgb(232,240,244),NAVY);
+        refresh.setOnClickListener(v->{
+            Toast.makeText(this,"Wetter und Rhein werden aktualisiert …",Toast.LENGTH_SHORT).show();
+            refreshLive(true);
+        });
+        row.addView(refresh,new LinearLayout.LayoutParams(-2,dp(40)));
+    }
+    Button configure=btn("Anpassen",NAVY,Color.WHITE);
+    configure.setOnClickListener(v->{tileSettingsArea=area;navigate(Screen.TILE_SETTINGS);});
+    LinearLayout.LayoutParams configureParams=new LinearLayout.LayoutParams(-2,dp(40));
+    configureParams.setMargins(dp(8),0,0,0);
+    row.addView(configure,configureParams);
+    return row;
+}
+
+private void addConfiguredTiles(LinearLayout parent,TileLayoutStore.Area area,TileViewFactory factory){
+    LinearLayout compactRow=null;
+    for(TileLayoutStore.Spec spec:tileLayoutStore.ordered(area)){
+        if(!tileLayoutStore.isVisible(spec))continue;
+        View tile=factory.create(spec);
+        if(tile==null)continue;
+        if(spec.width==TileLayoutStore.Width.COMPACT){
+            if(compactRow==null){
+                compactRow=new LinearLayout(this);
+                compactRow.setGravity(Gravity.TOP);
+                compactRow.setBaselineAligned(false);
+                parent.addView(compactRow,margin(-1,-2,0,0,0,10));
+            }
+            LinearLayout.LayoutParams tileParams=new LinearLayout.LayoutParams(0,-2,1);
+            if(compactRow.getChildCount()>0)tileParams.setMargins(dp(8),0,0,0);
+            compactRow.addView(tile,tileParams);
+            if(compactRow.getChildCount()==2){
+                LinearLayout completed=compactRow;
+                completed.post(()->equalizeSummaryCardHeights(completed.getChildAt(0),completed.getChildAt(1)));
+                compactRow=null;
+            }
         }else{
-            for(int i=0;i<Math.min(3,news.size());i++)b.addView(newsCard(news.get(i),true));
-        }
-        TextView allNews=link("Alle News anzeigen  →");allNews.setOnClickListener(v->navigate(Screen.NEWS));b.addView(allNews);
-
-        return scroll;
-    }
-
-    private View liveInfoRow(){
-        LinearLayout stack=new LinearLayout(this);
-        stack.setOrientation(LinearLayout.VERTICAL);
-        stack.setPadding(0,0,0,dp(2));
-        homeLiveStack=stack;
-        populateHomeLiveStack(stack);
-        return stack;
-    }
-
-    private void populateHomeLiveStack(LinearLayout stack){
-        stack.removeAllViews();
-        LinearLayout weather=weatherCard();
-        stack.addView(weather,margin(-1,-2,0,0,0,10));
-
-        TextView rangeLabel=txt("RHEIN · ZEITRAUM",10,MUTED,true);
-        rangeLabel.setPadding(dp(2),dp(2),0,dp(5));
-        stack.addView(rangeLabel);
-        stack.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
-
-        stack.addView(riverSummaryRow(),margin(-1,-2,0,10,0,10));
-        boolean secondRiver=riverSlotEnabled(2);
-        addRiverStationCharts(stack,1,!secondRiver);
-        if(secondRiver)addRiverStationCharts(stack,2,true);
-    }
-
-    private void addRiverStationCharts(LinearLayout stack,int slot,boolean last){
-        HydroStation station=riverStation(slot);
-        boolean temperature=station.supportsTemperature;
-        stack.addView(riverCombinedCard(slot),margin(-1,-2,0,0,0,temperature?10:(last?4:10)));
-        if(temperature)stack.addView(riverTemperatureCard(slot),margin(-1,-2,0,0,0,last?4:10));
-    }
-
-    private void refreshHomeLiveViews(){
-        if(current!=Screen.HOME||homeLiveStack==null)return;
-        final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
-        populateHomeLiveStack(homeLiveStack);
-        if(homeScroll!=null){
-            homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
-            homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
+            if(compactRow!=null){
+                compactRow.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
+                compactRow=null;
+            }
+            parent.addView(tile,margin(-1,-2,0,0,0,10));
         }
     }
+    if(compactRow!=null)compactRow.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
+}
 
-    private void rebuildHomePreservingScroll(){
-        if(current!=Screen.HOME)return;
-        final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
-        navigate(Screen.HOME);
-        if(homeScroll!=null){
-            homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
-            homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
-        }
+private LinearLayout tileGroup(String title,String subtitle){
+    LinearLayout group=new LinearLayout(this);
+    group.setOrientation(LinearLayout.VERTICAL);
+    TextView heading=txt(title,20,TEXT,true);
+    heading.setPadding(dp(2),dp(2),0,subtitle==null?dp(9):dp(2));
+    group.addView(heading);
+    if(subtitle!=null){
+        TextView detail=txt(subtitle,12,MUTED,false);
+        detail.setPadding(dp(2),0,0,dp(9));
+        group.addView(detail);
     }
+    return group;
+}
+
+private void populateHomeTileStack(LinearLayout stack){
+    stack.removeAllViews();
+    addConfiguredTiles(stack,TileLayoutStore.Area.HOME,this::homeTileView);
+}
+
+private View homeTileView(TileLayoutStore.Spec spec){
+    switch(spec.id){
+        case "home_weather":return homeWeatherTile();
+        case "home_river_summary":return homeRiverSummaryTile();
+        case "home_river_charts":return homeRiverChartsTile();
+        case "home_events":return homeEventsTile();
+        case "home_news":return homeNewsTile();
+        default:return null;
+    }
+}
+
+private View homeWeatherTile(){
+    LinearLayout group=tileGroup("Trainingswetter","Prognose für den nächsten relevanten Termin");
+    group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
+    return group;
+}
+
+private View homeRiverSummaryTile(){
+    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");
+    group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));
+    return group;
+}
+
+private View homeRiverChartsTile(){
+    LinearLayout group=tileGroup("Rhein-Grafiken","Abfluss und Pegel je Station; Temperatur separat");
+    TextView rangeLabel=txt("ZEITRAUM",10,MUTED,true);
+    rangeLabel.setPadding(dp(2),0,0,dp(5));
+    group.addView(rangeLabel);
+    group.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
+    boolean secondRiver=riverSlotEnabled(2);
+    addRiverStationCharts(group,1,!secondRiver);
+    if(secondRiver)addRiverStationCharts(group,2,true);
+    return group;
+}
+
+private View homeEventsTile(){
+    LinearLayout group=tileGroup("Als Nächstes","Aus dem öffentlichen Vereinskalender");
+    if(events.isEmpty()){
+        LinearLayout loading=card();
+        loading.setGravity(Gravity.CENTER_VERTICAL);
+        loading.addView(new ProgressBar(this),new LinearLayout.LayoutParams(dp(34),dp(34)));
+        TextView text=txt("Termine werden geladen …",14,MUTED,false);
+        text.setPadding(dp(12),0,0,0);
+        loading.addView(text);
+        group.addView(loading,margin(-1,-2,0,0,0,4));
+    }else{
+        for(int index=0;index<Math.min(3,events.size());index++)group.addView(eventCard(events.get(index),true));
+    }
+    TextView all=link("Alle Termine anzeigen  →");
+    all.setOnClickListener(v->navigate(Screen.EVENTS));
+    group.addView(all);
+    return group;
+}
+
+private View homeNewsTile(){
+    LinearLayout group=tileGroup("Aktuell vom Verein","News von pfvr.ch · "+newsStatus());
+    if(news.isEmpty()){
+        LinearLayout loading=card();
+        loading.setGravity(Gravity.CENTER_VERTICAL);
+        loading.addView(new ProgressBar(this),new LinearLayout.LayoutParams(dp(34),dp(34)));
+        TextView text=txt(newsLoading?"News werden geladen …":"Noch kein gespeicherter News-Stand.",14,MUTED,false);
+        text.setPadding(dp(12),0,0,0);
+        loading.addView(text);
+        group.addView(loading,margin(-1,-2,0,0,0,4));
+    }else{
+        for(int index=0;index<Math.min(3,news.size());index++)group.addView(newsCard(news.get(index),true));
+    }
+    TextView all=link("Alle News anzeigen  →");
+    all.setOnClickListener(v->navigate(Screen.NEWS));
+    group.addView(all);
+    return group;
+}
+
+private void addRiverStationCharts(LinearLayout stack,int slot,boolean last){
+    HydroStation station=riverStation(slot);
+    boolean temperature=station.supportsTemperature;
+    stack.addView(riverCombinedCard(slot),margin(-1,-2,0,temperature?10:10,0,temperature?10:(last?4:10)));
+    if(temperature)stack.addView(riverTemperatureCard(slot),margin(-1,-2,0,0,0,last?4:10));
+}
+
+private void refreshHomeLiveViews(){
+    if(current!=Screen.HOME||homeLiveStack==null)return;
+    final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
+    populateHomeTileStack(homeLiveStack);
+    if(homeScroll!=null){
+        homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
+        homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
+    }
+}
+
+private void rebuildHomePreservingScroll(){
+    if(current!=Screen.HOME)return;
+    final int scrollY=homeScroll==null?0:homeScroll.getScrollY();
+    navigate(Screen.HOME);
+    if(homeScroll!=null){
+        homeScroll.postOnAnimation(()->homeScroll.scrollTo(0,scrollY));
+        homeScroll.postDelayed(()->homeScroll.scrollTo(0,scrollY),80);
+    }
+}
 
     private LinearLayout weatherCard(){
         LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
@@ -1271,6 +1393,18 @@ public class MainActivity extends Activity {
         edit.setOnClickListener(v->editInternalSetting());
         access.addView(edit,new LinearLayout.LayoutParams(-1,dp(46)));
 
+        section(body,"Ansicht & Kacheln","Home, Kasse und Verein persönlich anordnen");
+    LinearLayout layoutCard=card();
+    layoutCard.setOrientation(LinearLayout.VERTICAL);
+    body.addView(layoutCard,margin(-1,-2,0,0,0,12));
+    layoutCard.addView(txt("Kacheln anordnen und ausblenden",16,TEXT,true));
+    TextView layoutInfo=txt("Die Auswahl wird nur auf diesem Gerät gespeichert. Neue Kacheln werden bei späteren Updates automatisch ergänzt.",13,MUTED,false);
+    layoutInfo.setPadding(0,dp(4),0,dp(10));
+    layoutCard.addView(layoutInfo);
+    Button layoutButton=btn("Ansicht & Kacheln öffnen",NAVY,Color.WHITE);
+    layoutButton.setOnClickListener(v->{tileSettingsArea=TileLayoutStore.Area.HOME;navigate(Screen.TILE_SETTINGS);});
+    layoutCard.addView(layoutButton,new LinearLayout.LayoutParams(-1,dp(46)));
+
         section(body,"Daten","Kalender, Training-Wetter und Rhein-Messwerte");
         LinearLayout data=card();
         data.setOrientation(LinearLayout.VERTICAL);
@@ -1318,6 +1452,91 @@ public class MainActivity extends Activity {
         about.addView(txt("PFVR Rheinfelden",16,TEXT,true));
         about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
     }
+
+    private View tileSettingsScreen(){
+    ScrollView scroll=new ScrollView(this);
+    LinearLayout body=body();
+    scroll.addView(body);
+
+    LinearLayout intro=card();
+    intro.setOrientation(LinearLayout.VERTICAL);
+    body.addView(intro,margin(-1,-2,0,4,0,14));
+    intro.addView(txt("Ansicht & Kacheln",23,TEXT,true));
+    TextView description=txt("Reihenfolge und Sichtbarkeit gelten nur auf diesem Gerät. Kompakte Kacheln werden automatisch paarweise angeordnet.",13,MUTED,false);
+    description.setPadding(0,dp(5),0,dp(11));
+    intro.addView(description);
+    intro.addView(tileAreaSelector(),new LinearLayout.LayoutParams(-1,dp(44)));
+
+    for(TileLayoutStore.Spec spec:tileLayoutStore.ordered(tileSettingsArea)){
+        body.addView(tileSettingsRow(spec),margin(-1,-2,0,0,0,9));
+    }
+
+    Button reset=btn(tileSettingsArea.label+" auf Standard zurücksetzen",Color.rgb(232,240,244),NAVY);
+    reset.setOnClickListener(v->{
+        tileLayoutStore.reset(tileSettingsArea);
+        Toast.makeText(this,tileSettingsArea.label+"-Kacheln zurückgesetzt.",Toast.LENGTH_SHORT).show();
+        navigate(Screen.TILE_SETTINGS);
+    });
+    body.addView(reset,margin(-1,dp(46),0,6,0,12));
+    return scroll;
+}
+
+private View tileAreaSelector(){
+    LinearLayout tabs=segmentedBackground();
+    for(TileLayoutStore.Area area:TileLayoutStore.Area.values()){
+        TextView option=segmentOption(area.label,area==tileSettingsArea);
+        option.setOnClickListener(v->{tileSettingsArea=area;navigate(Screen.TILE_SETTINGS);});
+        tabs.addView(option,segmentParams(tabs));
+    }
+    return tabs;
+}
+
+private View tileSettingsRow(TileLayoutStore.Spec spec){
+    boolean visible=tileLayoutStore.isVisible(spec);
+    LinearLayout card=card();
+    card.setOrientation(LinearLayout.VERTICAL);
+
+    LinearLayout titleRow=new LinearLayout(this);
+    titleRow.setGravity(Gravity.CENTER_VERTICAL);
+    LinearLayout copy=new LinearLayout(this);
+    copy.setOrientation(LinearLayout.VERTICAL);
+    copy.addView(txt(spec.label,15,TEXT,true));
+    copy.addView(txt(spec.width.label+(spec.pinned?" · fixiert":""),11,MUTED,false));
+    titleRow.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+    int stateColor=visible?STATUS_GOOD:MUTED;
+    TextView state=txt(spec.pinned?"Immer an":(visible?"Sichtbar":"Aus"),10,stateColor,true);
+    state.setTextColor(visible?statusTextColor(STATUS_GOOD):themeText(MUTED));
+    state.setGravity(Gravity.CENTER);
+    state.setPadding(dp(9),dp(4),dp(9),dp(4));
+    state.setBackground(visible?statusBadge(STATUS_GOOD):round(Color.rgb(238,243,246),12));
+    titleRow.addView(state,new LinearLayout.LayoutParams(-2,-2));
+    card.addView(titleRow);
+
+    LinearLayout actions=new LinearLayout(this);
+    actions.setPadding(0,dp(11),0,0);
+    boolean canUp=tileLayoutStore.canMove(spec.area,spec.id,-1);
+    boolean canDown=tileLayoutStore.canMove(spec.area,spec.id,1);
+    Button up=btn("↑",Color.rgb(232,240,244),NAVY);
+    up.setContentDescription(spec.label+" nach oben");
+    up.setEnabled(canUp);up.setAlpha(canUp?1f:0.35f);
+    up.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,-1);navigate(Screen.TILE_SETTINGS);});
+    actions.addView(up,new LinearLayout.LayoutParams(0,dp(42),0.8f));
+    Button down=btn("↓",Color.rgb(232,240,244),NAVY);
+    down.setContentDescription(spec.label+" nach unten");
+    down.setEnabled(canDown);down.setAlpha(canDown?1f:0.35f);
+    down.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,1);navigate(Screen.TILE_SETTINGS);});
+    LinearLayout.LayoutParams downParams=new LinearLayout.LayoutParams(0,dp(42),0.8f);
+    downParams.setMargins(dp(7),0,0,0);
+    actions.addView(down,downParams);
+    Button toggle=btn(spec.pinned?"Fixiert":(visible?"Ausblenden":"Einblenden"),spec.pinned?Color.rgb(232,240,244):(visible?Color.rgb(232,240,244):NAVY),spec.pinned||visible?NAVY:Color.WHITE);
+    toggle.setEnabled(!spec.pinned);toggle.setAlpha(spec.pinned?0.55f:1f);
+    toggle.setOnClickListener(v->{tileLayoutStore.setVisible(spec,!visible);navigate(Screen.TILE_SETTINGS);});
+    LinearLayout.LayoutParams toggleParams=new LinearLayout.LayoutParams(0,dp(42),1.8f);
+    toggleParams.setMargins(dp(7),0,0,0);
+    actions.addView(toggle,toggleParams);
+    card.addView(actions);
+    return card;
+}
 
     private void addRiverSettings(LinearLayout body){
         section(body,"Rhein-Anzeige","Kachel 1 ist immer sichtbar; Kachel 2 kann ein- oder ausgeblendet werden.");
@@ -1787,86 +2006,215 @@ public class MainActivity extends Activity {
     }
 
     private View cash() {
-        ScrollView scroll=new ScrollView(this);
-        LinearLayout body=body();
-        cashQuantityViews.clear();
-        scroll.addView(body);
+    ScrollView scroll=new ScrollView(this);
+    LinearLayout body=body();
+    cashQuantityViews.clear();
+    cashFreeAmountInput=null;
+    scroll.addView(body);
 
-        LinearLayout hero=new LinearLayout(this);
-        hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(20),dp(18),dp(20),dp(18));
-        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{NAVY,Color.rgb(21,90,122),WATER});
-        gradient.setCornerRadius(dp(22));hero.setBackground(gradient);
-        body.addView(hero,margin(-1,-2,0,4,0,16));
-        hero.addView(txt("VEREINSBEIZ",12,Color.rgb(208,231,239),true));
-        TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);title.setPadding(0,dp(5),0,dp(5));hero.addView(title);
-        hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
+    LinearLayout hero=new LinearLayout(this);
+    hero.setOrientation(LinearLayout.VERTICAL);
+    hero.setPadding(dp(20),dp(18),dp(20),dp(18));
+    GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{NAVY,Color.rgb(21,90,122),WATER});
+    gradient.setCornerRadius(dp(22));
+    hero.setBackground(gradient);
+    body.addView(hero,margin(-1,-2,0,4,0,14));
+    hero.addView(txt("VEREINSBEIZ",12,Color.rgb(208,231,239),true));
+    TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);
+    title.setPadding(0,dp(5),0,dp(5));
+    hero.addView(title);
+    hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
 
-        if(!hasPreferredBank()){
-            section(body,"Zahlungsweg","Für Direktzahlungen einmalig eine Banking-App festlegen");
-            body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
-        }
-
-        section(body,"Warenkorb","Mengen können mehrere Personen gemeinsam abdecken");
-        LinearLayout cart=card();cart.setOrientation(LinearLayout.VERTICAL);body.addView(cart,margin(-1,-2,0,0,0,12));
-        cashSummaryContainer=new LinearLayout(this);cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);cart.addView(cashSummaryContainer);
-        cashTotalView=txt("Total CHF 0.00",24,TEXT,true);cashTotalView.setPadding(0,dp(12),0,dp(10));cart.addView(cashTotalView);
-        Button cartBank=btn(preferredBankPaymentLabel(),NAVY,Color.WHITE);
-        cartBank.setOnClickListener(v->{
-            if(!hasPreferredBank()){
-                openPaymentSettings();
-                return;
-            }
-            EditText input=cartAmountInput();
-            if(input!=null)payWithPreferredBank(input);
-        });
-        cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
-        LinearLayout payRow=new LinearLayout(this);payRow.setPadding(0,dp(8),0,0);
-        Button cartQr=btn("Swiss QR",Color.rgb(232,240,244),NAVY);cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(44),1));
-        Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});LinearLayout.LayoutParams ctp=new LinearLayout.LayoutParams(0,dp(44),1);ctp.setMargins(dp(7),0,0,0);payRow.addView(cartTwint,ctp);
-        cart.addView(payRow);
-        TextView directInfo=txt(selectedBankPaymentHint(),11,MUTED,false);directInfo.setPadding(0,dp(8),0,0);cart.addView(directInfo);
-        TextView clearCart=link("Warenkorb leeren");clearCart.setOnClickListener(v->{cashCart.clear();for(TextView quantity:cashQuantityViews.values())quantity.setText("0");updateCashSummary();});cart.addView(clearCart);
-        updateCashSummary();
-
-
-        CashCatalog.Catalog catalog=cashCatalog();
-        section(body,"Auswahl",catalog==null?"Preisliste konnte nicht geladen werden.":"Trinken, Essen und Feiern · Stand "+catalog.validFrom);
-        if(catalog!=null){
-            for(CashCatalog.Category category:catalog.categories){
-                TextView categoryTitle=txt(category.label,15,TEXT,true);
-                categoryTitle.setPadding(dp(2),dp(3),0,dp(7));
-                body.addView(categoryTitle);
-                LinearLayout categoryCard=card();
-                categoryCard.setOrientation(LinearLayout.VERTICAL);
-                for(int i=0;i<category.items.size();i++){
-                    if(i>0){View divider=new View(this);divider.setBackgroundColor(darkMode?Color.rgb(51,65,74):Color.rgb(226,233,237));categoryCard.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}
-                    categoryCard.addView(cashItemRow(category.items.get(i)));
-                }
-                body.addView(categoryCard,margin(-1,-2,0,0,0,10));
-            }
-        }
-
-        section(body,"Freier Betrag","Für Sonderfälle oder Beträge ausserhalb der Preisliste");
-        LinearLayout amountCard=card();amountCard.setOrientation(LinearLayout.VERTICAL);body.addView(amountCard,margin(-1,-2,0,0,0,12));
-        LinearLayout amountRow=new LinearLayout(this);amountRow.setGravity(Gravity.CENTER_VERTICAL);amountRow.setPadding(0,0,0,dp(8));amountCard.addView(amountRow);
-        TextView chf=txt("CHF",20,NAVY,true);chf.setGravity(Gravity.CENTER_VERTICAL);amountRow.addView(chf,new LinearLayout.LayoutParams(dp(55),dp(56)));
-        EditText amount=new EditText(this);amount.setHint("0.00");amount.setTextSize(25);amount.setSingleLine(true);amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);amount.setTextColor(themeText(TEXT));amount.setHintTextColor(themeText(MUTED));amount.setBackground(round(Color.rgb(238,243,246),14));amount.setPadding(dp(14),0,dp(14),0);amountRow.addView(amount,new LinearLayout.LayoutParams(0,dp(56),1));
-        TextView amountInfo=txt("Leer oder 0 erzeugt einen Swiss QR mit offenem Betrag.",12,MUTED,false);amountInfo.setPadding(0,0,0,dp(10));amountCard.addView(amountInfo);
-        Button qr=btn("Swiss QR erstellen",NAVY,Color.WHITE);qr.setOnClickListener(v->showPaymentQr(amount));amountCard.addView(qr,new LinearLayout.LayoutParams(-1,dp(48)));
-        Button direct=btn(preferredBankPaymentLabel(),Color.rgb(232,240,244),NAVY);direct.setOnClickListener(v->payWithPreferredBank(amount));LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,dp(44));dlp.setMargins(0,dp(8),0,0);amountCard.addView(direct,dlp);
-
-        LinearLayout twint=card();twint.setOrientation(LinearLayout.VERTICAL);body.addView(twint,margin(-1,-2,0,0,0,12));
-        twint.addView(txt("TWINT",16,TEXT,true));
-        TextView twintInfo=txt("Für Zahlung auf demselben Handy: Betrag auf der PFVR-Seite übernehmen und dort den fünfstelligen TWINT-Code erzeugen. Der Vereins-QR bleibt zusätzlich verfügbar.",13,MUTED,false);twintInfo.setPadding(0,dp(4),0,dp(10));twint.addView(twintInfo);
-        Button twDirect=btn("TWINT-Code erzeugen",NAVY,Color.WHITE);twDirect.setOnClickListener(v->openTwintDirect(amount));twint.addView(twDirect,new LinearLayout.LayoutParams(-1,dp(48)));
-        Button twQr=btn("Vereins-TWINT-QR öffnen",Color.rgb(232,240,244),NAVY);twQr.setOnClickListener(v->external(TWINT_QR_PDF));LinearLayout.LayoutParams twqp=new LinearLayout.LayoutParams(-1,dp(44));twqp.setMargins(0,dp(8),0,0);twint.addView(twQr,twqp);
-
-        section(body,"Zahlungsdaten","Für E-Banking und manuelle Überweisung");
-        LinearLayout details=card();details.setOrientation(LinearLayout.VERTICAL);body.addView(details,margin(-1,-2,0,0,0,12));details.addView(txt(CLUB_PAYEE,16,TEXT,true));details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false));TextView iban=txt(CLUB_IBAN,19,NAVY,true);iban.setPadding(0,dp(12),0,dp(4));details.addView(iban);details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
-        LinearLayout copies=new LinearLayout(this);copies.setPadding(0,dp(12),0,0);details.addView(copies);Button copyIban=btn("IBAN kopieren",Color.rgb(232,240,244),NAVY);copyIban.setOnClickListener(v->copy("PFVR IBAN",CLUB_IBAN.replace(" ",""),"IBAN kopiert"));copies.addView(copyIban,new LinearLayout.LayoutParams(0,dp(42),1));Button copyAll=btn("Alles kopieren",Color.rgb(232,240,244),NAVY);copyAll.setOnClickListener(v->{String x=CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE;String a=amount(amount.getText().toString());if(a!=null&&!a.isBlank())x+="\nCHF "+a;copy("PFVR Zahlung",x,"Zahlungsdaten kopiert");});LinearLayout.LayoutParams cap=new LinearLayout.LayoutParams(0,dp(42),1);cap.setMargins(dp(8),0,0,0);copies.addView(copyAll,cap);
-        return scroll;
+    body.addView(tileControlRow(TileLayoutStore.Area.CASH,false),margin(-1,-2,0,0,0,12));
+    if(!hasPreferredBank()){
+        section(body,"Zahlungsweg","Für Direktzahlungen einmalig eine Banking-App festlegen");
+        body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
     }
+
+    LinearLayout tiles=new LinearLayout(this);
+    tiles.setOrientation(LinearLayout.VERTICAL);
+    body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));
+    addConfiguredTiles(tiles,TileLayoutStore.Area.CASH,this::cashTileView);
+    return scroll;
+}
+
+private View cashTileView(TileLayoutStore.Spec spec){
+    switch(spec.id){
+        case "cash_cart":return cashCartTile();
+        case "cash_drinks":return cashCategoryTile("drinks");
+        case "cash_food":return cashCategoryTile("food");
+        case "cash_celebrations":return cashCategoryTile("celebrations");
+        case "cash_free_amount":return cashFreeAmountTile();
+        case "cash_twint":return cashTwintTile();
+        case "cash_payment_details":return cashPaymentDetailsTile();
+        default:return null;
+    }
+}
+
+private View cashCartTile(){
+    LinearLayout group=tileGroup("Warenkorb","Ausgewählte Artikel und Zahlungswege");
+    LinearLayout cart=card();
+    cart.setOrientation(LinearLayout.VERTICAL);
+    group.addView(cart,new LinearLayout.LayoutParams(-1,-2));
+    cashSummaryContainer=new LinearLayout(this);
+    cashSummaryContainer.setOrientation(LinearLayout.VERTICAL);
+    cart.addView(cashSummaryContainer);
+    cashTotalView=txt("Total CHF 0.00",24,TEXT,true);
+    cashTotalView.setPadding(0,dp(12),0,dp(10));
+    cart.addView(cashTotalView);
+    Button cartBank=btn(preferredBankPaymentLabel(),NAVY,Color.WHITE);
+    cartBank.setOnClickListener(v->{
+        if(!hasPreferredBank()){openPaymentSettings();return;}
+        EditText input=cartAmountInput();
+        if(input!=null)payWithPreferredBank(input);
+    });
+    cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
+    LinearLayout payRow=new LinearLayout(this);
+    payRow.setPadding(0,dp(8),0,0);
+    Button cartQr=btn("Swiss QR",Color.rgb(232,240,244),NAVY);
+    cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});
+    payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(44),1));
+    Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);
+    cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});
+    LinearLayout.LayoutParams twintParams=new LinearLayout.LayoutParams(0,dp(44),1);
+    twintParams.setMargins(dp(7),0,0,0);
+    payRow.addView(cartTwint,twintParams);
+    cart.addView(payRow);
+    TextView directInfo=txt(selectedBankPaymentHint(),11,MUTED,false);
+    directInfo.setPadding(0,dp(8),0,0);
+    cart.addView(directInfo);
+    TextView clearCart=link("Warenkorb leeren");
+    clearCart.setOnClickListener(v->{cashCart.clear();for(TextView quantity:cashQuantityViews.values())quantity.setText("0");updateCashSummary();});
+    cart.addView(clearCart);
+    updateCashSummary();
+    return group;
+}
+
+private View cashCategoryTile(String categoryId){
+    CashCatalog.Catalog catalog=cashCatalog();
+    if(catalog==null){
+        LinearLayout group=tileGroup("Auswahl","Preisliste konnte nicht geladen werden.");
+        LinearLayout unavailable=card();
+        unavailable.addView(txt("Die lokale Preisliste ist derzeit nicht verfügbar.",13,MUTED,false));
+        group.addView(unavailable);
+        return group;
+    }
+    CashCatalog.Category category=findCashCategory(catalog,categoryId);
+    if(category==null)return null;
+    LinearLayout group=tileGroup(category.label,"Preisliste Vereinsbeiz · Stand "+catalog.validFrom);
+    LinearLayout categoryCard=card();
+    categoryCard.setOrientation(LinearLayout.VERTICAL);
+    for(int index=0;index<category.items.size();index++){
+        if(index>0){
+            View divider=new View(this);
+            divider.setBackgroundColor(darkMode?Color.rgb(51,65,74):Color.rgb(226,233,237));
+            categoryCard.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        }
+        categoryCard.addView(cashItemRow(category.items.get(index)));
+    }
+    group.addView(categoryCard,new LinearLayout.LayoutParams(-1,-2));
+    return group;
+}
+
+private CashCatalog.Category findCashCategory(CashCatalog.Catalog catalog,String categoryId){
+    if(catalog==null)return null;
+    for(CashCatalog.Category category:catalog.categories)if(category.id.equals(categoryId))return category;
+    return null;
+}
+
+private View cashFreeAmountTile(){
+    LinearLayout group=tileGroup("Freier Betrag","Für Sonderfälle oder Beträge ausserhalb der Preisliste");
+    LinearLayout amountCard=card();
+    amountCard.setOrientation(LinearLayout.VERTICAL);
+    group.addView(amountCard,new LinearLayout.LayoutParams(-1,-2));
+    LinearLayout amountRow=new LinearLayout(this);
+    amountRow.setGravity(Gravity.CENTER_VERTICAL);
+    amountRow.setPadding(0,0,0,dp(8));
+    amountCard.addView(amountRow);
+    TextView chf=txt("CHF",20,NAVY,true);
+    chf.setGravity(Gravity.CENTER_VERTICAL);
+    amountRow.addView(chf,new LinearLayout.LayoutParams(dp(55),dp(56)));
+    EditText amount=new EditText(this);
+    cashFreeAmountInput=amount;
+    amount.setHint("0.00");
+    amount.setTextSize(25);
+    amount.setSingleLine(true);
+    amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
+    amount.setTextColor(themeText(TEXT));
+    amount.setHintTextColor(themeText(MUTED));
+    amount.setBackground(round(Color.rgb(238,243,246),14));
+    amount.setPadding(dp(14),0,dp(14),0);
+    amountRow.addView(amount,new LinearLayout.LayoutParams(0,dp(56),1));
+    TextView amountInfo=txt("Leer oder 0 erzeugt einen Swiss QR mit offenem Betrag.",12,MUTED,false);
+    amountInfo.setPadding(0,0,0,dp(10));
+    amountCard.addView(amountInfo);
+    Button qr=btn("Swiss QR erstellen",NAVY,Color.WHITE);
+    qr.setOnClickListener(v->showPaymentQr(amount));
+    amountCard.addView(qr,new LinearLayout.LayoutParams(-1,dp(48)));
+    Button direct=btn(preferredBankPaymentLabel(),Color.rgb(232,240,244),NAVY);
+    direct.setOnClickListener(v->payWithPreferredBank(amount));
+    LinearLayout.LayoutParams directParams=new LinearLayout.LayoutParams(-1,dp(44));
+    directParams.setMargins(0,dp(8),0,0);
+    amountCard.addView(direct,directParams);
+    return group;
+}
+
+private EditText cashOptionalAmountInput(){
+    if(cashFreeAmountInput!=null)return cashFreeAmountInput;
+    EditText empty=new EditText(this);
+    empty.setText("");
+    return empty;
+}
+
+private View cashTwintTile(){
+    LinearLayout group=tileGroup("TWINT","Code oder Vereins-QR verwenden");
+    LinearLayout twint=card();
+    twint.setOrientation(LinearLayout.VERTICAL);
+    group.addView(twint,new LinearLayout.LayoutParams(-1,-2));
+    TextView info=txt("Für Zahlung auf demselben Handy: Betrag übernehmen und auf der PFVR-Seite den fünfstelligen TWINT-Code erzeugen. Der Vereins-QR bleibt zusätzlich verfügbar.",13,MUTED,false);
+    info.setPadding(0,0,0,dp(10));
+    twint.addView(info);
+    Button direct=btn("TWINT-Code erzeugen",NAVY,Color.WHITE);
+    direct.setOnClickListener(v->openTwintDirect(cashOptionalAmountInput()));
+    twint.addView(direct,new LinearLayout.LayoutParams(-1,dp(48)));
+    Button qr=btn("Vereins-TWINT-QR öffnen",Color.rgb(232,240,244),NAVY);
+    qr.setOnClickListener(v->external(TWINT_QR_PDF));
+    LinearLayout.LayoutParams qrParams=new LinearLayout.LayoutParams(-1,dp(44));
+    qrParams.setMargins(0,dp(8),0,0);
+    twint.addView(qr,qrParams);
+    return group;
+}
+
+private View cashPaymentDetailsTile(){
+    LinearLayout group=tileGroup("Zahlungsdaten","Für E-Banking und manuelle Überweisung");
+    LinearLayout details=card();
+    details.setOrientation(LinearLayout.VERTICAL);
+    group.addView(details,new LinearLayout.LayoutParams(-1,-2));
+    details.addView(txt(CLUB_PAYEE,16,TEXT,true));
+    details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false));
+    TextView iban=txt(CLUB_IBAN,19,NAVY,true);
+    iban.setPadding(0,dp(12),0,dp(4));
+    details.addView(iban);
+    details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
+    LinearLayout copies=new LinearLayout(this);
+    copies.setPadding(0,dp(12),0,0);
+    details.addView(copies);
+    Button copyIban=btn("IBAN kopieren",Color.rgb(232,240,244),NAVY);
+    copyIban.setOnClickListener(v->copy("PFVR IBAN",CLUB_IBAN.replace(" ",""),"IBAN kopiert"));
+    copies.addView(copyIban,new LinearLayout.LayoutParams(0,dp(42),1));
+    Button copyAll=btn("Alles kopieren",Color.rgb(232,240,244),NAVY);
+    copyAll.setOnClickListener(v->{
+        String value=CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE;
+        EditText amountInput=cashFreeAmountInput;
+        String amount=amount(amountInput==null?"":amountInput.getText().toString());
+        if(amount!=null&&!amount.isBlank())value+="\nCHF "+amount;
+        copy("PFVR Zahlung",value,"Zahlungsdaten kopiert");
+    });
+    LinearLayout.LayoutParams allParams=new LinearLayout.LayoutParams(0,dp(42),1);
+    allParams.setMargins(dp(8),0,0,0);
+    copies.addView(copyAll,allParams);
+    return group;
+}
 
     private View cashBankStatusCard(){
         LinearLayout card=card();
@@ -2437,34 +2785,79 @@ public class MainActivity extends Activity {
     private void copy(String label,String value,String toast){ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE); if(cm!=null)cm.setPrimaryClip(ClipData.newPlainText(label,value)); Toast.makeText(this,toast,Toast.LENGTH_SHORT).show();}
 
     private View club() {
-        ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);
-        LinearLayout top=card(); top.setGravity(Gravity.CENTER_VERTICAL); ImageView logo=new ImageView(this); logo.setImageResource(R.drawable.pfvr_logo); logo.setScaleType(ImageView.ScaleType.CENTER_CROP); top.addView(logo,new LinearLayout.LayoutParams(dp(82),dp(82))); LinearLayout info=new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL); info.setPadding(dp(15),0,0,0); info.addView(txt("Pontonierfahrverein Rheinfelden",19,TEXT,true)); info.addView(txt("Gegründet 1896 · Sport und Vereinsleben am Rhein",13,MUTED,false)); top.addView(info,new LinearLayout.LayoutParams(0,-2,1)); b.addView(top,margin(-1,-2,0,4,0,18));
+    ScrollView scroll=new ScrollView(this);
+    LinearLayout body=body();
+    scroll.addView(body);
 
-        section(b,"Über den Verein",null);
-        LinearLayout about=card();about.setOrientation(LinearLayout.VERTICAL);b.addView(about,margin(-1,-2,0,0,0,12));
-        about.addView(txt("Seit 1896 auf dem Rhein",18,TEXT,true));
-        TextView a=txt("Beim Pontonierfahren verbinden sich präzise Bootsführung, Kraft, Technik und Teamarbeit. Der PFVR trainiert auf dem Rhein in Rheinfelden, nimmt an Wettfahren teil und pflegt zugleich ein aktives Vereinsleben sowie die Ausbildung des Nachwuchses.",14,MUTED,false);a.setPadding(0,dp(7),0,0);about.addView(a);
+    LinearLayout hero=card();
+    hero.setGravity(Gravity.CENTER_VERTICAL);
+    ImageView logo=new ImageView(this);
+    logo.setImageResource(R.drawable.pfvr_logo);
+    logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    hero.addView(logo,new LinearLayout.LayoutParams(dp(82),dp(82)));
+    LinearLayout info=new LinearLayout(this);
+    info.setOrientation(LinearLayout.VERTICAL);
+    info.setPadding(dp(15),0,0,0);
+    info.addView(txt("Pontonierfahrverein Rheinfelden",19,TEXT,true));
+    info.addView(txt("Gegründet 1896 · Sport und Vereinsleben am Rhein",13,MUTED,false));
+    hero.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+    body.addView(hero,margin(-1,-2,0,4,0,14));
+    body.addView(tileControlRow(TileLayoutStore.Area.CLUB,false),margin(-1,-2,0,0,0,12));
 
-        section(b,"Geschichte","Einige feste Meilensteine direkt in der App");
-        b.addView(milestone("1896","Gründung","Beginn der Rheinfelder Pontonier-Tradition."));
-        b.addView(milestone("1971","75 Jahre","Jubiläumswettfahren in Rheinfelden."));
-        b.addView(milestone("1996","100 Jahre","Schweizerisches Jungpontonierwettfahren zum 100-Jahr-Jubiläum."));
-        b.addView(milestone("2021","125 Jahre","Jubiläumsjahr und Jungfernfahrt eines neuen Kunststoffweidlings; laut Stadt Rheinfelden war der PFVR damit der erste Pontonierfahrverein der Schweiz mit einem privaten Kunststoffweidling."));
-        b.addView(milestone("2023","Schweizer-Meisterschaft","Der PFVR richtete die Schweizer-Meisterschaft auf dem Rhein in Rheinfelden aus."));
+    LinearLayout tiles=new LinearLayout(this);
+    tiles.setOrientation(LinearLayout.VERTICAL);
+    body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));
+    addConfiguredTiles(tiles,TileLayoutStore.Area.CLUB,this::clubTileView);
+    return scroll;
+}
 
-        section(b,"Aktuell & Organisation",null);
-        b.addView(action("Vorstand","Ansprechpersonen und Funktionen","Öffnen",v->openInApp(BOARD,"Vorstand")));
-        b.addView(action("Jahresprogramm","Originalseite und Kalenderhinweise","Öffnen",v->openInApp(PROGRAM,"Jahresprogramm")));
-        b.addView(action("Vereinsnews","Native Liste mit lokalem Cache","Öffnen",v->navigate(Screen.NEWS)));
-
-        section(b,"Kontakt",null); b.addView(contact("Depot","Rheinweg 42\n4310 Rheinfelden","Route",v->openMap())); b.addView(contact("Telefon","076 209 18 96","Anrufen",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))))); b.addView(contact("E-Mail","info@pfvr.ch","Schreiben",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))))); b.addView(contact("Kontaktseite","pfvr.ch/kontakt","Öffnen",v->openInApp(CONTACT,"Kontakt"))); return scroll;
+private View clubTileView(TileLayoutStore.Spec spec){
+    switch(spec.id){
+        case "club_about":return clubAboutTile();
+        case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
+        case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
+        case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
+        case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openInApp(HISTORY,"Geschichte"));
+        case "club_depot":return clubActionTile("Depot & Route","Rheinweg 42",v->openMap());
+        case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
+        case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
+        case "club_contact":return clubActionTile("Kontaktseite","Weitere Ansprechwege",v->openInApp(CONTACT,"Kontakt"));
+        default:return null;
     }
+}
 
-    private View milestone(String year,String title,String detail){
-        LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);c.setLayoutParams(margin(-1,-2,0,0,0,9));
-        TextView y=txt(year,15,Color.WHITE,true);y.setGravity(Gravity.CENTER);y.setBackground(round(NAVY,13));c.addView(y,new LinearLayout.LayoutParams(dp(62),dp(48)));
-        LinearLayout text=new LinearLayout(this);text.setOrientation(LinearLayout.VERTICAL);text.setPadding(dp(13),0,0,0);text.addView(txt(title,15,TEXT,true));text.addView(txt(detail,12,MUTED,false));c.addView(text,new LinearLayout.LayoutParams(0,-2,1));return c;
-    }
+private View clubAboutTile(){
+    LinearLayout group=tileGroup("Über den Verein",null);
+    LinearLayout about=card();
+    about.setOrientation(LinearLayout.VERTICAL);
+    about.addView(txt("Seit 1896 auf dem Rhein",18,TEXT,true));
+    TextView text=txt("Beim Pontonierfahren verbinden sich präzise Bootsführung, Kraft, Technik und Teamarbeit. Der PFVR trainiert auf dem Rhein in Rheinfelden, nimmt an Wettfahren teil und pflegt zugleich ein aktives Vereinsleben sowie die Ausbildung des Nachwuchses.",14,MUTED,false);
+    text.setPadding(0,dp(7),0,dp(10));
+    about.addView(text);
+    TextView history=txt("Geschichte und Meilensteine öffnen  →",12,WATER,true);
+    history.setGravity(Gravity.END);
+    history.setOnClickListener(v->openInApp(HISTORY,"Geschichte"));
+    about.addView(history);
+    group.addView(about,new LinearLayout.LayoutParams(-1,-2));
+    return group;
+}
+
+private View clubActionTile(String title,String detail,View.OnClickListener listener){
+    LinearLayout tile=card();
+    tile.setOrientation(LinearLayout.VERTICAL);
+    tile.setMinimumHeight(dp(118));
+    tile.setOnClickListener(listener);
+    TextView heading=txt(title,16,TEXT,true);
+    tile.addView(heading);
+    TextView description=txt(detail,12,MUTED,false);
+    description.setPadding(0,dp(5),0,0);
+    tile.addView(description);
+    tile.addView(new View(this),new LinearLayout.LayoutParams(1,0,1));
+    TextView open=txt("Öffnen  →",12,WATER,true);
+    open.setGravity(Gravity.END);
+    tile.addView(open);
+    return tile;
+}
 
     private View internal() {
         String url=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,"")); if(!validInternal(url)) return internalMissing(); prefs.edit().putString(PREF_INTERNAL_URL,url).apply();
@@ -2495,12 +2888,16 @@ public class MainActivity extends Activity {
         v.loadDataWithBaseURL("https://intern.pfvr.ch/",html,"text/html","UTF-8",null);
     }
 
-    private void internalSkin(WebView v){
-        String bg=darkMode?"#11171C":"#F4F7F9",card=darkMode?"#1A2228":"#FFFFFF",soft=darkMode?"#232E36":"#EDF3F6",text=darkMode?"#ECF1F4":"#15232E",muted=darkMode?"#A0B0BA":"#60717E",border=darkMode?"#344550":"#DCE5EA",link=darkMode?"#5BBED5":"#247E99";
-        String css="html{color-scheme:"+(darkMode?"dark":"light")+"!important;}body{margin:0!important;padding:10px 10px 34px!important;background:"+bg+"!important;color:"+text+"!important;font-family:Arial,sans-serif!important;font-size:16px!important;}header,nav,footer,.navbar,.site-header,.site-footer{display:none!important;}table{border-collapse:separate!important;border-spacing:8px!important;width:max-content!important;min-width:100%!important;background:transparent!important;}td,th{background:"+card+"!important;color:"+text+"!important;border:1px solid "+border+"!important;border-radius:14px!important;padding:12px 10px!important;vertical-align:top!important;}p,span,div,label,strong{color:"+text+"!important;}small{color:"+muted+"!important;}a{color:"+link+"!important;}select,input[type=text],input[type=number]{background:"+soft+"!important;color:"+text+"!important;border:1px solid "+border+"!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;}button,input[type=submit],input[type=button],a.btn,.btn{min-height:48px!important;border:0!important;border-radius:12px!important;padding:10px 14px!important;font-size:16px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;}";
-        String js="(function(){var st=document.getElementById('pfvr-internal-style');if(!st){st=document.createElement('style');st.id='pfvr-internal-style';document.head.appendChild(st);}st.innerHTML="+JSONObject.quote(css)+";var norm=function(x){return (x||'').replace(/\\s+/g,' ').trim().toLowerCase();};var paint=function(el,bg,fg){el.style.setProperty('background',bg,'important');el.style.setProperty('color',fg,'important');el.style.setProperty('border-color',bg,'important');};var controls=document.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn');controls.forEach(function(el){var t=norm(el.innerText||el.value);var attend=false;if(t.indexOf('mit essen')>=0){paint(el,'#16863A','#FFFFFF');attend=true;}else if(t.indexOf('ohne essen')>=0){paint(el,'#F2C94C','#17222B');attend=true;}else if(t.indexOf('nicht gewählt')>=0||t.indexOf('nicht gewaehlt')>=0||t.indexOf('keine auswahl')>=0){paint(el,'#6D7880','#FFFFFF');attend=true;}else if(t.indexOf('komme nicht')>=0||t==='nicht'){paint(el,'#C83737','#FFFFFF');attend=true;}else{paint(el,'"+link+"','#FFFFFF');}if(attend&&!el.dataset.pfvrRefreshBound){el.dataset.pfvrRefreshBound='1';el.addEventListener('click',function(){setTimeout(function(){window.location.reload();},2000);});}});document.querySelectorAll('p,div,strong,label').forEach(function(el){var t=norm(el.innerText);if(t.indexOf('tipp: diese seite als favorit')===0&&t.length<350){el.style.display='none';}});})();";
-        v.evaluateJavascript(js,null);
-    }
+    private void internalSkin(WebView view){
+    String background=darkMode?"#11171C":"#F4F7F9";
+    String card=darkMode?"#1A2228":"#FFFFFF";
+    String soft=darkMode?"#232E36":"#EDF3F6";
+    String text=darkMode?"#ECF1F4":"#15232E";
+    String muted=darkMode?"#A0B0BA":"#60717E";
+    String border=darkMode?"#344550":"#DCE5EA";
+    String link=darkMode?"#5BBED5":"#247E99";
+    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link),null);
+}
 
     private View internalMissing() {
         ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);
@@ -2786,7 +3183,7 @@ public class MainActivity extends Activity {
     private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,"Link konnte nicht geöffnet werden.",Toast.LENGTH_SHORT).show();}}
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
-    private void handleBack(){if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
+    private void handleBack(){if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
     @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 
