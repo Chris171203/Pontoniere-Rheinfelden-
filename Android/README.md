@@ -21,7 +21,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.0 verwendet `versionCode 23` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.0 verwendet `versionCode 24` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
