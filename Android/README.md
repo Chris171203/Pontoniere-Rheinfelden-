@@ -8,6 +8,7 @@ Aktuelle Android-Testversion: `0.10.0`.
 - Java 17.
 - `minSdk 26`, `targetSdk 36`, `compileSdk 36`.
 - CI verwendet Gradle 8.13 und führt Unit-Tests, APK-Build sowie Signatur-, Paket- und Versionsprüfung aus.
+- Der allgemeine Android-CI-Lauf auf dem finalen Branch-Commit ist das verbindliche Build-Artefakt für Gerätetests.
 - Gebaut wird ausschließlich der eingecheckte Quellstand; Build-Workflows dürfen den Anwendungscode nicht patchen.
 - Banking-Kompatibilität wird zentral in `BankingAppRegistry.java` gepflegt.
 - Kachelreihenfolge und Sichtbarkeit werden zentral in `TileLayoutStore.java` gepflegt. Stabile Tile-IDs erhalten bestehende Benutzerlayouts über App-Updates hinweg.
