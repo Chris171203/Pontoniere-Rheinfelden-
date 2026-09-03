@@ -2,7 +2,17 @@ plugins {
     id 'com.android.application'
 }
 
+import java.util.Base64
+
 def uploadKeystore = System.getenv('ANDROID_UPLOAD_KEYSTORE')
+def testSigningSource = file('test-signing/pfvr-test.keystore.b64')
+def testSigningFile = layout.buildDirectory.file('test-signing/pfvr-test.keystore').get().asFile
+
+if (!testSigningSource.exists()) {
+    throw new GradleException('Missing committed PFVR test signing source: ' + testSigningSource)
+}
+testSigningFile.parentFile.mkdirs()
+testSigningFile.bytes = Base64.decoder.decode(testSigningSource.text.replaceAll('\\s', ''))
 
 android {
     namespace 'ch.pfvr.internapp'
@@ -25,7 +35,7 @@ android {
 
     signingConfigs {
         testStable {
-            storeFile file('test-signing/pfvr-test.keystore')
+            storeFile testSigningFile
             storePassword 'pfvr-test-only'
             keyAlias 'pfvr-test'
             keyPassword 'pfvr-test-only'
