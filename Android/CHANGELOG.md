@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.5
+- Gewünschte Personenliste der internen App-Ansicht wird dauerhaft im WebView-Origin gespeichert und nach App-Neustart über den echten Website-Select schrittweise wiederhergestellt.
+- Zusätzliche Personen können lokal aus der eigenen Übersicht entfernt werden; die Standard-/eigene Person bleibt geschützt. Das verändert keine serverseitigen An-/Abmeldedaten.
+- Teilnehmername steht zusätzlich in jeder Statuszelle. Lange Namen werden auf maximal zwei Zeilen begrenzt und moderat verkleinert; die gedeckelte Spaltenbreite für mindestens zwei sichtbare Personen bleibt bestehen.
+- Gemeinsames horizontales Scrollen der festen Personenspalten bleibt erhalten.
+
 ## 0.10.4
 - Interne Terminansicht als gemeinsam horizontal scrollende Matrix: Termine/Kochinfo links, jede Person als feste Spalte über alle Tage. Mindestens zwei Personenspalten sind gleichzeitig sichtbar.
 - `+ / − Person` zeigt neben dem Hinzufügen auch vorhandene originale Website-Aktionen aus der Personen-Spalte; vorhandene Entfernen-Aktionen werden dadurch wieder erreichbar.

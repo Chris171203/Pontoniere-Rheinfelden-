@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.4`.
+Aktuelle Android-Testversion: `0.10.5`.
 
 ## Entwicklung
 
@@ -16,8 +16,11 @@ Aktuelle Android-Testversion: `0.10.4`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.4
+## Gerätetest 0.10.5
 
+- Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.
+- Unter `+ / − Person` eine Zusatzperson lokal entfernen: sie muss sofort aus der Matrix verschwinden und nach Neustart entfernt bleiben; die Standardperson darf nicht entfernbar sein.
+- Auch weit unten in der Terminliste muss in jeder Personenzelle der Name sichtbar sein; lange Namen dürfen höchstens zwei Zeilen belegen und die Personenspalte nicht verbreitern.
 - Die interne App-Ansicht ist eine gemeinsame Matrix: Termine/Kochinfo links, jede Person als feste Spalte rechts über alle Tage hinweg.
 - Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
 - Nach einer Statusauswahl muss sich die Farbe des echten Buttons/Selects passend aktualisieren: grün `Mit Essen`, gelb `Ohne Essen`, rot `Komme nicht`, grau `Nicht gewählt`.
@@ -33,7 +36,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.4 verwendet `versionCode 28` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.5 verwendet `versionCode 29` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 

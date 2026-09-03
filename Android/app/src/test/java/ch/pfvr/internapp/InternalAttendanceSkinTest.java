@@ -77,16 +77,38 @@ public class InternalAttendanceSkinTest {
         assertFalse(script.contains("window.location.reload"));
     }
 
-    @Test public void generatedScriptShowsTwoParticipantsAndReusesPersonManagementActions(){
+    @Test public void generatedScriptKeepsTwoParticipantsAndUsesLocalViewManagement(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
         assertTrue(script.contains("--pfvr-day-col:84px;--pfvr-person-col:102px"));
-        assertTrue(script.contains("personManagementControls"));
-        assertTrue(script.contains("appendExistingPeople"));
-        assertTrue(script.contains("pfvr-managed-person"));
-        assertTrue(script.contains("looksLikeRemoveAction"));
-        assertTrue(script.contains("actionBox.appendChild(control)"));
-        assertFalse(script.contains("document.createElement('button').textContent='Entfernen'"));
+        assertTrue(script.contains("pfvr-attendance-people-v1"));
+        assertTrue(script.contains("pfvr-local-remove"));
+        assertTrue(script.contains("removeDesiredPerson"));
+        assertTrue(script.contains("savePeopleState"));
+        assertTrue(script.contains("loadPeopleState"));
+        assertTrue(script.contains("state.primary"));
+        assertFalse(script.contains("personManagementControls"));
+        assertFalse(script.contains("looksLikeRemoveAction"));
+    }
+
+    @Test public void generatedScriptPersistsRestoresRemovesAndLabelsParticipants(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("pfvr-attendance-people-v1"));
+        assertTrue(script.contains("localStorage.setItem(PEOPLE_KEY"));
+        assertTrue(script.contains("loadPeopleState"));
+        assertTrue(script.contains("tryRestoreMissingPerson"));
+        assertTrue(script.contains("dispatchEvent(new Event('change'"));
+        assertTrue(script.contains("removeDesiredPerson"));
+        assertTrue(script.contains("pfvr-local-remove"));
+        assertTrue(script.contains("data-pfvr-person"));
+        assertTrue(script.contains("state.primary"));
+        assertTrue(script.contains("pfvr-person-name-label"));
+        assertTrue(script.contains("fitPersonName(personLabel,names[rowIndex])"));
+        assertTrue(script.contains("-webkit-line-clamp:2"));
+        assertTrue(script.contains("clean.length>26"));
+        assertTrue(script.contains("clean.length>17"));
+        assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
+        assertFalse(script.contains("window.location.reload"));
     }
 
     @Test public void generatedScriptKeepsStatusRepairAndMobileViewport(){

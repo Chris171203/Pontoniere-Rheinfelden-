@@ -1,9 +1,11 @@
 # Status
 
-Stand: Testversion `0.10.4` · aktualisiert 2026-09-03.
+Stand: Testversion `0.10.5` · aktualisiert 2026-09-03.
 
 ## Implementiert / im Test
 
+- Die gewünschte Personenliste der internen App-Ansicht wird dauerhaft gespeichert. Fehlende Zusatzpersonen werden beim nächsten Laden über den originalen Website-Select wieder eingeblendet; zusätzliche Personen können lokal aus der Übersicht entfernt werden, ohne An-/Abmeldedaten auf dem Server zu löschen.
+- Teilnehmernamen stehen zusätzlich in jeder Statuszelle; lange Namen sind auf zwei Zeilen begrenzt und werden innerhalb der gedeckelten Personenspalte moderat verkleinert.
 - Die mobile interne Terminansicht verwendet eine gemeinsam horizontal scrollende Matrix: Termin-/Kochinfo bleibt links sticky, jede Person ist über alle Tage dieselbe feste Spalte und mindestens zwei Personenspalten sind gleichzeitig sichtbar. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.
 - Die Statusfarbe in der mobilen An-/Abmeldeansicht folgt dem aktuell ausgewählten Original-Control (Button oder Select) und wird nach Änderungen ohne zusätzlichen Seiten-Reload neu berechnet.
 - Formulierungen wie `Ich komme, mit Essen` / `Ich komme, ohne Essen` werden zusätzlich zur kurzen Form erkannt. Bei Selects wird die tatsächlich ausgewählte Option ausgewertet.
