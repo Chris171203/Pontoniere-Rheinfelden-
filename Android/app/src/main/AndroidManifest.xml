@@ -3,6 +3,32 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
+        <package android:name="com.ubs.swidKXJ.android" />
+        <package android:name="ch.postfinance.android" />
+        <package android:name="ch.raiffeisen.android" />
+        <package android:name="ch.raiffeisen.kep" />
+        <package android:name="ch.zkb.slv.mobile.client.android" />
+        <package android:name="ch.migrosbank.android" />
+        <package android:name="com.neonbanking.app" />
+        <package android:name="com.revolut.revolut" />
+        <package android:name="com.yuh" />
+        <package android:name="ch.cler.digital.banking.android" />
+        <package android:name="ch.bankcler.zak" />
+        <package android:name="ch.bcv.mobile.android" />
+        <package android:name="ch.bekb.BEKBApp" />
+        <package android:name="ch.bkb.digital.banking.android" />
+        <package android:name="ch.blkb.mobile.android" />
+        <package android:name="ch.akb.mobile.android" />
+        <package android:name="ch.sgkb.androidapp" />
+        <package android:name="ch.lukb.app" />
+        <package android:name="ch.tkb.androidapp" />
+        <package android:name="com.gkb.mobilebanking.production.release" />
+        <package android:name="com.zgkb.map4.android" />
+        <package android:name="com.zgkb.android.mbanking" />
+        <package android:name="com.valiant.mobilebanking.release" />
+        <package android:name="com.swissquote.android" />
+        <package android:name="com.alpian.alpian" />
+        <package android:name="com.radicant.bank" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

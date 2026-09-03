@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.9.4`.
+Aktuelle Android-Testversion: `0.9.5`.
 
 ## Entwicklung
 
@@ -16,6 +16,6 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test`. Dauerhafte Updates benötigen für dieselbe Paket-ID immer denselben geschützten Signierschlüssel.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und ab 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. Dieser Schlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
 Bis zum offiziellen Release werden `0.x.y`-Versionen verwendet. `1.0.0` ist für den ersten offiziellen Release reserviert.

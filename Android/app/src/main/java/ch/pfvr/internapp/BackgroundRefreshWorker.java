@@ -46,6 +46,7 @@ public final class BackgroundRefreshWorker extends Worker {
             if (stale(prefs, station.historyUpdatedKey(), 60L * 60L * 1000L)) refreshHydroHistory(prefs, station, now);
         }
         if (stale(prefs, PREF_WEATHER_UPDATED, 60L * 60L * 1000L)) refreshWeather(prefs, now);
+        if (stale(prefs, NewsRepository.PREF_UPDATED, 2L * 60L * 60L * 1000L)) refreshNews(prefs, now);
         if (stale(prefs, PREF_ICS_UPDATED, 4L * 60L * 60L * 1000L)) refreshCalendar(prefs, now);
 
         // Individual source failures preserve the previous successful cache.
@@ -63,6 +64,14 @@ public final class BackgroundRefreshWorker extends Worker {
             if (!raw.contains("BEGIN:VCALENDAR") || !raw.contains("BEGIN:VEVENT")) return;
             prefs.edit().putString(PREF_ICS_CACHE, raw).putLong(PREF_ICS_UPDATED, now).apply();
         } catch (Exception ignored) {}
+    }
+
+    private void refreshNews(SharedPreferences prefs, long now) {
+        try {
+            String raw=NewsRepository.fetchRaw();
+            if(NewsRepository.parse(raw).isEmpty())return;
+            prefs.edit().putString(NewsRepository.PREF_CACHE,raw).putLong(NewsRepository.PREF_UPDATED,now).apply();
+        } catch(Exception ignored) {}
     }
 
     private void refreshWeather(SharedPreferences prefs, long now) {

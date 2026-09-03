@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
@@ -133,6 +134,35 @@ public class MainActivity extends Activity {
     private static final String TWINT_QR_PDF = "https://www.pfvr.ch/wp-content/uploads/Seiten/vereinsbeiz_zahlung/Twint_QR.pdf";
     private static final String TWINT_DIRECT_URL = "https://www.pfvr.ch/vereinsbeiz-zahlung/";
 
+    private static final Map<String,String> KNOWN_BANK_APPS = Map.ofEntries(
+            Map.entry("com.ubs.swidKXJ.android","UBS"),
+            Map.entry("ch.postfinance.android","PostFinance"),
+            Map.entry("ch.raiffeisen.android","Raiffeisen E-Banking"),
+            Map.entry("ch.raiffeisen.kep","Raiffeisen"),
+            Map.entry("ch.zkb.slv.mobile.client.android","ZKB Mobile Banking"),
+            Map.entry("ch.migrosbank.android","Migros Bank"),
+            Map.entry("com.neonbanking.app","neon"),
+            Map.entry("com.revolut.revolut","Revolut"),
+            Map.entry("com.yuh","Yuh"),
+            Map.entry("ch.cler.digital.banking.android","Bank Cler"),
+            Map.entry("ch.bankcler.zak","Zak"),
+            Map.entry("ch.bcv.mobile.android","BCV"),
+            Map.entry("ch.bekb.BEKBApp","BEKB"),
+            Map.entry("ch.bkb.digital.banking.android","BKB"),
+            Map.entry("ch.blkb.mobile.android","BLKB"),
+            Map.entry("ch.akb.mobile.android","AKB"),
+            Map.entry("ch.sgkb.androidapp","SGKB"),
+            Map.entry("ch.lukb.app","LUKB"),
+            Map.entry("ch.tkb.androidapp","TKB"),
+            Map.entry("com.gkb.mobilebanking.production.release","GKB"),
+            Map.entry("com.zgkb.map4.android","ZugerKB"),
+            Map.entry("com.zgkb.android.mbanking","ZugerKB Mobile Banking"),
+            Map.entry("com.valiant.mobilebanking.release","Valiant"),
+            Map.entry("com.swissquote.android","Swissquote"),
+            Map.entry("com.alpian.alpian","Alpian"),
+            Map.entry("com.radicant.bank","radicant")
+    );
+
     private static final int NAVY = Color.rgb(12,45,72);
     private static final int WATER = Color.rgb(43,142,166);
     private static final int SURFACE = Color.rgb(244,247,249);
@@ -148,7 +178,7 @@ public class MainActivity extends Activity {
     private static final int STATUS_WARN = Color.rgb(242,201,76);
     private static final int STATUS_ALARM = Color.rgb(200,55,55);
 
-    private enum Screen { HOME, EVENTS, CASH, CLUB, SETTINGS, INTERNAL }
+    private enum Screen { HOME, EVENTS, CASH, CLUB, NEWS, SETTINGS, INTERNAL }
 
     private enum SettingsTab {
         GENERAL("Allgemein"),
@@ -205,6 +235,9 @@ public class MainActivity extends Activity {
     private List<Event> events = new ArrayList<>();
     private long eventsUpdated = 0L;
     private volatile boolean eventsLoading = false;
+    private List<NewsRepository.Article> news = new ArrayList<>();
+    private long newsUpdated = 0L;
+    private volatile boolean newsLoading = false;
     private Bitmap pendingQrBitmap;
     private final Map<String,Integer> cashCart = new LinkedHashMap<>();
     private final Map<String,TextView> cashQuantityViews = new HashMap<>();
@@ -218,7 +251,7 @@ public class MainActivity extends Activity {
     private ScrollView homeScroll;
     private LinearLayout homeLiveStack;
     private Handler dataRefreshHandler;
-    private final Runnable dataRefreshTick = new Runnable(){@Override public void run(){refreshLive(false);if(eventsUpdated<=0L||System.currentTimeMillis()-eventsUpdated>=60L*60L*1000L)refreshEvents(false,null);if(dataRefreshHandler!=null)dataRefreshHandler.postDelayed(this,5L*60L*1000L);}};
+    private final Runnable dataRefreshTick = new Runnable(){@Override public void run(){refreshLive(false);if(eventsUpdated<=0L||System.currentTimeMillis()-eventsUpdated>=60L*60L*1000L)refreshEvents(false,null);if(newsUpdated<=0L||System.currentTimeMillis()-newsUpdated>=60L*60L*1000L)refreshNews(false);if(dataRefreshHandler!=null)dataRefreshHandler.postDelayed(this,5L*60L*1000L);}};
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -227,6 +260,7 @@ public class MainActivity extends Activity {
         scheduleBackgroundRefresh();
         darkMode = resolveDarkMode();
         loadCachedEvents();
+        loadCachedNews();
         applyWindowTheme();
         setContentView(buildShell());
         navigate(Screen.HOME);
@@ -234,6 +268,7 @@ public class MainActivity extends Activity {
             if (current == Screen.HOME) rebuildHomePreservingScroll();
             else if (current == Screen.EVENTS) navigate(Screen.EVENTS);
         });
+        refreshNews(false);
         refreshLive(false);
     }
 
@@ -241,9 +276,12 @@ public class MainActivity extends Activity {
         super.onResume();
         if(prefs!=null){
             loadCachedEvents();
+            loadCachedNews();
+            refreshNews(false);
             refreshLive(false);
             if(current==Screen.HOME)rebuildHomePreservingScroll();
             else if(current==Screen.EVENTS)navigate(Screen.EVENTS);
+            else if(current==Screen.NEWS)navigate(Screen.NEWS);
         }
         if(dataRefreshHandler!=null){dataRefreshHandler.removeCallbacks(dataRefreshTick);dataRefreshHandler.postDelayed(dataRefreshTick,5L*60L*1000L);}
     }
@@ -350,6 +388,7 @@ public class MainActivity extends Activity {
             case EVENTS: headerSubtitle.setText("Jahresprogramm"); content.addView(eventScreen()); break;
             case CASH: headerSubtitle.setText("Vereinsbeiz bezahlen"); content.addView(cash()); break;
             case CLUB: headerSubtitle.setText("Verein & Kontakt"); content.addView(club()); break;
+            case NEWS: headerSubtitle.setText("Vereinsnews"); content.addView(newsScreen()); break;
             case SETTINGS: headerSubtitle.setText("Einstellungen"); content.addView(settings()); break;
             case INTERNAL: headerSubtitle.setText("Interner Bereich"); content.addView(internal()); break;
         }
@@ -386,6 +425,17 @@ public class MainActivity extends Activity {
             for(int i=0;i<Math.min(3,events.size());i++) b.addView(eventCard(events.get(i),true));
         }
         TextView all=link("Alle Termine anzeigen  →"); all.setOnClickListener(v->navigate(Screen.EVENTS)); b.addView(all);
+
+        section(b,"Aktuell vom Verein","News von pfvr.ch · "+newsStatus());
+        if(news.isEmpty()){
+            LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);
+            c.addView(new ProgressBar(this),new LinearLayout.LayoutParams(dp(34),dp(34)));
+            TextView t=txt(newsLoading?"News werden geladen …":"Noch kein gespeicherter News-Stand.",14,MUTED,false);t.setPadding(dp(12),0,0,0);c.addView(t);
+            b.addView(c,margin(-1,-2,0,0,0,10));
+        }else{
+            for(int i=0;i<Math.min(3,news.size());i++)b.addView(newsCard(news.get(i),true));
+        }
+        TextView allNews=link("Alle News anzeigen  →");allNews.setOnClickListener(v->navigate(Screen.NEWS));b.addView(allNews);
 
         return scroll;
     }
@@ -1407,6 +1457,7 @@ public class MainActivity extends Activity {
         stack.setOrientation(LinearLayout.VERTICAL);
         LinearLayout first=new LinearLayout(this);
         addFreshnessTile(first,"Kalender",prefs.getLong(PREF_ICS_UPDATED,0L),4L*60L*60L*1000L);
+        addFreshnessTile(first,"News",prefs.getLong(NewsRepository.PREF_UPDATED,0L),2L*60L*60L*1000L);
         addFreshnessTile(first,"Wetter",prefs.getLong(PREF_WEATHER_UPDATED,0L),90L*60L*1000L);
         stack.addView(first,new LinearLayout.LayoutParams(-1,-2));
         LinearLayout second=new LinearLayout(this);
@@ -1466,12 +1517,12 @@ public class MainActivity extends Activity {
     private int themeText(int c){if(!darkMode)return c;if(c==TEXT)return DARK_TEXT;if(c==MUTED||c==Color.rgb(65,82,96)||c==Color.rgb(126,140,150))return DARK_MUTED;if(c==NAVY)return Color.rgb(105,193,218);if(c==WATER)return Color.rgb(91,190,213);return c;}
     private int themeBg(int c){if(!darkMode)return c;if(c==SURFACE)return DARK_SURFACE;if(c==Color.WHITE)return DARK_CARD;if(c==Color.rgb(232,240,244)||c==Color.rgb(238,243,246)||c==Color.rgb(231,242,246)||c==Color.rgb(236,243,247))return DARK_SOFT;return c;}
     private void clearDataCache(){
-        SharedPreferences.Editor editor=prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED);
+        SharedPreferences.Editor editor=prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(NewsRepository.PREF_CACHE).remove(NewsRepository.PREF_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED);
         for(HydroStation station:HydroStation.values())editor.remove(station.liveCacheKey()).remove(station.liveUpdatedKey()).remove(station.fineCacheKey()).remove(station.fineUpdatedKey()).remove(station.historyCacheKey()).remove(station.historyUpdatedKey());
         editor.apply();
-        events=new ArrayList<>();eventsUpdated=0L;
+        events=new ArrayList<>();eventsUpdated=0L;news=new ArrayList<>();newsUpdated=0L;
         Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();
-        refreshEvents(false,()->{});refreshLive(true);
+        refreshEvents(false,()->{});refreshNews(false);refreshLive(true);
     }
 
     private void editRiverThresholds(HydroStation station){
@@ -1490,6 +1541,67 @@ public class MainActivity extends Activity {
         }).setNegativeButton("Abbrechen",null).show();
     }
     private EditText thresholdInput(String hint,float value){EditText e=new EditText(this);e.setHint(hint);e.setText(String.format(Locale.US,"%.0f",value));e.setSingleLine(true);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setTextColor(themeText(TEXT));e.setHintTextColor(themeText(MUTED));e.setBackground(round(Color.rgb(238,243,246),12));e.setPadding(dp(12),0,dp(12),0);return e;}
+
+    private void loadCachedNews(){
+        newsUpdated=prefs.getLong(NewsRepository.PREF_UPDATED,0L);
+        try{news=NewsRepository.parse(prefs.getString(NewsRepository.PREF_CACHE,""));}
+        catch(Exception ignored){news=new ArrayList<>();newsUpdated=0L;prefs.edit().remove(NewsRepository.PREF_CACHE).remove(NewsRepository.PREF_UPDATED).apply();}
+    }
+
+    private String newsStatus(){
+        if(newsUpdated<=0L)return newsLoading?"Abruf läuft":"noch kein Stand";
+        ZonedDateTime time=java.time.Instant.ofEpochMilli(newsUpdated).atZone(ZoneId.of("Europe/Zurich"));
+        if(time.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich"))))return "Stand "+time.format(DateTimeFormatter.ofPattern("HH:mm"));
+        return "Stand "+time.format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"));
+    }
+
+    private String newsDate(NewsRepository.Article article){
+        if(article.publishedAt<=0L)return "PFVR";
+        return java.time.Instant.ofEpochMilli(article.publishedAt).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM.yyyy",Locale.GERMAN));
+    }
+
+    private View newsCard(NewsRepository.Article article,boolean compact){
+        LinearLayout c=card();c.setOrientation(LinearLayout.VERTICAL);c.setLayoutParams(margin(-1,-2,0,0,0,9));
+        c.addView(txt(newsDate(article),11,WATER,true));
+        TextView title=txt(article.title,compact?15:17,TEXT,true);title.setPadding(0,dp(4),0,dp(4));c.addView(title);
+        if(article.excerpt!=null&&!article.excerpt.isBlank()){
+            TextView excerpt=txt(article.excerpt,compact?12:13,MUTED,false);excerpt.setMaxLines(compact?3:6);c.addView(excerpt);
+        }
+        TextView open=txt("Artikel öffnen  →",12,WATER,true);open.setGravity(Gravity.END);open.setPadding(0,dp(8),0,0);c.addView(open);
+        c.setOnClickListener(v->openNewsArticle(article));
+        return c;
+    }
+
+    private void openNewsArticle(NewsRepository.Article article){navigate(Screen.NEWS);openInApp(article.link,"Vereinsnews");}
+
+    private View newsScreen(){
+        ScrollView scroll=new ScrollView(this);LinearLayout body=body();scroll.addView(body);
+        LinearLayout intro=card();intro.setOrientation(LinearLayout.VERTICAL);body.addView(intro,margin(-1,-2,0,4,0,16));
+        intro.addView(txt("Vereinsnews",23,TEXT,true));
+        TextView source=txt("Direkt aus dem öffentlichen PFVR-WordPress-Feed · lokal gespeichert.",13,MUTED,false);source.setPadding(0,dp(5),0,dp(3));intro.addView(source);
+        intro.addView(txt(newsStatus(),11,newsUpdated>0?WATER:MUTED,false));
+        Button reload=btn(newsLoading?"Aktualisierung läuft …":"News aktualisieren",NAVY,Color.WHITE);reload.setEnabled(!newsLoading);reload.setOnClickListener(v->refreshNews(true));
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(44));rp.setMargins(0,dp(11),0,0);intro.addView(reload,rp);
+        if(news.isEmpty()){
+            TextView empty=txt(newsLoading?"News werden geladen …":"Noch keine Vereinsnews im lokalen Cache.",13,MUTED,false);empty.setGravity(Gravity.CENTER);empty.setPadding(0,dp(18),0,0);body.addView(empty);
+        }else for(NewsRepository.Article article:news)body.addView(newsCard(article,false));
+        TextView archive=link("Original-Newsarchiv auf pfvr.ch  ↗");archive.setOnClickListener(v->external(NEWS));body.addView(archive);
+        return scroll;
+    }
+
+    private void refreshNews(boolean toast){
+        long age=System.currentTimeMillis()-newsUpdated;
+        if(newsLoading)return;
+        if(!toast&&newsUpdated>0L&&!news.isEmpty()&&age<60L*60L*1000L)return;
+        newsLoading=true;
+        new Thread(()->{
+            try{
+                String raw=NewsRepository.fetchRaw();List<NewsRepository.Article> parsed=NewsRepository.parse(raw);if(parsed.isEmpty())throw new Exception("Keine News");
+                long updated=System.currentTimeMillis();prefs.edit().putString(NewsRepository.PREF_CACHE,raw).putLong(NewsRepository.PREF_UPDATED,updated).apply();
+                runOnUiThread(()->{news=parsed;newsUpdated=updated;newsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" News aktualisiert",Toast.LENGTH_SHORT).show();if(current==Screen.HOME)rebuildHomePreservingScroll();else if(current==Screen.NEWS)navigate(Screen.NEWS);});
+            }catch(Exception ignored){runOnUiThread(()->{newsLoading=false;if(toast)Toast.makeText(this,news.isEmpty()?"News konnten gerade nicht geladen werden.":"Keine Verbindung – gespeicherte News bleiben sichtbar.",Toast.LENGTH_LONG).show();if(current==Screen.NEWS)navigate(Screen.NEWS);});}
+        }).start();
+    }
 
     private View eventScreen() {
         ScrollView scroll=new ScrollView(this);
@@ -2123,6 +2235,16 @@ public class MainActivity extends Activity {
         Map<String,AppChoice> byPackage=new LinkedHashMap<>();
         Set<String> directPackages=new LinkedHashSet<>();
 
+        for(Map.Entry<String,String> known:KNOWN_BANK_APPS.entrySet()){
+            try{
+                ApplicationInfo info=packageManager.getApplicationInfo(known.getKey(),0);if(!info.enabled)continue;
+                String label=String.valueOf(packageManager.getApplicationLabel(info)).trim();if(label.isEmpty())label=known.getValue();
+                Intent directIntent=new Intent(Intent.ACTION_SEND);directIntent.setType("image/png");directIntent.setPackage(known.getKey());
+                boolean directShare=directIntent.resolveActivity(packageManager)!=null;if(directShare)directPackages.add(known.getKey());
+                byPackage.put(known.getKey(),new AppChoice(label,known.getKey(),directShare));
+            }catch(PackageManager.NameNotFoundException ignored){}
+        }
+
         Intent shareIntent=new Intent(Intent.ACTION_SEND);
         shareIntent.setType("image/png");
         for(ResolveInfo resolveInfo:packageManager.queryIntentActivities(shareIntent,PackageManager.MATCH_DEFAULT_ONLY)){
@@ -2228,6 +2350,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean looksLikeBankingApp(String value){
+        if(value==null||value.contains("twint"))return false;
         return value.matches(".*(ubs|postfinance|raiffeisen|zkb|kantonal|bank|banque|banca|neon|yuh|revolut|swissquote|cler|zak|migros|credit suisse|csx|bcv|bcf|bcge|bcj|bcju|bcn|bcne|bcvs|bekb|bkb|blkb|akb|sgkb|gkb|glkb|lukb|nkb|owkb|shkb|szkb|tgkb|tkb|urkb|zuger|alpian|radicant|willbe|cembra|valiant|hypothekar|acrevis|clientis|obwaldner|nidwaldner|schaffhauser|thurgauer|graub.ndner).*");
     }
 
@@ -2269,7 +2392,7 @@ public class MainActivity extends Activity {
         section(b,"Aktuell & Organisation",null);
         b.addView(action("Vorstand","Ansprechpersonen und Funktionen","Öffnen",v->openInApp(BOARD,"Vorstand")));
         b.addView(action("Jahresprogramm","Originalseite und Kalenderhinweise","Öffnen",v->openInApp(PROGRAM,"Jahresprogramm")));
-        b.addView(action("News-Archiv","Beiträge auf pfvr.ch","Öffnen",v->openInApp(NEWS,"News-Archiv")));
+        b.addView(action("Vereinsnews","Native Liste mit lokalem Cache","Öffnen",v->navigate(Screen.NEWS)));
 
         section(b,"Kontakt",null); b.addView(contact("Depot","Rheinweg 42\n4310 Rheinfelden","Route",v->openMap())); b.addView(contact("Telefon","076 209 18 96","Anrufen",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))))); b.addView(contact("E-Mail","info@pfvr.ch","Schreiben",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))))); b.addView(contact("Kontaktseite","pfvr.ch/kontakt","Öffnen",v->openInApp(CONTACT,"Kontakt"))); return scroll;
     }

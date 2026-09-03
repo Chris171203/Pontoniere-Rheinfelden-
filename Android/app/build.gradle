@@ -12,8 +12,8 @@ android {
         applicationId 'ch.pfvr.app'
         minSdk 26
         targetSdk 36
-        versionCode 18
-        versionName '0.9.4'
+        versionCode 19
+        versionName '0.9.5'
         manifestPlaceholders = [appLabel: 'PFVR Rheinfelden']
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -23,8 +23,14 @@ android {
         buildConfig true
     }
 
-    if (uploadKeystore) {
-        signingConfigs {
+    signingConfigs {
+        testStable {
+            storeFile file('test-signing/pfvr-test.keystore')
+            storePassword 'pfvr-test-only'
+            keyAlias 'pfvr-test'
+            keyPassword 'pfvr-test-only'
+        }
+        if (uploadKeystore) {
             release {
                 storeFile file(uploadKeystore)
                 storePassword System.getenv('ANDROID_UPLOAD_STORE_PASSWORD')
@@ -38,6 +44,7 @@ android {
         debug {
             applicationIdSuffix '.test'
             manifestPlaceholders = [appLabel: 'PFVR Rheinfelden Test']
+            signingConfig signingConfigs.testStable
         }
         release {
             minifyEnabled false

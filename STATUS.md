@@ -1,9 +1,13 @@
 # Status
 
-Stand: Testversion `0.9.4` · aktualisiert 2026-09-03.
+Stand: Testversion `0.9.5` · aktualisiert 2026-09-03.
 
 ## Implementiert / im Test
 
+- Native Vereinsnews werden über die öffentliche WordPress-REST-API geladen, lokal gecacht und auf Home sowie in einer nativen News-Liste angezeigt.
+- Die Banking-Erkennung enthält explizite Paket-Sichtbarkeit für verbreitete Schweizer Banken und Finanzapps, darunter neon und Revolut, plus generischen App-Fallback.
+- Bank-spezifische TWINT-Apps werden nicht mehr automatisch als Banking-App einsortiert; TWINT bleibt ein eigener Zahlungsweg.
+- `ch.pfvr.app.test` wird ab 0.9.5 mit einem festen öffentlichen Testschlüssel signiert, damit spätere Testversionen mit höherem `versionCode` überinstalliert werden können. Produktionssignierung bleibt separat.
 - Einstellungen sind in die Bereiche Allgemein, Rhein und Zahlung gegliedert.
 - Die bevorzugte Banking-App wird nur noch unter Einstellungen → Zahlung verwaltet. Die Auswahl speichert die App, startet sie aber nicht.
 - Ohne gewählte Banking-App zeigt die Kasse einen deutlichen Hinweis mit direktem Sprung zur passenden Einstellung; nach der Auswahl entfällt diese Zahlungsweg-Kachel und die Kasse beginnt direkt mit dem Warenkorb.
