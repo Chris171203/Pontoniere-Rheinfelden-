@@ -1984,13 +1984,13 @@ public class MainActivity extends Activity {
         BankingAppRegistry.Profile profile=selectedBankProfile();
         switch(profile.capability){
             case DIRECT_SHARE:
-                return "Direkte Swiss-QR-Übergabe an "+bank+" wird versucht. Falls die App den QR nicht übernimmt, folgen sichere Fallbacks.";
+                return "PFVR versucht immer zuerst die direkte Swiss-QR-Bildübergabe an "+bank+". Falls die App den QR nicht übernimmt, folgen sichere Fallbacks.";
             case FILE_IMPORT:
-                return bank+" unterstützt QR-Rechnungen als Datei. Wenn Android keinen direkten Import anbietet, QR speichern und in der Banking-App hochladen.";
+                return "PFVR versucht zuerst die direkte QR-Bildübergabe an "+bank+". Falls Android sie nicht anbietet, kann die QR-Datei gespeichert und in der Banking-App importiert werden.";
             case SCAN_ONLY:
-                return "Für "+bank+" ist kein verlässlicher Dateiimport bekannt. PFVR öffnet die App und kopiert die Zahlungsdaten für die manuelle Übernahme.";
+                return "PFVR versucht auch bei "+bank+" zuerst die direkte QR-Bildübergabe. Erst wenn die App kein Bild annimmt, wird sie geöffnet und die Zahlungsdaten werden kopiert.";
             default:
-                return "PFVR prüft "+bank+" auf Bild-, Datei- und Textübergabe. Falls nichts davon angeboten wird, öffnet PFVR die App und kopiert die Zahlungsdaten.";
+                return "PFVR versucht bei "+bank+" immer zuerst die QR-Bildübergabe und prüft danach weitere Datei- und Textwege. Erst zuletzt wird die App mit kopierten Zahlungsdaten geöffnet.";
         }
     }
 
@@ -2099,15 +2099,17 @@ public class MainActivity extends Activity {
             if(!preferred.isBlank()){
                 BankingAppRegistry.Profile profile=BankingAppRegistry.profile(preferred,selectedBankLabel(),supportsImageShare(preferred));
 
-                if(profile.capability==BankingAppRegistry.Capability.SCAN_ONLY){
-                    launchPreferredBankWithCopiedData(preferred,paymentText,"Kein direkter QR-Dateiimport bekannt – Zahlungsdaten wurden kopiert.");
-                    return;
-                }
-
+                // Share-first: jede Banking-App bekommt dieselben QR-Bildversuche. Die statische
+                // Capability steuert ausschließlich den Fallback, niemals ob Share versucht wird.
                 if(tryQrImageHandoff(preferred,uri,paymentText))return;
 
                 if(profile.capability==BankingAppRegistry.Capability.FILE_IMPORT){
                     showBankFileImportFallback(qr,value,paymentText,preferred);
+                    return;
+                }
+
+                if(profile.capability==BankingAppRegistry.Capability.SCAN_ONLY){
+                    launchPreferredBankWithCopiedData(preferred,paymentText,"QR-Bildübergabe wurde von dieser App nicht angeboten – Banking-App geöffnet und Zahlungsdaten kopiert.");
                     return;
                 }
 
@@ -2204,7 +2206,7 @@ public class MainActivity extends Activity {
         image.setAdjustViewBounds(true);
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         box.addView(image,new LinearLayout.LayoutParams(-1,dp(270)));
-        TextView info=txt(selectedBankLabel()+" unterstützt QR-Rechnungen als Datei, bietet auf diesem Gerät aber keinen direkten Android-Bildimport an. QR speichern und anschließend in der Banking-App hochladen.",13,MUTED,false);
+        TextView info=txt("Die direkte QR-Bildübergabe an "+selectedBankLabel()+" wurde versucht, aber von der installierten App-Version nicht angeboten. QR speichern und anschließend in der Banking-App hochladen.",13,MUTED,false);
         info.setPadding(0,dp(8),0,0);
         box.addView(info);
         new AlertDialog.Builder(this,dialogTheme())
