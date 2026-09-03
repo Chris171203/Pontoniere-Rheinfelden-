@@ -33,5 +33,7 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("setTimeout(formatText,900)"));
         assertTrue(script.contains("MutationObserver"));
         assertTrue(script.contains("observer.observe(document.body"));
+        assertTrue(script.contains("overflow-wrap:anywhere"));
+        assertTrue(script.contains("td *,th *{white-space:normal"));
     }
 }
