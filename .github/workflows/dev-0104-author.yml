@@ -1,0 +1,225 @@
+name: PFVR 0.10.4 compact participant management
+
+on:
+  push:
+    branches: [dev-0.10.4-author]
+
+permissions:
+  contents: write
+
+jobs:
+  author-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply compact participant management
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          skin = Path('Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java')
+          test = Path('Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java')
+          gradle = Path('Android/app/build.gradle')
+          changelog = Path('Android/CHANGELOG.md')
+          status = Path('STATUS.md')
+          readme = Path('Android/README.md')
+
+          source = skin.read_text(encoding='utf-8')
+
+          replacements = {
+              ".pfvr-attendance-mobile{display:flex!important;flex-direction:column!important;gap:12px!important;": ".pfvr-attendance-mobile{display:flex!important;flex-direction:column!important;gap:8px!important;",
+              ".pfvr-person-tools{display:flex!important;flex-direction:column!important;gap:8px!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:12px!important;": ".pfvr-person-tools{display:flex!important;flex-direction:column!important;gap:6px!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:14px!important;padding:10px!important;",
+              ".pfvr-person-tools-body{display:none!important;flex-direction:column!important;gap:8px!important;": ".pfvr-person-tools-body{display:none!important;flex-direction:column!important;gap:6px!important;",
+              ".pfvr-day-section{display:grid!important;grid-template-columns:minmax(140px,42%) minmax(0,1fr)!important;gap:9px!important;": ".pfvr-day-section{display:grid!important;grid-template-columns:minmax(108px,32%) minmax(0,1fr)!important;gap:6px!important;",
+              ".pfvr-day-meta{min-width:0!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:12px!important;": ".pfvr-day-meta{min-width:0!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;padding:9px!important;font-size:13px!important;",
+              ".pfvr-day-people{display:flex!important;gap:8px!important;": ".pfvr-day-people{display:flex!important;gap:6px!important;",
+              ".pfvr-person-card{flex:0 0 clamp(148px,48vw,190px)!important;min-width:0!important;min-height:100%!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:16px!important;padding:11px!important;box-sizing:border-box!important;scroll-snap-align:start!important;display:flex!important;flex-direction:column!important;gap:9px!important;": ".pfvr-person-card{flex:0 0 calc((100% - 6px)/2)!important;min-width:0!important;min-height:100%!important;background:${COLORS.card}!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;padding:8px!important;box-sizing:border-box!important;scroll-snap-align:start!important;display:flex!important;flex-direction:column!important;gap:6px!important;",
+              ".pfvr-person-name{font-size:14px!important;": ".pfvr-person-name{font-size:13px!important;",
+              ".pfvr-person-control{display:flex!important;flex-direction:column!important;gap:7px!important;": ".pfvr-person-control{display:flex!important;flex-direction:column!important;gap:4px!important;",
+              ".pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;}": ".pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:38px!important;padding:6px 7px!important;font-size:12px!important;border-radius:9px!important;}",
+              ".pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:6px 9px!important;margin:0 0 7px!important;": ".pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:5px 7px!important;margin:0 0 5px!important;font-size:12px!important;",
+              "@media(max-width:320px){.pfvr-day-section{grid-template-columns:minmax(125px,42%) minmax(0,1fr)!important;}.pfvr-person-card{flex-basis:145px!important;}.pfvr-day-meta{padding:10px!important;}}": "@media(max-width:340px){.pfvr-day-section{grid-template-columns:100px minmax(0,1fr)!important;}.pfvr-day-meta{padding:8px!important;font-size:12px!important;}.pfvr-person-card{padding:7px!important;}.pfvr-person-name{font-size:12px!important;}.pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{font-size:11px!important;padding:5px!important;}}",
+          }
+          for old, new in replacements.items():
+              if old not in source:
+                  raise SystemExit('missing CSS marker: ' + old[:80])
+              source = source.replace(old, new, 1)
+
+          marker = "                  .pfvr-person-tools-body select{width:100%!important;max-width:100%!important;}\n"
+          management_css = marker + """                  .pfvr-managed-people{display:flex!important;flex-direction:column!important;gap:4px!important;border-top:1px solid ${COLORS.border}!important;padding-top:7px!important;margin-top:2px!important;}\n                  .pfvr-managed-people-title{font-size:12px!important;font-weight:700!important;color:${COLORS.muted}!important;}\n                  .pfvr-managed-person{display:flex!important;align-items:center!important;gap:6px!important;min-width:0!important;padding:4px 0!important;}\n                  .pfvr-managed-person-name{flex:1 1 auto!important;min-width:0!important;font-size:13px!important;font-weight:600!important;overflow-wrap:break-word!important;}\n                  .pfvr-managed-person-actions{display:flex!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;}\n                  .pfvr-managed-person-actions button,.pfvr-managed-person-actions input[type=submit],.pfvr-managed-person-actions input[type=button],.pfvr-managed-person-actions a{min-height:34px!important;min-width:34px!important;padding:5px 7px!important;font-size:12px!important;border-radius:9px!important;}\n                  .pfvr-managed-action-label{font-size:10px!important;color:${COLORS.muted}!important;}\n"""
+          if source.count(marker) != 1:
+              raise SystemExit('management css marker mismatch')
+          source = source.replace(marker, management_css, 1)
+
+          start = source.index("                  var findPersonTools=function(table){")
+          end = source.index("\n\n                  var saveViewState=function(){", start)
+          new_tools = r'''                  var personManagementControls=function(cell,name){
+                    if(!cell)return [];
+                    var normalizedName=norm(name);
+                    return Array.from(cell.querySelectorAll('button,input[type=submit],input[type=button],a')).filter(function(control){
+                      if(control.closest('.pfvr-person-control'))return false;
+                      var descriptor=norm((control.innerText||control.value||'')+' '+(control.getAttribute('title')||'')+' '+(control.getAttribute('aria-label')||'')+' '+(control.getAttribute('href')||''));
+                      if(descriptor.indexOf('alle anzeigen')>=0)return false;
+                      if(normalizedName&&descriptor===normalizedName)return false;
+                      return !!(descriptor||control.querySelector('img,svg,i'));
+                    });
+                  };
+                  var looksLikeRemoveAction=function(control){
+                    var descriptor=norm((control.innerText||control.value||'')+' '+(control.getAttribute('title')||'')+' '+(control.getAttribute('aria-label')||'')+' '+(control.getAttribute('href')||'')+' '+(control.getAttribute('name')||''));
+                    return /entfern|löschen|loeschen|remove|delete|austrag|del[_-]?person|person[_-]?del/.test(descriptor);
+                  };
+                  var appendExistingPeople=function(body,participantRows,names){
+                    var list=element('div','pfvr-managed-people'),count=0;
+                    var title=element('div','pfvr-managed-people-title');title.textContent='Aktuelle Personen';list.appendChild(title);
+                    participantRows.forEach(function(row,index){
+                      var actions=personManagementControls(row.cells&&row.cells[0],names[index]);
+                      if(!actions.length)return;
+                      count++;
+                      var line=element('div','pfvr-managed-person');
+                      var name=element('div','pfvr-managed-person-name');name.textContent=names[index];line.appendChild(name);
+                      var actionBox=element('div','pfvr-managed-person-actions');
+                      actions.forEach(function(control){
+                        var remove=looksLikeRemoveAction(control);
+                        if(!control.getAttribute('aria-label'))control.setAttribute('aria-label',(remove?'Person entfernen: ':'Person verwalten: ')+names[index]);
+                        actionBox.appendChild(control);
+                        var label=element('span','pfvr-managed-action-label');label.textContent=remove?'Entfernen':'Aktion';actionBox.appendChild(label);
+                      });
+                      line.appendChild(actionBox);list.appendChild(line);
+                    });
+                    if(count)body.appendChild(list);
+                  };
+                  var findPersonTools=function(table,participantRows,names){
+                    var candidates=Array.from(document.querySelectorAll('label,p,span,div')).filter(function(el){var value=norm(text(el));return value.indexOf('person zur liste hinzuzufügen')===0&&value.length<120;});
+                    if(!candidates.length)return null;
+                    var anchor=candidates[0],scope=anchor.parentElement;
+                    for(var depth=0;scope&&depth<4;depth++,scope=scope.parentElement){
+                      if(scope===document.body)break;
+                      var select=scope.querySelector('select');
+                      if(!select)continue;
+                      var panel=element('div','pfvr-person-tools');
+                      var head=element('div','pfvr-person-tools-head');
+                      var title=element('div','pfvr-person-tools-title');title.textContent='Teilnehmende';
+                      var toggle=element('button','pfvr-person-tools-toggle');toggle.type='button';toggle.textContent='+ / − Person';
+                      head.appendChild(title);head.appendChild(toggle);panel.appendChild(head);
+                      var body=element('div','pfvr-person-tools-body');
+                      var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
+                      body.appendChild(select);
+                      var buttons=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return norm(control.innerText||control.value).indexOf('alle anzeigen')>=0;});
+                      buttons.forEach(function(control){body.appendChild(control);});
+                      appendExistingPeople(body,participantRows,names);
+                      panel.appendChild(body);
+                      toggle.addEventListener('click',function(){panel.classList.toggle('open');});
+                      anchor.style.display='none';
+                      return panel;
+                    }
+                    return null;
+                  };'''
+          source = source[:start] + new_tools + source[end:]
+
+          old_build = """                    var header=rows[0],mobile=element('div','pfvr-attendance-mobile');
+                    table.parentNode.insertBefore(mobile,table);
+                    var tools=findPersonTools(table);if(tools)mobile.appendChild(tools);
+                    var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
+                    var names=participantRows.map(function(row,index){var value=cleanPersonName(text(row.cells[0]));return value||('Person '+(index+1));});
+"""
+          new_build = """                    var header=rows[0],mobile=element('div','pfvr-attendance-mobile');
+                    table.parentNode.insertBefore(mobile,table);
+                    var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
+                    var names=participantRows.map(function(row,index){var value=cleanPersonName(text(row.cells[0]));return value||('Person '+(index+1));});
+                    var tools=findPersonTools(table,participantRows,names);if(tools)mobile.appendChild(tools);
+"""
+          if source.count(old_build) != 1:
+              raise SystemExit('build ordering marker mismatch')
+          source = source.replace(old_build, new_build, 1)
+          skin.write_text(source, encoding='utf-8')
+
+          test_source = test.read_text(encoding='utf-8')
+          test_source = test_source.replace('grid-template-columns:minmax(140px,42%)', 'grid-template-columns:minmax(108px,32%)')
+          test_source = test_source.replace('assertTrue(script.contains("+ Person"));', 'assertTrue(script.contains("+ / − Person"));')
+          marker_test = '    @Test public void generatedScriptKeepsStatusRepairAndMobileViewport(){\n'
+          insertion = '''    @Test public void generatedScriptShowsTwoParticipantsAndReusesPersonManagementActions(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("calc((100% - 6px)/2)"));
+        assertTrue(script.contains("personManagementControls"));
+        assertTrue(script.contains("appendExistingPeople"));
+        assertTrue(script.contains("pfvr-managed-person"));
+        assertTrue(script.contains("looksLikeRemoveAction"));
+        assertTrue(script.contains("actionBox.appendChild(control)"));
+        assertFalse(script.contains("document.createElement('button').textContent='Entfernen'"));
+    }
+
+'''
+          if insertion not in test_source:
+              if marker_test not in test_source:
+                  raise SystemExit('test marker missing')
+              test_source = test_source.replace(marker_test, insertion + marker_test, 1)
+          test.write_text(test_source, encoding='utf-8')
+
+          gradle_source = gradle.read_text(encoding='utf-8')
+          gradle_source = gradle_source.replace('versionCode 27', 'versionCode 28')
+          gradle_source = gradle_source.replace("versionName '0.10.3'", "versionName '0.10.4'")
+          if 'versionCode 28' not in gradle_source or "versionName '0.10.4'" not in gradle_source:
+              raise SystemExit('version bump failed')
+          gradle.write_text(gradle_source, encoding='utf-8')
+
+          change_source = changelog.read_text(encoding='utf-8')
+          if '## 0.10.4' not in change_source:
+              body = change_source.split('# Android Changelog\n',1)[1].lstrip()
+              change_source = '# Android Changelog\n\n## 0.10.4\n- Interne Terminansicht kompakter: Termin-Metadaten schmaler, Teilnehmerkarten so dimensioniert, dass mindestens zwei Personen gleichzeitig im rechten Bereich sichtbar sind.\n- `+ / − Person` zeigt neben dem Hinzufügen auch vorhandene originale Website-Aktionen aus der Personen-Spalte; vorhandene Entfernen-Aktionen werden dadurch wieder erreichbar.\n- Keine synthetische Löschfunktion: Entfernen wird nur angeboten, wenn die interne Website dafür selbst ein Control liefert.\n\n' + body
+          changelog.write_text(change_source, encoding='utf-8')
+
+          status_source = status.read_text(encoding='utf-8')
+          status_source = status_source.replace('Stand: Testversion `0.10.3`', 'Stand: Testversion `0.10.4`')
+          status_marker = '## Implementiert / im Test\n\n'
+          status_entry = '- Die mobile interne Terminansicht zeigt mindestens zwei kompakte Teilnehmerkarten gleichzeitig; Termin-Metadaten beanspruchen dafür weniger Breite. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.\n'
+          if status_entry not in status_source:
+              status_source = status_source.replace(status_marker, status_marker + status_entry, 1)
+          status.write_text(status_source, encoding='utf-8')
+
+          readme_source = readme.read_text(encoding='utf-8')
+          readme_source = readme_source.replace('Aktuelle Android-Testversion: `0.10.3`.', 'Aktuelle Android-Testversion: `0.10.4`.')
+          readme_source = readme_source.replace('0.10.3 verwendet `versionCode 27`', '0.10.4 verwendet `versionCode 28`')
+          readme.write_text(readme_source, encoding='utf-8')
+          PY
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Unit tests and APK
+        working-directory: Android
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+      - name: Verify package and stable signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=Android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='28' versionName='0.10.4'"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | grep -F '0521e6bc43e2868177609dea69d074ed14bb594bad28adee98293e586d3d46bf'
+      - name: Commit exact source to target branch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java \
+                  Android/app/build.gradle Android/CHANGELOG.md Android/README.md STATUS.md
+          git commit -m 'Compact participant cards and restore person management in 0.10.4'
+          git push origin HEAD:dev-0.10.4
+      - name: Remove temporary author branch
+        if: always()
+        shell: bash
+        run: git push origin --delete dev-0.10.4-author || true
