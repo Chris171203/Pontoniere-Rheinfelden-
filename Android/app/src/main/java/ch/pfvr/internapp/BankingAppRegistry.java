@@ -6,10 +6,10 @@ import java.util.Map;
 
 final class BankingAppRegistry {
     enum Capability {
-        DIRECT_SHARE("Direkte QR-Übergabe"),
-        FILE_IMPORT("QR-Datei importieren"),
-        SCAN_ONLY("Scanner / manuell"),
-        UNKNOWN("Kompatibilität prüfen");
+        DIRECT_SHARE("Direkte QR-Übergabe dokumentiert"),
+        FILE_IMPORT("QR-Datei als Fallback"),
+        SCAN_ONLY("Scanner als Fallback"),
+        UNKNOWN("Fallback automatisch prüfen");
 
         final String label;
         Capability(String label){this.label=label;}
@@ -44,15 +44,16 @@ final class BankingAppRegistry {
         add("ch.cler.digital.banking.android", "Bank Cler", Capability.DIRECT_SHARE, true);
         add("ch.bankcler.zak", "Zak", Capability.DIRECT_SHARE, true);
 
-        // Die App kann QR-Rechnungen als Datei/Bild importieren; direkter Android-Share ist nicht zugesichert.
+        // Die App kann QR-Rechnungen als Datei/Bild importieren. Share wird trotzdem immer zuerst versucht.
         add("com.neonbanking.app", "neon", Capability.FILE_IMPORT, true);
 
-        // Swiss QR wird unterstützt, aber öffentlich dokumentiert ist primär der Kamera-Scanner.
+        // Swiss QR bzw. QR-Scanner ist dokumentiert. Auch hier versucht PFVR immer zuerst die Bildübergabe;
+        // diese Einstufung beschreibt ausschließlich den Fallback, falls Android keinen Share anbietet.
         add("com.ubs.swidKXJ.android", "UBS", Capability.SCAN_ONLY, true);
         add("com.revolut.revolut", "Revolut", Capability.SCAN_ONLY, true);
         add("de.fiduciagad.banking.vr", "VR Banking", Capability.SCAN_ONLY, false);
 
-        // Gängige Schweizer Apps: erkennen und Runtime-Share prüfen; ohne positiven Nachweis konservativ UNKNOWN.
+        // Gängige Schweizer Apps: Share immer versuchen; Fallback ohne positiven Nachweis dynamisch bestimmen.
         add("ch.migrosbank.android", "Migros Bank", Capability.UNKNOWN, false);
         add("ch.bcv.mobile.android", "BCV", Capability.UNKNOWN, false);
         add("ch.bkb.digital.banking.android", "BKB", Capability.UNKNOWN, false);
@@ -81,7 +82,7 @@ final class BankingAppRegistry {
         String display=(label==null||label.isBlank())?(known==null?pkg:known.label):label;
         if(runtimeImageShare){
             // Ein tatsächlich registrierter Android-Bild-Share ist für den Geräte-Workflow aussagekräftiger
-            // als unsere statische Matrix. Ob die Bank den Swiss-QR fachlich übernimmt, bleibt App-Sache.
+            // als unsere statische Fallback-Matrix. Ob die Bank den Swiss-QR fachlich übernimmt, bleibt App-Sache.
             return new Profile(display,Capability.DIRECT_SHARE,known!=null&&known.documented);
         }
         if(known!=null)return new Profile(display,known.capability,known.documented);
