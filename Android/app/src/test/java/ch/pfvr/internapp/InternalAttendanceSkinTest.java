@@ -49,6 +49,20 @@ public class InternalAttendanceSkinTest {
         assertFalse(script.contains("option.value='Ohne Essen'"));
     }
 
+    @Test public void generatedScriptRestylesCurrentSelectionWithoutReload(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("statusForValue"));
+        assertTrue(script.contains("controlValue"));
+        assertTrue(script.contains("selectedIndex"));
+        assertTrue(script.contains(".btn,select"));
+        assertTrue(script.contains("refreshInteractiveSoon"));
+        assertTrue(script.contains("bindInteractiveObserver"));
+        assertTrue(script.contains("attributeFilter:['value','selected','class']"));
+        assertTrue(script.contains("indexOf('mit essen')"));
+        assertTrue(script.contains("indexOf('ohne essen')"));
+        assertFalse(script.contains("window.location.reload"));
+    }
+
     @Test public void generatedScriptDoesNotForceReloadAndPreservesScrollAcrossServerNavigation(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("sessionStorage.setItem"));
