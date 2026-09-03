@@ -3,6 +3,7 @@ package ch.pfvr.internapp;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -30,10 +31,20 @@ public class InternalAttendanceSkinTest {
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("pfvr-attendance-status"));
         assertTrue(script.contains("NodeFilter.SHOW_TEXT"));
-        assertTrue(script.contains("setTimeout(formatText,900)"));
+        assertTrue(script.contains("setTimeout(formatLayout,900)"));
         assertTrue(script.contains("MutationObserver"));
         assertTrue(script.contains("observer.observe(document.body"));
-        assertTrue(script.contains("overflow-wrap:anywhere"));
-        assertTrue(script.contains("td *,th *{white-space:normal"));
+    }
+
+    @Test public void generatedScriptKeepsAppointmentColumnsReadableAndScrollable(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("pfvr-table-scroll"));
+        assertTrue(script.contains("overflow-x:auto"));
+        assertTrue(script.contains("min-width:176px"));
+        assertTrue(script.contains("table-layout:fixed"));
+        assertTrue(script.contains("word-break:normal"));
+        assertTrue(script.contains("meta[name=viewport]"));
+        assertTrue(script.contains("width=device-width"));
+        assertFalse(script.contains("overflow-wrap:anywhere"));
     }
 }

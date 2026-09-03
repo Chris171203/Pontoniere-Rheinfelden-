@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Builds the WebView skin and repairs concatenated attendance-status text. */
+/** Builds the WebView skin and repairs the external attendance table for phone screens. */
 final class InternalAttendanceSkin {
     static final class StatusSplit {
         final String status;
@@ -51,17 +51,20 @@ final class InternalAttendanceSkin {
             String link
     ) {
         String css =
+                "html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}" +
                 "html{color-scheme:" + ("#11171C".equalsIgnoreCase(background) ? "dark" : "light") + "!important;}" +
-                "body{margin:0!important;padding:10px 10px 34px!important;background:" + background + "!important;color:" + text + "!important;font-family:Arial,sans-serif!important;font-size:16px!important;}" +
+                "body{margin:0!important;padding:10px 10px 34px!important;box-sizing:border-box!important;background:" + background + "!important;color:" + text + "!important;font-family:Arial,sans-serif!important;font-size:16px!important;}" +
                 "header,nav,footer,.navbar,.site-header,.site-footer{display:none!important;}" +
-                "table{border-collapse:separate!important;border-spacing:8px!important;width:max-content!important;min-width:100%!important;background:transparent!important;}" +
-                "td,th{background:" + card + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:14px!important;padding:12px 10px!important;vertical-align:top!important;overflow-wrap:anywhere!important;}" +
-                "td *,th *{white-space:normal!important;}" +
+                ".pfvr-table-scroll{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;padding:0 0 8px!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}" +
+                ".pfvr-table-scroll table{display:table!important;border-collapse:separate!important;border-spacing:8px!important;table-layout:fixed!important;width:max-content!important;min-width:max-content!important;max-width:none!important;background:transparent!important;}" +
+                ".pfvr-table-scroll td,.pfvr-table-scroll th{box-sizing:border-box!important;width:176px!important;min-width:176px!important;max-width:176px!important;background:" + card + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:14px!important;padding:12px 10px!important;vertical-align:top!important;overflow-wrap:break-word!important;word-break:normal!important;hyphens:auto!important;}" +
+                ".pfvr-table-scroll td *,.pfvr-table-scroll th *{box-sizing:border-box!important;max-width:100%!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}" +
                 "p,span,div,label,strong{color:" + text + "!important;}small{color:" + muted + "!important;}a{color:" + link + "!important;}" +
                 "select,input[type=text],input[type=number]{background:" + soft + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;}" +
-                "button,input[type=submit],input[type=button],a.btn,.btn{min-height:48px!important;border:0!important;border-radius:12px!important;padding:10px 14px!important;font-size:16px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;}" +
-                ".pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:7px 10px!important;margin:0 0 9px!important;border-radius:10px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;}" +
-                ".pfvr-attendance-detail{display:block!important;margin:0 0 5px!important;line-height:1.35!important;color:" + text + "!important;}";
+                "button,input[type=submit],input[type=button],a.btn,.btn{min-height:48px!important;border:0!important;border-radius:12px!important;padding:10px 14px!important;font-size:16px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}" +
+                ".pfvr-table-scroll button,.pfvr-table-scroll input[type=submit],.pfvr-table-scroll input[type=button],.pfvr-table-scroll a.btn,.pfvr-table-scroll .btn{width:100%!important;box-sizing:border-box!important;}" +
+                ".pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:7px 10px!important;margin:0 0 9px!important;border-radius:10px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}" +
+                ".pfvr-attendance-detail{display:block!important;margin:0 0 5px!important;line-height:1.35!important;color:" + text + "!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}";
 
         String definitions = "[" +
                 "{p:'^\\\\s*mit\\\\s+essen',l:'Mit Essen',b:'#16863A',f:'#FFFFFF'}," +
@@ -77,6 +80,8 @@ final class InternalAttendanceSkin {
                 "var defs=" + definitions + ";" +
                 "var norm=function(x){return (x||'').replace(/\\s+/g,' ').trim().toLowerCase();};" +
                 "var paint=function(el,bg,fg){el.style.setProperty('background',bg,'important');el.style.setProperty('color',fg,'important');el.style.setProperty('border-color',bg,'important');};" +
+                "var ensureViewport=function(){var viewport=document.querySelector('meta[name=viewport]');if(!viewport){viewport=document.createElement('meta');viewport.name='viewport';document.head.appendChild(viewport);}viewport.content='width=device-width,initial-scale=1,maximum-scale=3,user-scalable=yes';};" +
+                "var wrapTables=function(){document.querySelectorAll('table').forEach(function(table){if(table.closest('.pfvr-table-scroll'))return;var wrapper=document.createElement('div');wrapper.className='pfvr-table-scroll';wrapper.setAttribute('role','region');wrapper.setAttribute('aria-label','Termine horizontal scrollen');wrapper.tabIndex=0;table.parentNode.insertBefore(wrapper,table);wrapper.appendChild(table);});};" +
                 "var badge=function(d){var el=document.createElement('span');el.className='pfvr-attendance-status';el.textContent=d.l;paint(el,d.b,d.f);return el;};" +
                 "var formatText=function(){" +
                     "var nodes=[];document.querySelectorAll('td,th').forEach(function(cell){var w=document.createTreeWalker(cell,NodeFilter.SHOW_TEXT);while(w.nextNode())nodes.push(w.currentNode);});" +
@@ -90,7 +95,7 @@ final class InternalAttendanceSkin {
                         "}" +
                     "});" +
                 "};" +
-                "var controls=document.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn');" +
+                "var styleControls=function(){var controls=document.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn');" +
                 "controls.forEach(function(el){var t=norm(el.innerText||el.value),attend=false;" +
                     "if(t.indexOf('mit essen')>=0){paint(el,'#16863A','#FFFFFF');attend=true;}" +
                     "else if(t.indexOf('ohne essen')>=0){paint(el,'#F2C94C','#17222B');attend=true;}" +
@@ -98,11 +103,12 @@ final class InternalAttendanceSkin {
                     "else if(t.indexOf('komme nicht')>=0||t==='nicht'){paint(el,'#C83737','#FFFFFF');attend=true;}" +
                     "else{paint(el,'" + escapeJs(link) + "','#FFFFFF');}" +
                     "if(attend&&!el.dataset.pfvrRefreshBound){el.dataset.pfvrRefreshBound='1';el.addEventListener('click',function(){setTimeout(function(){window.location.reload();},2000);});}" +
-                "});" +
+                "});};" +
+                "var formatLayout=function(){ensureViewport();wrapTables();formatText();styleControls();};" +
                 "document.querySelectorAll('p,div,strong,label').forEach(function(el){var t=norm(el.innerText);if(t.indexOf('tipp: diese seite als favorit')===0&&t.length<350)el.style.display='none';});" +
-                "formatText();setTimeout(formatText,250);setTimeout(formatText,900);" +
+                "formatLayout();setTimeout(formatLayout,250);setTimeout(formatLayout,900);" +
                 "var scheduled=false;" +
-                "if(window.MutationObserver&&document.body){var observer=new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;formatText();},80);});observer.observe(document.body,{childList:true,subtree:true});}" +
+                "if(window.MutationObserver&&document.body){var observer=new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;formatLayout();},80);});observer.observe(document.body,{childList:true,subtree:true});}" +
                 "})();";
     }
 

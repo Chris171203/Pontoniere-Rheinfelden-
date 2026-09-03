@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.0`.
+Aktuelle Android-Testversion: `0.10.1`.
 
 ## Entwicklung
 
@@ -16,11 +16,13 @@ Aktuelle Android-Testversion: `0.10.0`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.0
+## Gerätetest 0.10.1
 
+- In der internen App-Ansicht müssen Terminspalten lesbar bleiben und horizontal gescrollt werden können.
+- Es sollten ungefähr zwei Spalten gleichzeitig sichtbar sein; Texte dürfen innerhalb einer Spalte umbrechen, aber nicht buchstabenweise.
+- Termine mit `Mit Essen`, `Ohne Essen`, `Nicht gewählt` und längeren Beschreibungen prüfen.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
 - App neu starten und kontrollieren, ob die lokale Anordnung erhalten bleibt.
-- Im internen App-Modus insbesondere Termine mit `Mit Essen`, `Ohne Essen` und `Nicht gewählt` prüfen; Status und Termintext müssen getrennt umbrechen.
 - Kasse mit ausgeblendeten Kategorien testen; der Warenkorb muss trotzdem sichtbar und bedienbar bleiben.
 
 ## Lokale Daten
@@ -29,7 +31,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.0 verwendet `versionCode 24` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.1 verwendet `versionCode 25` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 

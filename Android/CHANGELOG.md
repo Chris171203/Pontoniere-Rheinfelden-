@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.1
+- Interne Terminspalten erhalten eine feste lesbare Breite statt auf wenige Zeichen zusammenzuschrumpfen.
+- Breite An-/Abmeldetabellen liegen in einem horizontal scrollbaren Container.
+- Wortumbruch erfolgt wieder an Wortgrenzen; `overflow-wrap:anywhere` wurde entfernt.
+- Statusblöcke wie `Ohne Essen` bleiben vom Termintext getrennt.
+
 ## 0.10.0
 - Personalisierbare Kachelreihenfolge und Sichtbarkeit für Home, Kasse und Verein.
 - Eigenes Einstellungsmenü mit Bereichsauswahl, Hoch/Runter, Ein-/Ausblenden und Standard-Reset.
