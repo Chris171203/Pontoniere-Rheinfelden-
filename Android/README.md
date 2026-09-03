@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.1`.
+Aktuelle Android-Testversion: `0.10.2`.
 
 ## Entwicklung
 
@@ -16,14 +16,15 @@ Aktuelle Android-Testversion: `0.10.1`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.1
+## Gerätetest 0.10.2
 
-- In der internen App-Ansicht müssen Terminspalten lesbar bleiben und horizontal gescrollt werden können.
-- Es sollten ungefähr zwei Spalten gleichzeitig sichtbar sein; Texte dürfen innerhalb einer Spalte umbrechen, aber nicht buchstabenweise.
-- Termine mit `Mit Essen`, `Ohne Essen`, `Nicht gewählt` und längeren Beschreibungen prüfen.
+- Interne App-Ansicht: Termine müssen vertikal untereinander erscheinen; Termin-/Kochinfo links, Teilnehmerkarten rechts.
+- Bei mehreren hinzugefügten Teilnehmern muss die rechte Teilnehmerleiste pro Termin horizontal scrollbar bleiben.
+- Prüfen, dass Köche/Termin-Metadaten nicht als Teilnehmer erscheinen.
+- Termine mit unterschiedlichen angebotenen Optionen prüfen. Die App darf keine Auswahl anzeigen, die in der Originalseite für diesen Tag nicht vorhanden ist.
+- `+ Person`, Personenauswahl und `Alle anzeigen` testen.
+- Nach An-/Abmeldung bzw. einer serverseitigen Aktualisierung soll die vorherige Scrollposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload mehr.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
-- App neu starten und kontrollieren, ob die lokale Anordnung erhalten bleibt.
-- Kasse mit ausgeblendeten Kategorien testen; der Warenkorb muss trotzdem sichtbar und bedienbar bleiben.
 
 ## Lokale Daten
 
@@ -31,7 +32,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.1 verwendet `versionCode 25` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.2 verwendet `versionCode 26` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
