@@ -31,5 +31,7 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("pfvr-attendance-status"));
         assertTrue(script.contains("NodeFilter.SHOW_TEXT"));
         assertTrue(script.contains("setTimeout(formatText,900)"));
+        assertTrue(script.contains("MutationObserver"));
+        assertTrue(script.contains("observer.observe(document.body"));
     }
 }

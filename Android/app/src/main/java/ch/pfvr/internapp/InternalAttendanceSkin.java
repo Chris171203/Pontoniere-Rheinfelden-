@@ -100,6 +100,8 @@ final class InternalAttendanceSkin {
                 "});" +
                 "document.querySelectorAll('p,div,strong,label').forEach(function(el){var t=norm(el.innerText);if(t.indexOf('tipp: diese seite als favorit')===0&&t.length<350)el.style.display='none';});" +
                 "formatText();setTimeout(formatText,250);setTimeout(formatText,900);" +
+                "var scheduled=false;" +
+                "if(window.MutationObserver&&document.body){var observer=new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;formatText();},80);});observer.observe(document.body,{childList:true,subtree:true});}" +
                 "})();";
     }
 

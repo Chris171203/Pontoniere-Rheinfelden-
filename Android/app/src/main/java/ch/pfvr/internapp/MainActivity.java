@@ -352,8 +352,9 @@ public class MainActivity extends Activity {
         current = screen; activeWebView = null;
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
         if (headerBack != null) headerBack.setVisibility(screen == Screen.HOME ? View.GONE : View.VISIBLE);
+        Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen;
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
-            boolean selected = e.getKey()==screen;
+            boolean selected = e.getKey()==selectedNavigation;
             e.getValue().setTextColor(selected?Color.WHITE:themeText(Color.rgb(65,82,96)));
             e.getValue().setTypeface(Typeface.DEFAULT_BOLD);
             e.getValue().setBackground(selected?round(NAVY,16):null);
@@ -404,35 +405,11 @@ private View home() {
     LinearLayout.LayoutParams payParams = new LinearLayout.LayoutParams(0,dp(46),1);
     payParams.setMargins(dp(9),0,0,0);
     actions.addView(pay,payParams);
-
-    body.addView(tileControlRow(TileLayoutStore.Area.HOME,true),margin(-1,-2,0,0,0,12));
     homeLiveStack=new LinearLayout(this);
     homeLiveStack.setOrientation(LinearLayout.VERTICAL);
     body.addView(homeLiveStack,new LinearLayout.LayoutParams(-1,-2));
     populateHomeTileStack(homeLiveStack);
     return scroll;
-}
-
-private View tileControlRow(TileLayoutStore.Area area,boolean refreshLiveData){
-    LinearLayout row=card();
-    row.setGravity(Gravity.CENTER_VERTICAL);
-    row.setPadding(dp(12),dp(9),dp(12),dp(9));
-    TextView label=txt(area.label+"-Kacheln",13,TEXT,true);
-    row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-    if(refreshLiveData){
-        Button refresh=btn("Aktualisieren",Color.rgb(232,240,244),NAVY);
-        refresh.setOnClickListener(v->{
-            Toast.makeText(this,"Wetter und Rhein werden aktualisiert …",Toast.LENGTH_SHORT).show();
-            refreshLive(true);
-        });
-        row.addView(refresh,new LinearLayout.LayoutParams(-2,dp(40)));
-    }
-    Button configure=btn("Anpassen",NAVY,Color.WHITE);
-    configure.setOnClickListener(v->{tileSettingsArea=area;navigate(Screen.TILE_SETTINGS);});
-    LinearLayout.LayoutParams configureParams=new LinearLayout.LayoutParams(-2,dp(40));
-    configureParams.setMargins(dp(8),0,0,0);
-    row.addView(configure,configureParams);
-    return row;
 }
 
 private void addConfiguredTiles(LinearLayout parent,TileLayoutStore.Area area,TileViewFactory factory){
@@ -562,7 +539,7 @@ private View homeNewsTile(){
 private void addRiverStationCharts(LinearLayout stack,int slot,boolean last){
     HydroStation station=riverStation(slot);
     boolean temperature=station.supportsTemperature;
-    stack.addView(riverCombinedCard(slot),margin(-1,-2,0,temperature?10:10,0,temperature?10:(last?4:10)));
+    stack.addView(riverCombinedCard(slot),margin(-1,-2,0,10,0,temperature?10:(last?4:10)));
     if(temperature)stack.addView(riverTemperatureCard(slot),margin(-1,-2,0,0,0,last?4:10));
 }
 
@@ -2024,8 +2001,6 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     title.setPadding(0,dp(5),0,dp(5));
     hero.addView(title);
     hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
-
-    body.addView(tileControlRow(TileLayoutStore.Area.CASH,false),margin(-1,-2,0,0,0,12));
     if(!hasPreferredBank()){
         section(body,"Zahlungsweg","Für Direktzahlungen einmalig eine Banking-App festlegen");
         body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
@@ -2802,8 +2777,6 @@ private View cashPaymentDetailsTile(){
     info.addView(txt("Gegründet 1896 · Sport und Vereinsleben am Rhein",13,MUTED,false));
     hero.addView(info,new LinearLayout.LayoutParams(0,-2,1));
     body.addView(hero,margin(-1,-2,0,4,0,14));
-    body.addView(tileControlRow(TileLayoutStore.Area.CLUB,false),margin(-1,-2,0,0,0,12));
-
     LinearLayout tiles=new LinearLayout(this);
     tiles.setOrientation(LinearLayout.VERTICAL);
     body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));

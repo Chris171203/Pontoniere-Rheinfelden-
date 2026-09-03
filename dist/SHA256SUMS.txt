@@ -1,1 +1,1 @@
-52216a9f094004286055ad3efff89781542216380585e74487fa67ff5be19ea4  dist/PFVR-Rheinfelden-test-0.10.0-debug.apk
+0d9e69b8df49804ba72cabdc44054ab8baa4f2b22b5aa6f4e77a4e9b1a3eae63  dist/PFVR-Rheinfelden-test-0.10.0-debug.apk

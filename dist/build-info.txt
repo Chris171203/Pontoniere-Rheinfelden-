@@ -1,4 +1,4 @@
 Version: 0.10.0 (23)
 Package: ch.pfvr.app.test
 Certificate SHA-256: 0521e6bc43e2868177609dea69d074ed14bb594bad28adee98293e586d3d46bf
-Features: configurable Home/Cash/Club tiles and internal attendance formatting
+Features: settings-managed tiles and dynamic internal attendance formatting
