@@ -29,6 +29,7 @@
         <package android:name="com.swissquote.android" />
         <package android:name="com.alpian.alpian" />
         <package android:name="com.radicant.bank" />
+        <package android:name="de.fiduciagad.banking.vr" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -36,6 +37,14 @@
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="image/png" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="application/pdf" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
