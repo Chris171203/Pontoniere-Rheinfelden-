@@ -1,5 +1,12 @@
 # Android Changelog
 
+## 0.10.2
+- Interne An-/Abmeldematrix mobil transponiert: Termine untereinander, Termin-/Kochinfo links und Teilnehmer rechts.
+- Teilnehmer werden ausschließlich aus der Personen-Spalte übernommen; Namen in Termin-Metadaten bleiben Termin-/Kochinfo.
+- Pro Tag/Person werden die realen Website-Controls verwendet; keine synthetischen `Mit Essen`/`Ohne Essen`-Optionen.
+- `Person zur Liste hinzufügen` als globale, einklappbare `+ Person`-Verwaltung oberhalb der Termine.
+- Von der App erzwungenen Voll-Reload nach Statusklick entfernt; Scroll- und horizontale Position werden über serverseitige Navigationen hinweg wiederhergestellt.
+
 ## 0.10.1
 - Interne Terminspalten erhalten eine feste lesbare Breite statt auf wenige Zeichen zusammenzuschrumpfen.
 - Breite An-/Abmeldetabellen liegen in einem horizontal scrollbaren Container.
