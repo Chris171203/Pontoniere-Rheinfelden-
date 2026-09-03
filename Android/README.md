@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.9.3`.
+Aktuelle Android-Testversion: `0.9.4`.
 
 ## Entwicklung
 
