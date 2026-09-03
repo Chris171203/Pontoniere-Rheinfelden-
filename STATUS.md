@@ -1,9 +1,11 @@
 # Status
 
-Stand: Testversion `0.10.2` · aktualisiert 2026-09-03.
+Stand: Testversion `0.10.3` · aktualisiert 2026-09-03.
 
 ## Implementiert / im Test
 
+- Die Statusfarbe in der mobilen An-/Abmeldeansicht folgt dem aktuell ausgewählten Original-Control (Button oder Select) und wird nach Änderungen ohne zusätzlichen Seiten-Reload neu berechnet.
+- Formulierungen wie `Ich komme, mit Essen` / `Ich komme, ohne Essen` werden zusätzlich zur kurzen Form erkannt. Bei Selects wird die tatsächlich ausgewählte Option ausgewertet.
 - Die interne An-/Abmeldeansicht wird mobil aus der vorhandenen Terminmatrix projiziert: Termine stehen untereinander, die Termin-Metadaten links und die tatsächlich hinzugefügten Teilnehmer rechts in horizontal scrollbaren Personenkarten.
 - Namen in den Termin-Metadaten werden nicht als Teilnehmer interpretiert; Koch/Termininfo bleibt vollständig beim jeweiligen Tag. Teilnehmernamen stammen ausschließlich aus der linken Personen-Spalte der Originalmatrix.
 - Pro Tag/Person werden ausschließlich die echten Website-Controls verschoben. Die App erfindet keine Essensoptionen: wenn `Mit Essen` serverseitig nicht angeboten wird, erscheint diese Auswahl auch in der App-Ansicht nicht.
@@ -25,13 +27,15 @@ Stand: Testversion `0.10.2` · aktualisiert 2026-09-03.
 ## Verifiziert
 
 - Unit-Tests prüfen die mobile Tag/Teilnehmer-Projektion, dynamische Breiten, Wiederverwendung echter Website-Controls, globale Personenverwaltung und das Entfernen des erzwungenen Reloads.
+- Zusätzliche Unit-Tests prüfen Live-Restyling aus Button-/Select-Werten, verzögerte Neuberechnung und DOM-Mutationserkennung ohne Voll-Reload.
 - Unit-Tests prüfen weiterhin Statusaufteilung und die Kachel-Layoutmigration.
 - Android-Kompilierung, Unit-Tests, APK-Build, Paket/Version und fester Test-Zertifikatsfingerprint werden in CI geprüft.
-- Finale Testidentität: `0.10.2`, `versionCode 26`, Paket `ch.pfvr.app.test`.
+- Finale Testidentität: `0.10.3`, `versionCode 27`, Paket `ch.pfvr.app.test`.
 - APK/AAB-Dateien werden nicht im Git-Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Nach Statusauswahl muss sich die Farbe sofort bzw. nach kurzer Server-/DOM-Aktualisierung anpassen. Anschließend durch `Neu laden` oder Originalansicht prüfen, ob der Status serverseitig erhalten bleibt.
 - Ob die reale interne Matrix exakt mit `erste Zeile = Termine` und `erste Spalte = Teilnehmer` strukturiert ist; der Screenshot spricht dafür, aber die Seite ist nicht öffentlich prüfbar.
 - Termine mit unterschiedlichen zulässigen Essens-/Anmeldeoptionen: die mobilen Karten müssen exakt die serverseitig vorhandenen Controls zeigen.
 - `+ Person`, Auswahl eines weiteren Namens und `Alle anzeigen` nach dem Verschieben der Original-Controls.
