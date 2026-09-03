@@ -1,5 +1,16 @@
 # Android Changelog
 
+## 0.9.8
+- Gespeicherte und temporär geteilte Swiss-QR-Bilder verwenden ein einheitliches, suchbares Dateinamensschema.
+- Betragsbezogene QR-Dateien heißen z. B. `PFVR_12.50CHF.png`; offene Beträge `PFVR_offenCHF.png`.
+- Dateinamenlogik in `PaymentQrFileName` ausgelagert und mit Unit-Tests abgesichert.
+
+## 0.9.7
+- Banking-Handoff auf Share-first umgestellt: jede Banking-App erhält zuerst die Bildübergabeversuche, unabhängig von der statischen Capability-Einstufung.
+
+## 0.9.6
+- Banking-Kompatibilität in `BankingAppRegistry` ausgelagert und um Capability-basierte Fallbacks erweitert.
+
 ## 0.9.5
 - Native Vereinsnews via WordPress REST mit Cache.
 - Explizite Erkennung verbreiteter Schweizer Banking-Apps, darunter neon und Revolut.
