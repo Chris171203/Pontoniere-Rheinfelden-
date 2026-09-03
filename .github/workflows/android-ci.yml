@@ -76,6 +76,9 @@ jobs:
 
           APK=Android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > signature.txt
+          EXPECTED_CERT=$(tr -d '[:space:]' < Android/app/test-signing/CERT_SHA256.txt)
+          test -n "$EXPECTED_CERT"
+          grep -Fqi "$EXPECTED_CERT" signature.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
 
           mkdir -p dist
@@ -87,7 +90,8 @@ jobs:
             echo "Version: $VERSION_NAME ($VERSION_CODE)"
             echo 'Package: ch.pfvr.app.test'
             echo "Commit: $GITHUB_SHA"
-            echo 'Signing: ephemeral GitHub runner debug key; not a stable update identity'
+            echo "Certificate SHA-256: $EXPECTED_CERT"
+            echo 'Signing: stable public PFVR test key; production signing is separate'
           } > dist/build-info.txt
 
       - uses: actions/upload-artifact@v4
