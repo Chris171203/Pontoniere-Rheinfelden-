@@ -108,12 +108,37 @@ final class InternalAttendanceSkin {
                     {pattern:/^\\s*komme\\s+nicht/i,label:'Komme nicht',background:'#C83737',foreground:'#FFFFFF'}
                   ];
                   var paint=function(el,bg,fg){if(!el)return;el.style.setProperty('background',bg,'important');el.style.setProperty('color',fg,'important');el.style.setProperty('border-color',bg,'important');};
+                  var statusForValue=function(value){
+                    var normalized=norm(value);
+                    if(normalized.indexOf('ohne essen')>=0)return statusDefs[1];
+                    if(normalized.indexOf('mit essen')>=0)return statusDefs[0];
+                    if(normalized.indexOf('nicht gewählt')>=0||normalized.indexOf('nicht gewaehlt')>=0||normalized.indexOf('keine auswahl')>=0)return statusDefs[2];
+                    if(normalized.indexOf('komme nicht')>=0||normalized==='nicht')return statusDefs[3];
+                    return null;
+                  };
+                  var controlValue=function(el){
+                    if(!el)return '';
+                    if(el.tagName==='SELECT'){
+                      var option=el.options&&el.selectedIndex>=0?el.options[el.selectedIndex]:null;
+                      return ((option&&(option.textContent||option.value))||el.value||'');
+                    }
+                    return el.innerText||el.value||el.textContent||'';
+                  };
                   var styleInteractive=function(root){
-                    (root||document).querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn').forEach(function(el){
-                      var value=norm(el.innerText||el.value),matched=null;
-                      for(var i=0;i<statusDefs.length;i++){if(statusDefs[i].pattern.test(value)){matched=statusDefs[i];break;}}
-                      if(matched)paint(el,matched.background,matched.foreground);else paint(el,COLORS.link,'#FFFFFF');
+                    (root||document).querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn,select').forEach(function(el){
+                      var matched=statusForValue(controlValue(el));
+                      if(matched){paint(el,matched.background,matched.foreground);return;}
+                      if(el.tagName==='SELECT'){
+                        paint(el,COLORS.soft,COLORS.text);
+                        el.style.setProperty('border-color',COLORS.border,'important');
+                      }else paint(el,COLORS.link,'#FFFFFF');
                     });
+                  };
+                  var refreshInteractiveSoon=function(root){
+                    if(!root)return;
+                    styleInteractive(root);
+                    setTimeout(function(){styleInteractive(root);},80);
+                    setTimeout(function(){styleInteractive(root);},350);
                   };
                   var splitStatusText=function(root){
                     var nodes=[];
@@ -186,9 +211,27 @@ final class InternalAttendanceSkin {
                   };
                   var bindStatePreservation=function(root){
                     if(window.__pfvrAttendanceStateBound)return;window.__pfvrAttendanceStateBound=true;
-                    document.addEventListener('click',function(event){if(event.target&&event.target.closest&&event.target.closest('.pfvr-person-control button,.pfvr-person-control input,.pfvr-person-control a,.pfvr-person-tools button,.pfvr-person-tools a'))saveViewState();},true);
-                    document.addEventListener('change',function(event){if(event.target&&event.target.closest&&event.target.closest('.pfvr-person-control select,.pfvr-person-tools select'))saveViewState();},true);
+                    document.addEventListener('click',function(event){
+                      if(event.target&&event.target.closest&&event.target.closest('.pfvr-person-control button,.pfvr-person-control input,.pfvr-person-control a,.pfvr-person-tools button,.pfvr-person-tools a')){
+                        saveViewState();refreshInteractiveSoon(document.querySelector('.pfvr-attendance-mobile'));
+                      }
+                    },true);
+                    document.addEventListener('change',function(event){
+                      if(event.target&&event.target.closest&&event.target.closest('.pfvr-person-control select,.pfvr-person-tools select')){
+                        saveViewState();refreshInteractiveSoon(document.querySelector('.pfvr-attendance-mobile'));
+                      }
+                    },true);
                     window.addEventListener('beforeunload',saveViewState);
+                  };
+                  var bindInteractiveObserver=function(root){
+                    if(!root||root.dataset.pfvrColorObserver==='1'||!window.MutationObserver)return;
+                    root.dataset.pfvrColorObserver='1';
+                    var scheduled=false;
+                    var observer=new MutationObserver(function(){
+                      if(scheduled)return;scheduled=true;
+                      setTimeout(function(){scheduled=false;styleInteractive(root);},40);
+                    });
+                    observer.observe(root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['value','selected','class']});
                   };
 
                   var buildMobile=function(){
@@ -215,7 +258,7 @@ final class InternalAttendanceSkin {
                       section.appendChild(people);mobile.appendChild(section);
                     }
                     table.classList.add('pfvr-attendance-source');
-                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);restoreViewState();
+                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);restoreViewState();
                     return true;
                   };
 
