@@ -55,7 +55,8 @@ final class InternalAttendanceSkin {
                 "body{margin:0!important;padding:10px 10px 34px!important;background:" + background + "!important;color:" + text + "!important;font-family:Arial,sans-serif!important;font-size:16px!important;}" +
                 "header,nav,footer,.navbar,.site-header,.site-footer{display:none!important;}" +
                 "table{border-collapse:separate!important;border-spacing:8px!important;width:max-content!important;min-width:100%!important;background:transparent!important;}" +
-                "td,th{background:" + card + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:14px!important;padding:12px 10px!important;vertical-align:top!important;}" +
+                "td,th{background:" + card + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:14px!important;padding:12px 10px!important;vertical-align:top!important;overflow-wrap:anywhere!important;}" +
+                "td *,th *{white-space:normal!important;}" +
                 "p,span,div,label,strong{color:" + text + "!important;}small{color:" + muted + "!important;}a{color:" + link + "!important;}" +
                 "select,input[type=text],input[type=number]{background:" + soft + "!important;color:" + text + "!important;border:1px solid " + border + "!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;}" +
                 "button,input[type=submit],input[type=button],a.btn,.btn{min-height:48px!important;border:0!important;border-radius:12px!important;padding:10px 14px!important;font-size:16px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;}" +
