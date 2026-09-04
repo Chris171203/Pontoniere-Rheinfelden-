@@ -186,7 +186,7 @@ public class MainActivity extends Activity {
     }
 
     private enum RiverMetric {
-        FLOW("Abfluss","Q","m³/s",Color.rgb(220,137,63),0),
+        FLOW("Abfluss","Q","m³/s",Color.rgb(77,119,153),0),
         LEVEL("Pegel","W","m ü.M.",WATER,2),
         TEMPERATURE("Temperatur","WT","°C",Color.rgb(70,157,177),1);
 
@@ -961,7 +961,7 @@ private void rebuildHomePreservingScroll(){
 
     private int navigationFlowColor(RhineNavigation.Stage stage){
         if(stage==RhineNavigation.Stage.UNKNOWN)return themeText(MUTED);
-        if(stage==RhineNavigation.Stage.NORMAL)return themeText(RiverMetric.FLOW.color);
+        if(stage==RhineNavigation.Stage.NORMAL)return darkMode?Color.rgb(126,171,204):Color.rgb(77,119,153);
         if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(224,169,72):Color.rgb(174,103,0);
         if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(225,111,76):Color.rgb(166,66,31);
         return darkMode?Color.rgb(210,77,88):Color.rgb(139,39,45);

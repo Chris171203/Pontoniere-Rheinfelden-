@@ -1,5 +1,9 @@
 # Android Changelog
 
+## 0.10.21
+- Normale Abflusswerte und die normale Abflusskurve verwenden nun ein neutrales Stahlblau statt Orange. Dadurch sieht ein unkritischer Abfluss nicht mehr wie eine Warnung aus.
+- Gelb/Orange/Rot werden nur noch verwendet, wenn der maßgebliche Basel-Pegel tatsächlich HWM I, HWM IIb oder HWM IIa erreicht; die Abflusskurve bleibt innerhalb jeder Stufe als dunklere Schwesterfarbe vom Pegel unterscheidbar.
+
 ## 0.10.20
 - Die offizielle Schifffahrtslage wird ausschließlich aus dem Pegel Basel-Rheinhalle abgeleitet: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs. Abflusswerte steuern keine Sperrampel mehr.
 - `Rhein aktuell` priorisiert den Pegel wieder visuell. Basel-Pegel und Statusbadge verwenden die aktuelle Hochwasserstufe; der Abfluss bleibt kleiner und erhält je Stufe eine unterscheidbare Schwesterfarbe. Rheinfelden bleibt mangels eigenem offiziellem Sperrbezug neutral.

@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.20` (`versionCode 44`).
+Aktuelle Android-Testversion: `0.10.21` (`versionCode 45`).
 
 ## Entwicklung
 
@@ -24,6 +24,7 @@ Aktuelle Android-Testversion: `0.10.20` (`versionCode 44`).
 - Die offizielle Schifffahrtslage richtet sich ausschließlich nach dem Pegel Basel-Rheinhalle: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs.
 - Der Abfluss bleibt ein eigener hydrologischer Messwert und steuert keine offizielle Sperrstufe.
 - Im Basel-Diagramm werden die drei Hochwassermarken auf der Pegelachse eingezeichnet. Pegel- und Abflusskurve folgen je Abschnitt der zeitgleichen Pegelstufe, verwenden innerhalb derselben Stufe aber unterschiedliche Farbtöne.
+- Im Normalzustand ist der Abfluss neutral stahlblau. Warnfarben dürfen erst mit einer tatsächlichen Basel-Hochwasserstufe erscheinen.
 
 ## Interne An-/Abmeldung
 
@@ -35,7 +36,7 @@ Aktuelle Android-Testversion: `0.10.20` (`versionCode 44`).
 - Website-Bulk-Aktionen wie `Alle anzeigen` sind im App-Modus blockiert; im unveränderten Originalmodus können sie bewusst verwendet werden.
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 
-## Gerätetest 0.10.20
+## Gerätetest 0.10.21
 
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - `Rhein aktuell`: Basel-Rheinhalle und Rheinfelden müssen beide den Wasserstand in `m ü.M.` zeigen. Nur Basel darf darunter zusätzlich einen cm-Pegel anzeigen. Die beiden Zeitstempel müssen am unteren Kartenrand auf derselben Höhe stehen.
