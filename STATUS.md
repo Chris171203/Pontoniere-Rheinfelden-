@@ -21,6 +21,7 @@ Stand: Testversion `0.10.8` · aktualisiert 2026-09-04.
 ## Automatisch geprüft
 
 - Unit-Tests prüfen Namensformatierung, CamelCase-Trennung, mobile Matrix, zwei sichtbare Personenspalten, Original-Control-Kontext, Personen-Synchronisierung, lokale Ausblendung, unterdrückte Bulk-Aktion, Statusfarben und das Fehlen eines erzwungenen Reloads.
+- Eingebettete JavaScript-RegExp-Escapes sind Java-textblockkompatibel eingecheckt; der finale Branch wird unverändert durch die normale Android-CI gebaut.
 - Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
