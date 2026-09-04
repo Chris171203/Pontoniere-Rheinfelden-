@@ -351,7 +351,7 @@ public class MainActivity extends Activity {
     private void navigate(Screen screen) {
         current = screen; activeWebView = null;
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
-        if (headerBack != null) headerBack.setVisibility(screen == Screen.HOME ? View.GONE : View.VISIBLE);
+        if (headerBack != null) headerBack.setVisibility((screen == Screen.HOME || screen == Screen.INTERNAL) ? View.GONE : View.VISIBLE);
         Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen;
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==selectedNavigation;
@@ -2840,12 +2840,13 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         if(android.os.Build.VERSION.SDK_INT>=33) web.getSettings().setAlgorithmicDarkeningAllowed(false);
         web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
-        Button people=btn(appView?"Personen":"‹ Zurück",Color.WHITE,NAVY);
-        people.setContentDescription(appView?"Personen hinzufügen oder entfernen":"Zurück");
-        people.setOnClickListener(v->{if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))openInternalPeopleManager(web,0);else handleBack();});
+        Button people=btn("Personen",Color.WHITE,NAVY);
+        people.setContentDescription("Personen hinzufügen oder entfernen");
+        people.setVisibility(appView?View.VISIBLE:View.GONE);
+        people.setOnClickListener(v->openInternalPeopleManager(web,0));
         tools.addView(people,new LinearLayout.LayoutParams(0,dp(40),1));
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");people.setText(next?"Personen":"‹ Zurück");people.setContentDescription(next?"Personen hinzufügen oder entfernen":"Zurück");web.clearCache(false);web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");people.setVisibility(next?View.VISIBLE:View.GONE);web.clearCache(false);web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
@@ -2883,7 +2884,8 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     String muted=darkMode?"#A0B0BA":"#60717E";
     String border=darkMode?"#344550":"#DCE5EA";
     String link=darkMode?"#5BBED5":"#247E99";
-    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link),null);
+    String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
+    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link),null);
 }
 
     private View internalMissing() {
@@ -3170,7 +3172,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,"Link konnte nicht geöffnet werden.",Toast.LENGTH_SHORT).show();}}
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
-    private void handleBack(){if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
+    private void handleBack(){if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
     @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 

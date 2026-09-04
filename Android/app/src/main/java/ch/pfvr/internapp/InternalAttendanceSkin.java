@@ -82,9 +82,9 @@ final class InternalAttendanceSkin {
 
                   var COLORS={background:'__BG__',card:'__CARD__',soft:'__SOFT__',text:'__TEXT__',muted:'__MUTED__',border:'__BORDER__',link:'__LINK__'};
                   var STORAGE_KEY='pfvr-attendance-view-state-v2';
-                  var PEOPLE_KEY='pfvr-attendance-people-v3';
-                  var LEGACY_PEOPLE_KEY='pfvr-attendance-people-v2';
-                  var RESTORE_KEY='pfvr-attendance-restore-v3';
+                  var PEOPLE_KEY='pfvr-attendance-people-v4';
+                  var LEGACY_PEOPLE_KEY='pfvr-attendance-people-v3';
+                  var RESTORE_KEY='pfvr-attendance-restore-v4';
                   var sourceTableRef=null;
                   var sourcePeopleObserver=null;
                   var norm=function(value){return (value||'').replace(/\\s+/g,' ').trim().toLowerCase();};
@@ -287,6 +287,7 @@ final class InternalAttendanceSkin {
                     var clean=cleanPersonName(name);if(!state||!clean||samePersonName(clean,state.primary))return false;
                     state.desired=(state.desired||[]).filter(function(saved){return !samePersonName(saved,clean);});
                     if(!listHasPerson(state.hidden,clean))state.hidden.push(clean);
+                    state.rowNames=[];state.pendingAdd=null;
                     Object.keys(state.restoreValues||{}).forEach(function(key){if(samePersonName(key,clean))delete state.restoreValues[key];});
                     savePeopleState(state);return true;
                   };
@@ -344,8 +345,9 @@ final class InternalAttendanceSkin {
                   };
                   var loadPeopleState=function(currentNames,seed){
                     var state=seed||readPeopleState();
-                    if(!state||!Array.isArray(state.desired))state={version:3,primary:currentNames[0]||'',desired:[],hidden:[],restoreValues:{},pendingAdd:null,rowNames:[]};
-                    state.version=3;if(!Array.isArray(state.hidden))state.hidden=[];if(!Array.isArray(state.rowNames))state.rowNames=[];if(!state.restoreValues||typeof state.restoreValues!=='object')state.restoreValues={};
+                    var migrated=!!(state&&state.version!==4);
+                    if(!state||!Array.isArray(state.desired))state={version:4,primary:currentNames[0]||'',desired:[],hidden:[],restoreValues:{},pendingAdd:null,rowNames:[]};
+                    state.version=4;if(migrated)state.hidden=[];if(!Array.isArray(state.hidden))state.hidden=[];if(!Array.isArray(state.rowNames))state.rowNames=[];if(!state.restoreValues||typeof state.restoreValues!=='object')state.restoreValues={};
                     state.primary=cleanPersonName(state.primary);
                     if((!state.primary||isPlaceholderPersonName(state.primary))&&currentNames.length)state.primary=currentNames[0];
                     state.hidden=dedupePeople(state.hidden).filter(function(name){return !samePersonName(name,state.primary);});state.desired=dedupePeople(state.desired);state.rowNames=dedupePeople(state.rowNames);
@@ -422,7 +424,7 @@ final class InternalAttendanceSkin {
                       var primary=element('span','pfvr-primary-label');primary.textContent='Standard';line.appendChild(primary);
                     }else{
                       var remove=element('button','pfvr-local-remove');remove.type='button';remove.textContent='Entfernen';remove.setAttribute('aria-label','Person aus Ansicht entfernen: '+formatPersonName(personName));
-                      remove.addEventListener('click',function(){if(!removeDesiredPerson(state,personName))return;setPersonColumnHidden(personName,true);appendHiddenPerson(document.querySelector('.pfvr-hidden-people'),state,personName);line.remove();});
+                      remove.addEventListener('click',function(){if(!removeDesiredPerson(state,personName))return;saveViewState();closePersonManager();var base=window.__pfvrBaseInternalUrl||'';if(base){window.location.replace(base);return;}setPersonColumnHidden(personName,true);line.remove();});
                       line.appendChild(remove);
                     }
                     list.appendChild(line);
@@ -497,13 +499,10 @@ final class InternalAttendanceSkin {
                       var action=element('button');action.type='button';action.textContent=label;action.setAttribute('aria-label',label);
                       action.addEventListener('click',function(){control.click();scheduleParticipantSync(state);});body.appendChild(action);
                     });
-                    var note=element('div');note.textContent='Entfernen blendet die Person nur in der App-Ansicht aus.';note.style.color=COLORS.muted;note.style.fontSize='11px';body.appendChild(note);
+                    var note=element('div');note.textContent='Entfernen aktualisiert die Personenliste automatisch.';note.style.color=COLORS.muted;note.style.fontSize='11px';body.appendChild(note);
                     var list=element('div','pfvr-managed-people pfvr-managed-people-visible');
-                    var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='Angezeigte Personen';list.appendChild(listTitle);
-                    (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);
-                    var hiddenList=element('div','pfvr-managed-people pfvr-hidden-people');
-                    var hiddenTitle=element('div','pfvr-managed-people-title');hiddenTitle.textContent='Ausgeblendet';hiddenList.appendChild(hiddenTitle);
-                    (state.hidden||[]).forEach(function(personName){appendHiddenPerson(hiddenList,state,personName);});body.appendChild(hiddenList);panel.appendChild(body);
+                    var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='Aktuelle Personen';list.appendChild(listTitle);
+                    (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);panel.appendChild(body);
                     if(anchor&&anchor!==scope)anchor.style.display='none';return panel;
                   };
 

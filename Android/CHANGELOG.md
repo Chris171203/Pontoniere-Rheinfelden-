@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.9
+- `Entfernen` ist keine reine lokale Ausblendung mehr: Die App setzt die interne Seite automatisch auf den persönlichen Basislink zurück und stellt anschließend nur die verbleibenden Zusatzpersonen über die echten Website-Controls wieder her.
+- Dadurch wird die entfernte Person auch aus der Originalansicht genommen und der fehlerhafte Grid-Zwischenzustand nach lokalem Ausblenden vermieden; kein manueller Reload ist nötig.
+- Der Zurückpfeil neben dem Logo ist im internen Bereich entfernt. Android-Zurück navigiert dort direkt zu Home und kann nicht mehr durch WebView-Historie eine Personenänderung rückgängig machen.
+- Im Originalmodus entfällt zusätzlich der redundante innere Zurück-Button; `Personen` ist ausschließlich in der App-Ansicht sichtbar.
+
 ## 0.10.8
 - Teilnehmernamen werden robust aus getrennten DOM-Textteilen, CamelCase und vorhandenen Personen-IDs gelesen und als `Nachname, Vorname` dargestellt.
 - Der App-Modus verwendet den linken Werkzeugleisten-Button als direkt erreichbare modale Personenverwaltung; Hinzufügen, Entfernen und Wieder-Einblenden liegen an einer Stelle.

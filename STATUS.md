@@ -1,16 +1,16 @@
 # Status
 
-Stand: Testversion `0.10.8` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.9` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
 - Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.
 - Teilnehmernamen werden aus den tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Zusammengezogene Namen wie `NeugebauerChristoph` werden getrennt und als `Neugebauer, Christoph` angezeigt.
 - Die Originaltabelle ist die Quelle der Wahrheit. Jede dort vorhandene Person wird in der App-Ansicht angezeigt, sofern sie nicht ausdrücklich lokal ausgeblendet wurde. Generische Namen wie `Person 1` sind nur noch letzter technischer Fallback.
-- In der App-Ansicht ersetzt der linke Werkzeugleistenbutton `Personen` den redundanten Zurück-Button. Er öffnet eine modale Verwaltung zum Hinzufügen, lokalen Ausblenden und Wieder-Einblenden. Der normale Zurückweg bleibt über den App-Header bzw. Android-Zurück erhalten.
+- In der App-Ansicht öffnet `Personen` die Verwaltung zum Hinzufügen und Entfernen. Der Zurückpfeil neben dem Logo wird im internen Bereich nicht angezeigt; Android-Zurück führt direkt zu Home, damit WebView-Historie keine Personenänderung rückgängig macht.
 - `Alle anzeigen` beziehungsweise `Alle hinzufügen` wird im App-Modus nicht mehr gespiegelt. Diese Website-Funktion bleibt ausschließlich in der unveränderten Originalansicht verfügbar.
 - Das sichtbare Personen-Select ist ein Proxy; das originale Website-Control bleibt in seinem Formular- und DOM-Kontext. Änderungen werden am Original ausgelöst und neue Zeilen über verzögerte Synchronisierung sowie MutationObserver übernommen.
-- Lokales Entfernen blendet eine Personenspalte aus, ohne die echten An-/Abmelde-Controls aus dem DOM oder Daten auf dem Server zu löschen. Ausgeblendete Personen können in derselben Verwaltung wieder eingeblendet werden.
+- Entfernen baut die Website-Personenliste automatisch vom persönlichen Basislink neu auf und stellt nur die verbleibenden Zusatzpersonen wieder her. Dadurch verschwindet die Person auch aus der Originalansicht, ohne dass der Benutzer manuell neu laden muss.
 - Pro Tag und Person werden ausschließlich die echten Website-Controls verwendet. Die App erfindet keine Essensoptionen. Statusfarben folgen dem aktuell gewählten Original-Control; es gibt keinen zusätzlich von der App erzwungenen Voll-Reload.
 - Vertikale Scrollposition und gemeinsame horizontale Matrixposition werden über technisch notwendige Seitennavigationen hinweg gespeichert und wiederhergestellt.
 - Home, Kasse und Verein verwenden eine gemeinsame, lokal personalisierbare Kachelarchitektur. Reihenfolge und Sichtbarkeit können unter Einstellungen → Ansicht & Kacheln angepasst werden; der Warenkorb bleibt in der Kasse fixiert.

@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.8`.
+Aktuelle Android-Testversion: `0.10.9`.
 
 ## Entwicklung
 
@@ -18,16 +18,16 @@ Aktuelle Android-Testversion: `0.10.8`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.8
+## Gerätetest 0.10.9
 
 - Namen werden als `Nachname, Vorname` angezeigt. Getrennte DOM-Textteile und zusammengezogene Formen wie `NeugebauerChristoph` müssen gleich ausgewertet werden; generische `Person 1`-Bezeichnungen dürfen nur als letzter technischer Fallback erscheinen.
-- In der App-Ansicht öffnet der linke Werkzeugleistenbutton `Personen` eine modale Verwaltung zum Hinzufügen, lokalen Ausblenden und Wieder-Einblenden. Der normale Zurückweg bleibt über den App-Header und Android-Zurück erhalten.
+- In der App-Ansicht öffnet der Werkzeugleistenbutton `Personen` die Verwaltung zum Hinzufügen und Entfernen. Der Zurückpfeil neben dem Logo ist im internen Bereich entfernt; Navigation erfolgt über die untere Leiste, und Android-Zurück führt von dort direkt zu Home statt durch die WebView-Historie.
 - Der Website-Befehl `Alle anzeigen/hinzufügen` wird im App-Modus bewusst nicht angeboten und bleibt der unveränderten Originalansicht vorbehalten.
 - Ist die zweite Person in `Original` bereits sichtbar, muss sie nach Wechsel zu `App` dauerhaft als zweite feste Personenspalte stehen bleiben und darf nicht mehr kurz aufblitzen und wieder verschwinden.
 - Zusatzperson über die Verwaltung hinzufügen: Jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit; nur ausdrücklich lokal entfernte Personen werden ausgeblendet.
 - Unterschiedliche Reihenfolge oder Schreibweise von Auswahltext und Tabellenname darf die Person nicht herausfiltern. Für die Wiederherstellung wird zusätzlich der Optionswert gespeichert und der Name tokenbasiert verglichen.
 - Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: Die App-Ansicht soll die gespeicherte Personenliste über das originale Website-Select wiederherstellen.
-- In der Personenverwaltung eine Zusatzperson lokal entfernen: Sie muss sofort aus der Matrix verschwinden und nach Neustart ausgeblendet bleiben. Über `Einblenden` muss sie zurückkehren; die Standardperson darf nicht entfernbar sein.
+- In der Personenverwaltung eine Zusatzperson entfernen: Die App lädt automatisch den persönlichen Basislink neu und stellt danach nur die verbleibenden Zusatzpersonen über die echten Website-Controls wieder her. Kein manueller Neu-laden-Schritt darf nötig sein; die Standardperson darf nicht entfernbar sein.
 - Auch weit unten in der Terminliste muss in jeder Personenzelle der Name sichtbar sein. Lange Namen dürfen höchstens zwei Zeilen belegen und die Personenspalte nicht unbegrenzt verbreitern.
 - Die interne App-Ansicht bleibt eine gemeinsame Matrix: Termine und Kochinformationen links, jede Person als feste Spalte rechts über alle Tage hinweg.
 - Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
@@ -44,7 +44,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.8 verwendet `versionCode 32` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.9 verwendet `versionCode 33` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 

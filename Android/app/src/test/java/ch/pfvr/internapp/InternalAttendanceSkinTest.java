@@ -90,11 +90,11 @@ public class InternalAttendanceSkinTest {
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
         assertTrue(script.contains("--pfvr-day-col:84px;--pfvr-person-col:102px"));
-        assertTrue(script.contains("pfvr-attendance-people-v3"));
+        assertTrue(script.contains("pfvr-attendance-people-v4"));
         assertTrue(script.contains("pfvr-local-remove"));
         assertTrue(script.contains("removeDesiredPerson"));
         assertTrue(script.contains("setPersonColumnHidden"));
-        assertTrue(script.contains("Einblenden"));
+        assertTrue(script.contains("window.location.replace(base)"));
         assertTrue(script.contains("savePeopleState"));
         assertTrue(script.contains("loadPeopleState"));
         assertTrue(script.contains("state.primary"));
@@ -119,7 +119,7 @@ public class InternalAttendanceSkinTest {
 
     @Test public void generatedScriptPersistsRestoresRemovesAndLabelsParticipants(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("pfvr-attendance-people-v3"));
+        assertTrue(script.contains("pfvr-attendance-people-v4"));
         assertTrue(script.contains("localStorage.setItem(PEOPLE_KEY"));
         assertTrue(script.contains("loadPeopleState"));
         assertTrue(script.contains("tryRestoreMissingPerson"));
@@ -162,7 +162,18 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("if(bulkPeopleAction(label))return"));
         assertTrue(script.contains("Schliessen"));
         assertTrue(script.contains("Angezeigte Personen"));
-        assertTrue(script.contains("Entfernen blendet die Person nur in der App-Ansicht aus."));
+        assertTrue(script.contains("Entfernen aktualisiert die Personenliste automatisch."));
+        assertTrue(script.contains("Aktuelle Personen"));
+        assertFalse(script.contains("Ausgeblendet"));
+    }
+
+    @Test public void generatedScriptRebuildsWebsiteListAfterRemoval(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("state.rowNames=[];state.pendingAdd=null"));
+        assertTrue(script.contains("window.__pfvrBaseInternalUrl"));
+        assertTrue(script.contains("window.location.replace(base)"));
+        assertTrue(script.contains("removeDesiredPerson"));
+        assertFalse(script.contains("Entfernen blendet die Person nur"));
     }
 
     @Test public void generatedScriptKeepsStatusRepairAndMobileViewport(){
