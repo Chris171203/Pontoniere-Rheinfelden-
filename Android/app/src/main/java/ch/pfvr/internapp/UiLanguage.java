@@ -23,6 +23,7 @@ final class UiLanguage {
         put("Interner Bereich", "Interne Bereich");
 
         // Home / public data
+        put("Rhein", "Rhy");
         put("Rhein aktuell", "Rhy aktuell");
         put("Abfluss, Pegel, Temperatur und Messdatenstand", "Abfluss, Pegel, Temperatur und Messdatestand");
         put("Als Nächstes", "Als Nöchscht");
@@ -41,6 +42,7 @@ final class UiLanguage {
         put("Wassertemperatur", "Wassertemperatur");
 
         // Settings
+        put("Allgemein", "Allgmein");
         put("Einstellungen nach Bereich", "Iistellige nach Bereich");
         put("Zahlung", "Zahlig");
         put("Darstellung", "Darstellig");
