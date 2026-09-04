@@ -1,7 +1,7 @@
 # Android Changelog
 
 ## 0.10.18
-- In `Rhein-Grafiken` kann die Pegelachse global zwischen `m ü.M.` und `cm` umgeschaltet werden. Die Auswahl wird lokal gespeichert und gilt für beide Messstationen.
+- In `Rhein-Grafiken` kann die Pegelachse global zwischen `m ü.M.` und `cm` umgeschaltet werden. Die Auswahl wird lokal gespeichert und gilt für beide Messstationen; Standard bleibt `m ü.M.`.
 - Aktueller Pegelwert im Diagrammkopf, rechte Pegelachse, Kurve, Tooltip und Hinweistext verwenden gemeinsam die ausgewählte Einheit.
 - `Rhein aktuell` bleibt davon unabhängig: Beide Stationen zeigen dort primär den absoluten Wasserstand in `m ü.M.` und darunter klein den relativen Pegel in `cm`.
 
