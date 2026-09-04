@@ -1,0 +1,94 @@
+name: One-off Android 0.10.21 neutral flow color
+
+on:
+  push:
+    branches:
+      - dev-0.10.21
+    paths:
+      - '.github/workflows/oneoff-0.10.21.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-source-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.10.21
+
+      - name: Document scope first
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('STATUS.md')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace('Stand: Testversion `0.10.20`', 'Stand: Testversion `0.10.21`', 1)
+          anchor = '- Der Pegel ist in `Rhein aktuell` und im Diagrammkopf wieder die visuell priorisierte Größe. Basel-Pegelwert und -kurve folgen der offiziellen Hochwasserstufe; die Abflusskurve nutzt je Stufe eine unterscheidbare Schwesterfarbe. Rheinfelden erhält ohne eigenen offiziellen Sperrbezug keine erfundene Stufenfarbe.\n'
+          addition = anchor + '- Im Normalzustand verwendet der Abfluss eine neutrale Stahlblau-Farbe statt Orange, damit keine Warnwirkung entsteht. Gelb/Orange/Rot bleiben den tatsächlichen Hochwasserstufen vorbehalten; innerhalb einer Hochwasserstufe bleibt der Abfluss als dunklere Schwesterfarbe vom Pegel unterscheidbar.\n'
+          if anchor not in text:
+              raise SystemExit('STATUS color anchor not found')
+          text = text.replace(anchor, addition, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add STATUS.md
+          git commit -m 'Document neutral normal-flow color'
+          git push origin HEAD:dev-0.10.21
+
+      - name: Apply neutral normal-flow color
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'{label} not found')
+              return text.replace(old, new, 1)
+
+          main = Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          text = main.read_text(encoding='utf-8')
+          text = replace_once(text,
+              '        FLOW("Abfluss","Q","m³/s",Color.rgb(220,137,63),0),',
+              '        FLOW("Abfluss","Q","m³/s",Color.rgb(77,119,153),0),',
+              'FLOW base color')
+          text = replace_once(text,
+              '        if(stage==RhineNavigation.Stage.NORMAL)return themeText(RiverMetric.FLOW.color);',
+              '        if(stage==RhineNavigation.Stage.NORMAL)return darkMode?Color.rgb(126,171,204):Color.rgb(77,119,153);',
+              'normal navigation flow color')
+          main.write_text(text, encoding='utf-8')
+
+          gradle = Path('Android/app/build.gradle')
+          text = gradle.read_text(encoding='utf-8')
+          text = replace_once(text, "        versionCode 44\n        versionName '0.10.20'", "        versionCode 45\n        versionName '0.10.21'", 'version')
+          gradle.write_text(text, encoding='utf-8')
+
+          changelog = Path('Android/CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          entry = '''# Android Changelog\n\n## 0.10.21\n- Normale Abflusswerte und die normale Abflusskurve verwenden nun ein neutrales Stahlblau statt Orange. Dadurch sieht ein unkritischer Abfluss nicht mehr wie eine Warnung aus.\n- Gelb/Orange/Rot werden nur noch verwendet, wenn der maßgebliche Basel-Pegel tatsächlich HWM I, HWM IIb oder HWM IIa erreicht; die Abflusskurve bleibt innerhalb jeder Stufe als dunklere Schwesterfarbe vom Pegel unterscheidbar.\n\n'''
+          if not text.startswith('# Android Changelog\n\n'):
+              raise SystemExit('CHANGELOG header not found')
+          text = entry + text[len('# Android Changelog\n\n'):]
+          changelog.write_text(text, encoding='utf-8')
+
+          android_readme = Path('Android/README.md')
+          text = android_readme.read_text(encoding='utf-8')
+          text = replace_once(text, 'Aktuelle Android-Testversion: `0.10.20` (`versionCode 44`).', 'Aktuelle Android-Testversion: `0.10.21` (`versionCode 45`).', 'Android README version')
+          text = replace_once(text, '## Gerätetest 0.10.20', '## Gerätetest 0.10.21', 'Android README device test')
+          anchor = '- Im Basel-Diagramm werden die drei Hochwassermarken auf der Pegelachse eingezeichnet. Pegel- und Abflusskurve folgen je Abschnitt der zeitgleichen Pegelstufe, verwenden innerhalb derselben Stufe aber unterschiedliche Farbtöne.\n'
+          addition = anchor + '- Im Normalzustand ist der Abfluss neutral stahlblau. Warnfarben dürfen erst mit einer tatsächlichen Basel-Hochwasserstufe erscheinen.\n'
+          text = replace_once(text, anchor, addition, 'Android README color note')
+          android_readme.write_text(text, encoding='utf-8')
+
+          root = Path('README.md')
+          text = root.read_text(encoding='utf-8')
+          text = replace_once(text, 'Android-Testversion `0.10.20` auf `main`.', 'Android-Testversion `0.10.21` auf `main`.', 'root README version')
+          root.write_text(text, encoding='utf-8')
+          PY
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java Android/app/build.gradle Android/CHANGELOG.md Android/README.md README.md
+          git commit -m 'Use neutral color for normal Rhine flow'
+          git push origin HEAD:dev-0.10.21
