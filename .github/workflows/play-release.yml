@@ -104,7 +104,9 @@ jobs:
           test -s "$AAB"
 
           mkdir -p dist
-          jarsigner -verify -strict -verbose -certs "$AAB" > dist/aab-signature.txt
+          # Upload keys are normally self-signed certificates. Cryptographic JAR verification is
+          # required here; `-strict` would also treat the expected trust-chain warning as failure.
+          jarsigner -verify -verbose -certs "$AAB" > dist/aab-signature.txt
           grep -Fq 'jar verified.' dist/aab-signature.txt
 
           OUT="PFVR-Rheinfelden-${VERSION_NAME}-${VERSION_CODE}.aab"
