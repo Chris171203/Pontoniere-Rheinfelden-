@@ -614,7 +614,9 @@ private void rebuildHomePreservingScroll(){
     private LinearLayout riverSummaryCard(int slot){
         HydroStation station=riverStation(slot);
         double flow=currentHydroValue(station,"Q");
-        double level=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));
+        double rawLevel=currentHydroValue(station,"W");
+        double level=displayHydroValue(station,RiverMetric.LEVEL,rawLevel);
+        double gaugeCm=RiverDisplay.gaugeCentimetres(station,rawLevel);
         double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;
         RiverStatus status=riverStatus(station,flow);
         int statusColor=statusTextColor(status.bg);
@@ -642,6 +644,11 @@ private void rebuildHomePreservingScroll(){
         LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));
         levelMetric.setPadding(0,dp(5),0,0);
         c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));
+        if(Double.isFinite(gaugeCm)){
+            TextView gaugeView=txt(String.format(Locale.GERMAN,"%.0f cm",gaugeCm),10,MUTED,false);
+            gaugeView.setPadding(0,dp(1),0,0);
+            c.addView(gaugeView);
+        }
 
         if(Double.isFinite(temperature)){
             TextView temperatureView=txt("Wasser "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);

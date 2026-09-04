@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.17
+- Beide Rhein-Messpunkte zeigen den Pegel wieder primär als absoluten BAFU-Wasserstand in `m ü.M.` mit zwei Nachkommastellen.
+- Direkt darunter wird in der kompakten Rhein-Übersicht zusätzlich der relative Pegelstand in `cm` klein dargestellt. Basel verwendet den Pegelnullpunkt 240.00 m ü.M.; Rheinfelden den historischen BAFU-Pegelnullpunkt 260.00 m ü.M.
+- Die Zeitstempel bleiben durch die gleich hohen Karten und den flexiblen Restbereich am unteren Kartenrand auf gleicher Höhe.
+
 ## 0.10.16
 - `Rhein aktuell` zeigt bei beiden Messpunkten Abfluss und Pegel als eigene, klar beschriftete Werte. Basel-Rheinhalle verwendet für den Pegel weiterhin `cm`, Rheinfelden `m ü.M.`.
 - Rheinfelden zeigt die Wassertemperatur weiterhin zusätzlich unter den beiden Hauptwerten.
