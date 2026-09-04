@@ -1,0 +1,32 @@
+name: Fix PFVR 0.10.8 text-block escapes
+
+on:
+  push:
+    branches:
+      - dev-0.10.8-fix-author
+    paths:
+      - 'tools/fix_0108_text_block_escapes.py'
+      - '.github/workflows/dev-0108-escape-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed escape fix
+        run: python tools/fix_0108_text_block_escapes.py
+      - name: Publish clean target branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f tools/fix_0108_text_block_escapes.py .github/workflows/dev-0108-escape-fix.yml
+          git config user.name 'PFVR Build Author'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: escape embedded JavaScript regexes'
+          git push --force origin HEAD:refs/heads/dev-0.10.8
