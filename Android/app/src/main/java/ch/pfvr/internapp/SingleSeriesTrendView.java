@@ -1,5 +1,6 @@
 package ch.pfvr.internapp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -21,7 +22,11 @@ import java.util.Locale;
 /**
  * Compact single-series trend chart used for measurements that should not
  * share an axis with another physical quantity, such as water temperature.
+ *
+ * <p>This view is instantiated programmatically only; it is never inflated
+ * from XML, so an XML-inflation constructor is intentionally not provided.</p>
  */
+@SuppressLint("ViewConstructor")
 final class SingleSeriesTrendView extends View {
     private final List<Long> times;
     private final List<Double> values;
@@ -36,14 +41,21 @@ final class SingleSeriesTrendView extends View {
     private final int surfaceColor;
     private final int tooltipColor;
     private final int tooltipTextColor;
+    private final ZoneId zone = ZoneId.of("Europe/Zurich");
+    private final DateTimeFormatter timeFormatter;
+    private final DateTimeFormatter tooltipFormatter;
 
     private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint point = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint crosshair = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltip = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltipText = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path seriesPath = new Path();
+    private final Path areaPath = new Path();
+    private final RectF tooltipBox = new RectF();
     private int selectedIndex = -1;
 
     SingleSeriesTrendView(
@@ -76,6 +88,12 @@ final class SingleSeriesTrendView extends View {
         this.surfaceColor = surfaceColor;
         this.tooltipColor = tooltipColor;
         this.tooltipTextColor = tooltipTextColor;
+        this.timeFormatter = weekRange
+                ? DateTimeFormatter.ofPattern("EE dd.", Locale.GERMAN)
+                : DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
+        this.tooltipFormatter = weekRange
+                ? DateTimeFormatter.ofPattern("EE dd.MM. · HH:mm", Locale.GERMAN)
+                : DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
 
         setClickable(true);
         setFocusable(true);
@@ -87,6 +105,7 @@ final class SingleSeriesTrendView extends View {
         line.setStrokeJoin(Paint.Join.ROUND);
         fill.setStyle(Paint.Style.FILL);
         point.setStyle(Paint.Style.FILL);
+        crosshair.setStrokeWidth(dp(1));
         tooltip.setStyle(Paint.Style.FILL);
         tooltipText.setTextSize(sp(10));
         tooltipText.setTypeface(Typeface.DEFAULT_BOLD);
@@ -150,7 +169,7 @@ final class SingleSeriesTrendView extends View {
         }
         drawTimeGrid(canvas, left, right, top, bottom, minTime, maxTime);
 
-        Path path = new Path();
+        seriesPath.reset();
         boolean started = false;
         int lastFinite = -1;
         for (int index = 0; index < values.size(); index++) {
@@ -159,23 +178,23 @@ final class SingleSeriesTrendView extends View {
             float x = seriesX(index, left, right, minTime, maxTime);
             float y = seriesY(value, scale, top, bottom);
             if (!started) {
-                path.moveTo(x, y);
+                seriesPath.moveTo(x, y);
                 started = true;
             } else {
-                path.lineTo(x, y);
+                seriesPath.lineTo(x, y);
             }
             lastFinite = index;
         }
         if (!started) return;
 
-        Path area = new Path(path);
-        area.lineTo(right, bottom);
-        area.lineTo(left, bottom);
-        area.close();
+        areaPath.set(seriesPath);
+        areaPath.lineTo(right, bottom);
+        areaPath.lineTo(left, bottom);
+        areaPath.close();
         fill.setColor(Color.argb(28, Color.red(lineColor), Color.green(lineColor), Color.blue(lineColor)));
-        canvas.drawPath(area, fill);
+        canvas.drawPath(areaPath, fill);
         line.setColor(lineColor);
-        canvas.drawPath(path, line);
+        canvas.drawPath(seriesPath, line);
 
         if (lastFinite >= 0) {
             float lastX = seriesX(lastFinite, left, right, minTime, maxTime);
@@ -196,16 +215,12 @@ final class SingleSeriesTrendView extends View {
 
     private void drawTimeGrid(Canvas canvas, float left, float right, float top, float bottom, long minTime, long maxTime) {
         int intervals = "1h".equals(rangeLabel) ? 3 : 4;
-        DateTimeFormatter formatter = weekRange
-                ? DateTimeFormatter.ofPattern("EE dd.", Locale.GERMAN)
-                : DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
-        ZoneId zone = ZoneId.of("Europe/Zurich");
         for (int index = 0; index <= intervals; index++) {
             float fraction = index / (float) intervals;
             float x = left + (right - left) * fraction;
             if (index > 0 && index < intervals) canvas.drawLine(x, top, x, bottom, grid);
             long timestamp = minTime + Math.round((maxTime - minTime) * fraction);
-            String value = Instant.ofEpochMilli(timestamp).atZone(zone).format(formatter);
+            String value = Instant.ofEpochMilli(timestamp).atZone(zone).format(timeFormatter);
             float textWidth = label.measureText(value);
             float textX = Math.max(left, Math.min(right - textWidth, x - textWidth / 2f));
             canvas.drawText(value, textX, bottom + dp(18), label);
@@ -225,9 +240,7 @@ final class SingleSeriesTrendView extends View {
         float x = seriesX(selectedIndex, left, right, minTime, maxTime);
         float y = seriesY(values.get(selectedIndex), scale, top, bottom);
 
-        Paint crosshair = new Paint(Paint.ANTI_ALIAS_FLAG);
         crosshair.setColor(Color.argb(120, Color.red(labelColor), Color.green(labelColor), Color.blue(labelColor)));
-        crosshair.setStrokeWidth(dp(1));
         canvas.drawLine(x, top, x, bottom, crosshair);
         point.setColor(lineColor);
         canvas.drawCircle(x, y, dp(5), point);
@@ -237,22 +250,19 @@ final class SingleSeriesTrendView extends View {
         canvas.drawCircle(x, y, dp(7), point);
         point.setStyle(Paint.Style.FILL);
 
-        ZonedDateTime timestamp = Instant.ofEpochMilli(times.get(selectedIndex)).atZone(ZoneId.of("Europe/Zurich"));
-        DateTimeFormatter formatter = weekRange
-                ? DateTimeFormatter.ofPattern("EE dd.MM. · HH:mm", Locale.GERMAN)
-                : DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
-        String text = timestamp.format(formatter) + " · " + formatValue(values.get(selectedIndex));
+        ZonedDateTime timestamp = Instant.ofEpochMilli(times.get(selectedIndex)).atZone(zone);
+        String text = timestamp.format(tooltipFormatter) + " · " + formatValue(values.get(selectedIndex));
         tooltipText.setColor(tooltipTextColor);
         float textWidth = tooltipText.measureText(text);
         float textHeight = Math.abs(tooltipText.ascent()) + Math.abs(tooltipText.descent());
         float boxWidth = Math.min(right - left, textWidth + dp(16));
         float boxLeft = Math.max(left, Math.min(right - boxWidth, x - boxWidth / 2f));
-        RectF box = new RectF(boxLeft, top + dp(4), boxLeft + boxWidth, top + textHeight + dp(14));
+        tooltipBox.set(boxLeft, top + dp(4), boxLeft + boxWidth, top + textHeight + dp(14));
         tooltip.setColor(tooltipColor);
-        canvas.drawRoundRect(box, dp(8), dp(8), tooltip);
+        canvas.drawRoundRect(tooltipBox, dp(8), dp(8), tooltip);
         canvas.save();
-        canvas.clipRect(box);
-        canvas.drawText(text, box.left + dp(8), box.bottom - dp(6), tooltipText);
+        canvas.clipRect(tooltipBox);
+        canvas.drawText(text, tooltipBox.left + dp(8), tooltipBox.bottom - dp(6), tooltipText);
         canvas.restore();
         setContentDescription(seriesLabel + " " + text);
     }
