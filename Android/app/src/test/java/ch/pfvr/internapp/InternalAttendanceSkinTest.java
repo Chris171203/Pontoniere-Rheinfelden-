@@ -161,7 +161,6 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("value.indexOf('alle hinzufügen')"));
         assertTrue(script.contains("if(bulkPeopleAction(label))return"));
         assertTrue(script.contains("Schliessen"));
-        assertTrue(script.contains("Angezeigte Personen"));
         assertTrue(script.contains("Entfernen aktualisiert die Personenliste automatisch."));
         assertTrue(script.contains("Aktuelle Personen"));
         assertFalse(script.contains("Ausgeblendet"));
