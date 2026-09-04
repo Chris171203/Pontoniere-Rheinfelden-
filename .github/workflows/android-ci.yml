@@ -72,9 +72,9 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
-      - name: Unit tests, debug APK and unsigned release bundle
+      - name: Unit tests, release lint, debug APK and unsigned release bundle
         working-directory: Android
-        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug bundleRelease
+        run: gradle --no-daemon --stacktrace testDebugUnitTest lintRelease assembleDebug bundleRelease
 
       - name: Verify and package APK
         shell: bash
@@ -94,10 +94,12 @@ jobs:
           RELEASE_AAB=Android/app/build/outputs/bundle/release/app-release.aab
           test -s "$RELEASE_AAB"
           unzip -t "$RELEASE_AAB" >/dev/null
+          test -s Android/app/build/reports/lint-results-release.html
 
           mkdir -p dist
           OUT="PFVR-Rheinfelden-test-${VERSION_NAME}-debug.apk"
           cp "$APK" "dist/$OUT"
+          cp Android/app/build/reports/lint-results-release.html dist/lint-results-release.html
           mv signature.txt dist/debug-signature.txt
           sha256sum "dist/$OUT" > dist/SHA256SUMS.txt
           {
@@ -106,7 +108,7 @@ jobs:
             echo "Commit: $GITHUB_SHA"
             echo "Certificate SHA-256: $EXPECTED_CERT"
             echo 'Signing: stable public PFVR test key; production signing is separate'
-            echo 'Release variant: bundleRelease compiled successfully without production signing secrets'
+            echo 'Release variant: lintRelease and bundleRelease completed without production signing secrets'
           } > dist/build-info.txt
 
       - uses: actions/upload-artifact@v4
