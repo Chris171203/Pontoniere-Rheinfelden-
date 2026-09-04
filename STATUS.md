@@ -1,10 +1,13 @@
 # Status
 
-Stand: Testversion `0.10.9` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.10` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
 - Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.
+- Die Kopfzeile der Matrix mit `Termin` und den Teilnehmernamen bleibt beim vertikalen Scrollen oben sichtbar. Die linke Terminspalte bleibt weiterhin beim horizontalen Scrollen fixiert.
+- Teilnehmernamen werden nur noch in dieser Kopfzeile angezeigt; die bisherige Wiederholung über jedem An-/Abmelde-Control wurde entfernt. Dadurch steht in jeder Personen-/Termin-Zelle mehr Platz für die eigentliche Auswahl zur Verfügung.
+- Die An-/Abmelde-Controls in den Personenspalten besitzen größere Touch-Flächen und größere Schrift. Auf sehr schmalen Geräten wird die Größe moderat reduziert, ohne auf den alten kompakten Stand zurückzufallen.
 - Teilnehmernamen werden aus den tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Zusammengezogene Namen wie `NeugebauerChristoph` werden getrennt und als `Neugebauer, Christoph` angezeigt.
 - Die Originaltabelle ist die Quelle der Wahrheit. Jede dort vorhandene Person wird in der App-Ansicht angezeigt, sofern sie nicht ausdrücklich lokal ausgeblendet wurde. Generische Namen wie `Person 1` sind nur noch letzter technischer Fallback.
 - In der App-Ansicht öffnet `Personen` die Verwaltung zum Hinzufügen und Entfernen. Der Zurückpfeil neben dem Logo wird im internen Bereich nicht angezeigt; Android-Zurück führt direkt zu Home, damit WebView-Historie keine Personenänderung rückgängig macht.
@@ -20,13 +23,16 @@ Stand: Testversion `0.10.9` · aktualisiert 2026-09-04.
 
 ## Automatisch geprüft
 
-- Unit-Tests prüfen Namensformatierung, CamelCase-Trennung, mobile Matrix, zwei sichtbare Personenspalten, Original-Control-Kontext, Personen-Synchronisierung, lokale Ausblendung, unterdrückte Bulk-Aktion, Statusfarben und das Fehlen eines erzwungenen Reloads.
+- Unit-Tests prüfen Namensformatierung, CamelCase-Trennung, mobile Matrix, zwei sichtbare Personenspalten, fixierte Matrix-Kopfzeile, vergrößerte An-/Abmelde-Controls, fehlende redundante Namenslabels in den Zellen, Original-Control-Kontext, Personen-Synchronisierung, lokale Ausblendung, unterdrückte Bulk-Aktion, Statusfarben und das Fehlen eines erzwungenen Reloads.
 - Eingebettete JavaScript-RegExp-Escapes sind Java-textblockkompatibel eingecheckt; der finale Branch wird unverändert durch die normale Android-CI gebaut.
 - Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Beim vertikalen Scrollen müssen `Termin` und alle sichtbaren Teilnehmernamen stehen bleiben; beim horizontalen Scrollen müssen Kopfzeile und Matrix weiterhin exakt zusammenlaufen.
+- Die größeren An-/Abmelde-Controls dürfen auch bei langen Beschriftungen wie `Ich komme, ohne Essen` nicht abgeschnitten werden und sollen die Zellen nicht unnötig hochziehen.
+- Teilnehmernamen dürfen innerhalb der Tageszeilen nicht mehr zusätzlich über den Controls erscheinen.
 - Namen müssen als `Nachname, Vorname` erscheinen; insbesondere `NeugebauerChristoph` und `WiekertStephan` dürfen weder zusammengezogen noch als `Person 1/2` angezeigt werden.
 - Der obere Button `Personen` muss die Verwaltung zuverlässig öffnen. Hinzufügen, lokales Entfernen und Wieder-Einblenden müssen ohne Missbrauch des Zurück-Buttons möglich sein.
 - Eine bereits in der Originalansicht vorhandene zweite Person muss beim Wechsel in die App-Ansicht dauerhaft bestehen bleiben.
