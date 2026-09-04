@@ -1,0 +1,232 @@
+name: One-off Android 0.10.19 verified gauge support
+
+on:
+  push:
+    branches:
+      - dev-0.10.19
+    paths:
+      - '.github/workflows/oneoff-0.10.19.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-source-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.10.19
+
+      - name: Restrict cm gauge presentation to verified stations
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          main = Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          text = main.read_text(encoding='utf-8')
+
+          old_global = '''    TextView levelUnitLabel=txt("PEGEL-EINHEIT",10,MUTED,true);
+    levelUnitLabel.setPadding(dp(2),dp(9),0,dp(5));
+    group.addView(levelUnitLabel);
+    group.addView(riverGraphLevelUnitSelector(),new LinearLayout.LayoutParams(-1,dp(42)));
+'''
+          if old_global not in text:
+              raise SystemExit('global graph unit selector not found')
+          text = text.replace(old_global, '', 1)
+
+          text = text.replace(
+              '        double gaugeCm=RiverDisplay.gaugeCentimetres(station,rawLevel);',
+              '        double gaugeCm=RiverDisplay.hasVerifiedGaugeCentimetres(station)?RiverDisplay.gaugeCentimetres(station,rawLevel):Double.NaN;',
+              1
+          )
+
+          text = text.replace('formatGraphLevel(levelNow)+" "+graphLevelUnit()', 'formatGraphLevel(station,levelNow)+" "+graphLevelUnit(station)', 1)
+          text = text.replace('"Abfluss links · Pegel rechts ("+graphLevelUnit()+") · Diagramm berühren für Einzelwerte"', '"Abfluss links · Pegel rechts ("+graphLevelUnit(station)+") · Diagramm berühren für Einzelwerte"', 1)
+
+          anchor = '        card.addView(values);\n\n        TextView limits=txt('
+          insertion = '''        card.addView(values);
+
+        if(RiverDisplay.hasVerifiedGaugeCentimetres(station)){
+            TextView levelUnitLabel=txt("PEGEL-EINHEIT",9,MUTED,true);
+            levelUnitLabel.setPadding(0,dp(2),0,dp(4));
+            card.addView(levelUnitLabel);
+            card.addView(riverGraphLevelUnitSelector(station),new LinearLayout.LayoutParams(-1,dp(38)));
+        }
+
+        TextView limits=txt('''
+          if anchor not in text:
+              raise SystemExit('river card selector anchor not found')
+          text = text.replace(anchor, insertion, 1)
+
+          start = text.index('    private boolean riverGraphLevelCentimetres(){')
+          end = text.index('    private LinearLayout segmentedBackground(){', start)
+          replacement = '''    private String riverGraphLevelUnitPreferenceKey(HydroStation station){
+        return PREF_RIVER_GRAPH_LEVEL_UNIT+"_"+station.id;
+    }
+
+    private boolean riverGraphLevelCentimetres(HydroStation station){
+        if(!RiverDisplay.hasVerifiedGaugeCentimetres(station))return false;
+        String key=riverGraphLevelUnitPreferenceKey(station);
+        if(prefs.contains(key))return "cm".equals(prefs.getString(key,"m"));
+        return "cm".equals(prefs.getString(PREF_RIVER_GRAPH_LEVEL_UNIT,"m"));
+    }
+
+    private View riverGraphLevelUnitSelector(HydroStation station){
+        LinearLayout outer=segmentedBackground();
+        boolean centimetres=riverGraphLevelCentimetres(station);
+        TextView absolute=segmentOption("m ü.M.",!centimetres);
+        absolute.setContentDescription("Pegel "+station.label+" im Diagramm in Meter über Meer");
+        absolute.setOnClickListener(v->{
+            prefs.edit().putString(riverGraphLevelUnitPreferenceKey(station),"m").apply();
+            if(current==Screen.HOME)refreshHomeLiveViews();
+        });
+        outer.addView(absolute,segmentParams(outer));
+        TextView relative=segmentOption("cm",centimetres);
+        relative.setContentDescription("Pegel "+station.label+" im Diagramm in Zentimetern");
+        relative.setOnClickListener(v->{
+            prefs.edit().putString(riverGraphLevelUnitPreferenceKey(station),"cm").apply();
+            if(current==Screen.HOME)refreshHomeLiveViews();
+        });
+        outer.addView(relative,segmentParams(outer));
+        return outer;
+    }
+
+    private double graphLevelValue(HydroStation station,double rawValue){
+        return RiverDisplay.graphLevelValue(station,rawValue,riverGraphLevelCentimetres(station));
+    }
+
+    private String graphLevelUnit(HydroStation station){
+        return RiverDisplay.graphLevelUnit(station,riverGraphLevelCentimetres(station));
+    }
+
+    private String formatGraphLevel(HydroStation station,double value){
+        if(!Double.isFinite(value))return "–";
+        return RiverDisplay.graphLevelDecimals(station,riverGraphLevelCentimetres(station))==0
+                ?String.format(Locale.GERMAN,"%.0f",value)
+                :String.format(Locale.GERMAN,"%.2f",value);
+    }
+
+'''
+          text = text[:start] + replacement + text[end:]
+
+          text = text.replace('formatGraphLevel(w)+" "+graphLevelUnit()', 'formatGraphLevel(station,w)+" "+graphLevelUnit(station)')
+          main.write_text(text, encoding='utf-8')
+
+          display = Path('Android/app/src/main/java/ch/pfvr/internapp/RiverDisplay.java')
+          display.write_text('''package ch.pfvr.internapp;
+
+/** Station-specific presentation rules for hydrological values. */
+final class RiverDisplay {
+    // Verified for Basel-Rheinhalle: 247.20 m ü.M. corresponds to 720 cm.
+    private static final double BASEL_RHEINHALLE_GAUGE_ZERO_M = 240.0d;
+
+    private RiverDisplay() {}
+
+    static double levelValue(HydroStation station,double rawMetresAboveSea){
+        return rawMetresAboveSea;
+    }
+
+    static String levelUnit(HydroStation station){
+        return "m ü.M.";
+    }
+
+    static int levelDecimals(HydroStation station){
+        return 2;
+    }
+
+    static boolean hasVerifiedGaugeCentimetres(HydroStation station){
+        return station==HydroStation.BASEL_RHEINHALLE;
+    }
+
+    static double graphLevelValue(HydroStation station,double rawMetresAboveSea,boolean centimetres){
+        return centimetres&&hasVerifiedGaugeCentimetres(station)
+                ?gaugeCentimetres(station,rawMetresAboveSea)
+                :levelValue(station,rawMetresAboveSea);
+    }
+
+    static String graphLevelUnit(HydroStation station,boolean centimetres){
+        return centimetres&&hasVerifiedGaugeCentimetres(station)?"cm":"m ü.M.";
+    }
+
+    static int graphLevelDecimals(HydroStation station,boolean centimetres){
+        return centimetres&&hasVerifiedGaugeCentimetres(station)?0:2;
+    }
+
+    static double gaugeCentimetres(HydroStation station,double rawMetresAboveSea){
+        if(!Double.isFinite(rawMetresAboveSea))return rawMetresAboveSea;
+        if(!hasVerifiedGaugeCentimetres(station))return Double.NaN;
+        return (rawMetresAboveSea-BASEL_RHEINHALLE_GAUGE_ZERO_M)*100.0d;
+    }
+}
+''', encoding='utf-8')
+
+          test = Path('Android/app/src/test/java/ch/pfvr/internapp/RiverDisplayTest.java')
+          test.write_text('''package ch.pfvr.internapp;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class RiverDisplayTest {
+    @Test public void keepsBothStationWaterLevelsAsAbsoluteMetresAboveSea(){
+        assertEquals(245.00, RiverDisplay.levelValue(HydroStation.BASEL_RHEINHALLE,245.00), 0.0001);
+        assertEquals(261.30, RiverDisplay.levelValue(HydroStation.RHEINFELDEN,261.30), 0.0001);
+        assertEquals("m ü.M.", RiverDisplay.levelUnit(HydroStation.BASEL_RHEINHALLE));
+        assertEquals("m ü.M.", RiverDisplay.levelUnit(HydroStation.RHEINFELDEN));
+    }
+
+    @Test public void onlyBaselHasVerifiedRelativeGaugeCentimetres(){
+        assertTrue(RiverDisplay.hasVerifiedGaugeCentimetres(HydroStation.BASEL_RHEINHALLE));
+        assertFalse(RiverDisplay.hasVerifiedGaugeCentimetres(HydroStation.RHEINFELDEN));
+        assertEquals(720.0, RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,247.20), 0.0001);
+        assertTrue(Double.isNaN(RiverDisplay.gaugeCentimetres(HydroStation.RHEINFELDEN,261.30)));
+    }
+
+    @Test public void graphCentimetreModeFallsBackToAbsoluteMetresWhenUnsupported(){
+        assertEquals(720.0, RiverDisplay.graphLevelValue(HydroStation.BASEL_RHEINHALLE,247.20,true), 0.0001);
+        assertEquals("cm", RiverDisplay.graphLevelUnit(HydroStation.BASEL_RHEINHALLE,true));
+        assertEquals(0, RiverDisplay.graphLevelDecimals(HydroStation.BASEL_RHEINHALLE,true));
+        assertEquals(261.30, RiverDisplay.graphLevelValue(HydroStation.RHEINFELDEN,261.30,true), 0.0001);
+        assertEquals("m ü.M.", RiverDisplay.graphLevelUnit(HydroStation.RHEINFELDEN,true));
+        assertEquals(2, RiverDisplay.graphLevelDecimals(HydroStation.RHEINFELDEN,true));
+    }
+
+    @Test public void preservesMissingValues(){
+        assertTrue(Double.isNaN(RiverDisplay.levelValue(HydroStation.BASEL_RHEINHALLE,Double.NaN)));
+        assertTrue(Double.isNaN(RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,Double.NaN)));
+    }
+}
+''', encoding='utf-8')
+
+          gradle = Path('Android/app/build.gradle')
+          build = gradle.read_text(encoding='utf-8')
+          build = build.replace('versionCode 42', 'versionCode 43', 1)
+          build = build.replace("versionName '0.10.18'", "versionName '0.10.19'", 1)
+          gradle.write_text(build, encoding='utf-8')
+
+          changelog = Path('Android/CHANGELOG.md')
+          ch = changelog.read_text(encoding='utf-8')
+          ch = ch.replace('# Android Changelog\n', '''# Android Changelog\n\n## 0.10.19\n- Rheinfelden wird nicht mehr auf einen relativen cm-Pegel umgerechnet, weil für die aktuelle BAFU-Messreihe kein belastbarer aktueller Pegelnullpunkt als Grundlage verwendet wird.\n- `Rhein aktuell` zeigt Rheinfelden daher ausschließlich in `m ü.M.`; der zusätzliche cm-Wert bleibt nur bei Basel-Rheinhalle, wo der Bezug offiziell dokumentiert ist.\n- Die Graphen-Umschaltung `m ü.M.` / `cm` wird stationsbezogen angeboten und erscheint nur bei Messstationen mit verifiziertem cm-Bezug. Rheinfelden bleibt im Graphen in `m ü.M.`.\n''', 1)
+          changelog.write_text(ch, encoding='utf-8')
+
+          status = Path('STATUS.md')
+          st = status.read_text(encoding='utf-8')
+          st = st.replace('Stand: Testversion `0.10.18`', 'Stand: Testversion `0.10.19`', 1)
+          st = st.replace('Beide Rhein-Kurzkarten zeigen den BAFU-Wasserstand primär in `m ü.M.`. Direkt darunter steht zusätzlich der relative Pegel in `cm`: Basel bezogen auf 240.00 m ü.M., Rheinfelden bezogen auf den historischen BAFU-Pegelnullpunkt 260.00 m ü.M.', 'Beide Rhein-Kurzkarten zeigen den BAFU-Wasserstand primär in `m ü.M.`. Einen zusätzlichen relativen Pegel in `cm` zeigt nur Basel-Rheinhalle, weil nur dort der aktuelle Bezug für diese Darstellung belastbar dokumentiert ist; Rheinfelden bleibt ohne abgeleiteten cm-Wert.')
+          st = st.replace('Die Pegel-Einheit der Rhein-Grafiken ist global zwischen `m ü.M.` und `cm` umschaltbar und wird lokal gespeichert; die Auswahl wirkt konsistent auf aktuellen Wert, rechte Achse, Kurve, Tooltip und Beschriftung beider Stationen.', 'Die Pegel-Einheit der Rhein-Grafiken wird stationsbezogen nur dort zwischen `m ü.M.` und `cm` angeboten, wo ein verifizierter cm-Bezug vorliegt. Basel-Rheinhalle ist umschaltbar; Rheinfelden bleibt in `m ü.M.`.')
+          status.write_text(st, encoding='utf-8')
+          PY
+
+      - name: Commit direct source changes
+        shell: bash
+        run: |
+          rm .github/workflows/oneoff-0.10.19.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Use cm gauge only where verified'
+          git push origin HEAD:dev-0.10.19
