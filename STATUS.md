@@ -5,7 +5,6 @@ Stand: Testversion `0.10.6` · aktualisiert 2026-09-04.
 ## Implementiert / im Test
 
 - Personen-Hinzufügen lässt das originale Website-Select in seinem Formular/DOM-Kontext und verwendet in der App nur einen Proxy. Änderungen werden am echten Control ausgelöst; neue Personenzeilen werden zusätzlich über verzögerte Synchronisierung und MutationObserver in die mobile Matrix übernommen.
-
 - Die gewünschte Personenliste der internen App-Ansicht wird dauerhaft gespeichert. Fehlende Zusatzpersonen werden beim nächsten Laden über den originalen Website-Select wieder eingeblendet; zusätzliche Personen können lokal aus der Übersicht entfernt werden, ohne An-/Abmeldedaten auf dem Server zu löschen.
 - Teilnehmernamen stehen zusätzlich in jeder Statuszelle; lange Namen sind auf zwei Zeilen begrenzt und werden innerhalb der gedeckelten Personenspalte moderat verkleinert.
 - Die mobile interne Terminansicht verwendet eine gemeinsam horizontal scrollende Matrix: Termin-/Kochinfo bleibt links sticky, jede Person ist über alle Tage dieselbe feste Spalte und mindestens zwei Personenspalten sind gleichzeitig sichtbar. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.
@@ -35,15 +34,17 @@ Stand: Testversion `0.10.6` · aktualisiert 2026-09-04.
 - Zusätzliche Unit-Tests prüfen Live-Restyling aus Button-/Select-Werten, verzögerte Neuberechnung und DOM-Mutationserkennung ohne Voll-Reload.
 - Unit-Tests prüfen weiterhin Statusaufteilung und die Kachel-Layoutmigration.
 - Android-Kompilierung, Unit-Tests, APK-Build, Paket/Version und fester Test-Zertifikatsfingerprint werden in CI geprüft.
-- Finale Testidentität: `0.10.3`, `versionCode 27`, Paket `ch.pfvr.app.test`.
+- Finale Testidentität: `0.10.6`, `versionCode 30`, Paket `ch.pfvr.app.test`.
 - APK/AAB-Dateien werden nicht im Git-Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Zusatzperson über `+ / − Person` auswählen: die echte Website-Aktion muss ausgelöst werden und die neue Person danach ohne manuelles Neuladen in der mobilen Matrix erscheinen.
+- Danach App vollständig schließen und erneut öffnen: die hinzugefügte Person muss aus der gespeicherten Ansicht wiederhergestellt werden.
 - Nach Statusauswahl muss sich die Farbe sofort bzw. nach kurzer Server-/DOM-Aktualisierung anpassen. Anschließend durch `Neu laden` oder Originalansicht prüfen, ob der Status serverseitig erhalten bleibt.
 - Ob die reale interne Matrix exakt mit `erste Zeile = Termine` und `erste Spalte = Teilnehmer` strukturiert ist; der Screenshot spricht dafür, aber die Seite ist nicht öffentlich prüfbar.
 - Termine mit unterschiedlichen zulässigen Essens-/Anmeldeoptionen: die mobilen Karten müssen exakt die serverseitig vorhandenen Controls zeigen.
-- `+ Person`, Auswahl eines weiteren Namens und `Alle anzeigen` nach dem Verschieben der Original-Controls.
+- `Alle anzeigen` muss über das originale Website-Control funktionieren und neu auftauchende Personen direkt in die Matrix übernehmen.
 - Scrollposition nach Statusänderung bzw. serverseitigem Aktualisieren; ein technisch notwendiger Seitenwechsel darf den Benutzer nicht mehr an den Seitenanfang zurückwerfen.
 - Kachelmenü auf kleiner Displaybreite, Hell-/Dunkelmodus und längere deutsche Bezeichnungen.
 - Direkte Zahlungsübernahme weiterer Banking-Apps; Yuh ist bestätigt, Neon und Revolut übernahmen das Bild im bisherigen Test nicht.
