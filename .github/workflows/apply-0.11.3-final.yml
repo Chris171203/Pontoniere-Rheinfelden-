@@ -23,6 +23,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo 'bd80cb03b6a9a54639a436547837ec1386d231c476a15d1c9997e23540a9593c  .github/tmp/0.11.3/chunk-00' | sha256sum -c -
+          echo '0e16c13f73ed84e4ee4705c0eaea3159daefef8f6535471b2a3b90e8bfe76d37  .github/tmp/0.11.3/chunk-01' | sha256sum -c -
+          echo '3de36e299bf91a09760fa9265c16301efaf5d349e0d37ab819ade1658c5dd7d1  .github/tmp/0.11.3/chunk-02' | sha256sum -c -
+          echo '8a2820132a40aec36a7fe8319db3f23e79bd352f24b066f41177ebb90aac4b74  .github/tmp/0.11.3/chunk-03' | sha256sum -c -
+          echo '8d9d367ddc82af5ac497bd8498702e0e2d0ef71cc05a77dd938efe25552d19f1  .github/tmp/0.11.3/chunk-04' | sha256sum -c -
           cat .github/tmp/0.11.3/chunk-* > /tmp/pfvr.patch.gz.b64
           echo '6b8ae6395bf705fa7612ad4d882b5458562456decdcbb016288351f076a4836e  /tmp/pfvr.patch.gz.b64' | sha256sum -c -
           base64 -d /tmp/pfvr.patch.gz.b64 | gzip -d > /tmp/pfvr.patch
