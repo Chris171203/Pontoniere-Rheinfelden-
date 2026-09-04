@@ -1,28 +1,35 @@
 # Google Play Vorbereitung
 
-Technisch ist die Android-App für Google Play geeignet. Vor dem ersten Store-Release bleiben organisatorische und Store-spezifische Schritte.
+Stand: Android-Testversion `0.11.3` (`versionCode 50`), Paket `ch.pfvr.app`, `targetSdk 36` / `compileSdk 36`, `minSdk 26`.
 
-## Technischer Stand
+Die App ist technisch weit genug für die Google-Play-Vorbereitung und einen ersten internen Play-Test. `1.0.0` bleibt für den ersten öffentlichen Produktionsrelease reserviert.
 
-- Paketname: `ch.pfvr.app`
-- Testversion: `0.5.0`
-- `targetSdk` / `compileSdk`: API 36 (Android 16)
-- Mindestversion: Android 8 / API 26
-- Debug-APK wird über `.github/workflows/android.yml` gebaut.
-- Ein signiertes Release-AAB kann über `.github/workflows/play-release.yml` erzeugt werden, sobald der Upload-Key als GitHub-Secrets hinterlegt ist.
+## Bereits erfüllt
 
-## Noch vor Veröffentlichung festlegen
+- Android 16 / API 36 als Target; damit wird die seit 31.08.2026 geltende Ziel-API-Anforderung für neue Apps und Updates erfüllt.
+- Produktions-Paketname ist fest als `ch.pfvr.app`; Debug/Test bleibt durch `.test` getrennt.
+- Nur `INTERNET` als Android-Laufzeit-/Manifestberechtigung. Keine Standort-, Kamera-, Mikrofon-, Kontakte-, Kalender- oder Speicherberechtigung.
+- Cleartext-Verkehr ist deaktiviert.
+- Testsignierung und Produktions-/Upload-Signierung sind getrennt. Der eingecheckte Testschlüssel ist niemals für Google Play zu verwenden.
+- `.github/workflows/play-release.yml` erzeugt nach Hinterlegung eines separaten Upload-Keys ein signiertes Release-AAB.
+- Store-Text, Datenschutzentwurf, Data-Safety-Arbeitsblatt, Review-Zugang, Asset-Anforderungen und Play-Console-Checkliste liegen in diesem Ordner.
+- Die App ist keine reine WebView-Hülle: Kalender, Wetter, Rheinwerte/Diagramme, Kacheln, Kasse/Swiss-QR, Sprache und große Teile der Vereinsdarstellung sind nativ.
 
-1. **Herausgeberkonto**: für eine offizielle Vereins-App ist ein Organisationskonto des Pontonierfahrvereins Rheinfelden die sauberste Variante. Google verlangt dafür einen D-U-N-S-Eintrag und Organisationsnachweise. Alternativ ist ein privates Entwicklerkonto möglich; dann erscheint der private Herausgeber entsprechend bei Google Play und bei neuen privaten Konten gilt vor Produktion die Testanforderung unten.
-2. **Upload-Key** erzeugen und sicher offline sichern. Nur die Base64-Kopie und Passwörter als GitHub-Secrets hinterlegen.
-3. **Play App Signing** beim ersten Upload verwenden.
-4. **Datenschutzerklärung** finalisieren. Der Entwurf liegt in `PlayStore/privacy-policy-draft.md`; Herausgeber/Datenschutzkontakt müssen zum tatsächlichen Play-Konto passen. Die finale Erklärung muss öffentlich erreichbar sein und zusätzlich aus der App verlinkt werden.
-5. **Store-Grafiken**: hochauflösendes App-Icon, Feature Graphic und Screenshots erzeugen. Das aktuelle kleine Vereinslogo ist für einen finalen Store-Auftritt qualitativ noch nicht ideal.
-6. **Data-Safety-Formular** anhand der finalen App und des tatsächlichen Herausgebers ausfüllen.
-7. **Financial-Features-Erklärung** ausfüllen. Google verlangt diese Erklärung für alle auf Google Play veröffentlichten Apps. Die PFVR-App verarbeitet selbst keine Bankzugangsdaten und führt keine Zahlung aus; sie erzeugt Händler-Zahlungsdaten/Swiss-QR bzw. übergibt an externe Banking-/TWINT-Apps. Die endgültige Auswahl im Play-Formular ist anhand der dann aktuellen Google-Kategorien zu bestätigen und darf nicht pauschal als Banking-App deklariert werden.
-8. **Inhaltsklassifizierung** und sonstige App-Content-Angaben in der Play Console ausfüllen.
-9. **App-Zugriff für Google-Review**: Der interne PFVR-Bereich ist zugangsbeschränkt. Für eine Store-Prüfung sollte der Verein einen separaten Test-/Demo-Zugang bereitstellen, der ausschließlich in der Play Console unter den Review-Zugangsdaten hinterlegt wird. Keinesfalls einen persönlichen Vereinslink ins Repository oder in den Store-Text übernehmen.
-10. Falls ein **neues privates Entwicklerkonto** verwendet wird: geschlossenen Test mit mindestens 12 Testern über 14 aufeinanderfolgende Tage durchführen, bevor Produktionszugriff beantragt werden kann. Der interne Test-Track kann bereits vorher für die Verteilung an Tester genutzt werden.
+## Externe Release-Blocker
+
+1. **Herausgeber festlegen.** Für eine offizielle Vereins-App ist ein Organisationskonto des Pontonierfahrvereins Rheinfelden vorzuziehen. Google verlangt für Organisationskonten grundsätzlich eine D-U-N-S-Nummer sowie verifizierbare Organisations- und Kontaktdaten. Falls noch keine D-U-N-S-Nummer existiert, früh beantragen; Google weist auf eine mögliche Bearbeitungszeit von bis zu 30 Tagen hin.
+2. **Öffentliche Datenschutzerklärung veröffentlichen.** Google verlangt für jede App eine aktive, öffentlich zugängliche, nicht geogesperrte Privacy-Policy-URL und zusätzlich eine Datenschutzerklärung bzw. einen Link innerhalb der App. Der Entwurf in `privacy-policy-draft.md` ist fachlich vorbereitet, benötigt aber den endgültigen Herausgeber/Datenschutzkontakt und eine reale öffentliche URL, vorzugsweise auf `pfvr.ch`.
+3. **Separaten Review-Zugang bereitstellen.** Der gemeinsame Erstfreigabecode gehört ausschließlich in die Play Console, nicht ins Repository. Für den internen PFVR-Bereich braucht Google zusätzlich einen dedizierten, nicht personenbezogenen Demo-/Review-Link oder einen entsprechend isolierten Testzugang.
+4. **Upload-Key auf einem vertrauenswürdigen Vereins-/Admin-Gerät erzeugen und offline sichern.** Keystore und Passwörter niemals in Git committen. Anschließend die vier Release-Secrets in GitHub hinterlegen.
+5. **Store-Assets erstellen.** Benötigt werden insbesondere ein 512×512-PNG-App-Icon, eine 1024×500-Feature-Grafik und mindestens zwei geeignete Screenshots. Das derzeitige kleine Launcher-JPEG ist kein ausreichendes Store-Master-Asset.
+6. **Play Console vollständig ausfüllen:** App-Zugriff, Werbung, Zielgruppe, IARC-Altersfreigabe, Data Safety, Financial Features und sonstige App-Content-Erklärungen.
+
+## Wichtige Policy-Einordnung
+
+- **Zahlungen:** Die Vereinsbeiz betrifft physische Waren/Konsumationen. Google Play Billing ist für den Kauf physischer Waren nicht zu verwenden. Die App verarbeitet keine Bankzugangsdaten und führt selbst keine Banktransaktion aus; sie erzeugt Zahlungsdaten/Swiss-QR und übergibt diese auf Nutzeraktion an externe Banking-/TWINT-Apps. Die Financial-Features-Erklärung ist trotzdem für jede veröffentlichte App auszufüllen; die konkrete Auswahl muss bei Einreichung anhand des dann sichtbaren Formularwortlauts bestätigt werden.
+- **Vereinsmeldungen:** Die App wird in der Kategorie `Sport` positioniert und ist keine News-/Magazine-App. Vereinsmeldungen sind nur eine Teilfunktion; Store-Metadaten sollen die App nicht als Nachrichtenprodukt beschreiben.
+- **Kinder/Zielgruppe:** Vor Einreichung muss der Verein das tatsächlich vorgesehene Mindestalter bestätigen. Unter-13-Zielgruppen dürfen nicht einfach aus Bequemlichkeit ausgeschlossen oder eingeschlossen werden, weil davon zusätzliche Families-Anforderungen abhängen.
+- **App-Zugriff:** Die Erstfreigabe und der interne Bereich müssen in der Play Console als eingeschränkter Zugriff angegeben werden. Reviewer müssen ohne persönliche Vereinszugänge alles Wesentliche prüfen können.
 
 ## GitHub-Secrets für den Release-Workflow
 
@@ -31,12 +38,36 @@ Technisch ist die Android-App für Google Play geeignet. Vor dem ersten Store-Re
 - `ANDROID_UPLOAD_KEY_ALIAS`
 - `ANDROID_UPLOAD_KEY_PASSWORD`
 
-Keystore und Passwörter niemals committen.
+Empfohlen: die Secrets in einer GitHub-Environment `play-store` hinterlegen und dort Freigaberegeln aktivieren.
 
-## Store-Positionierung
+## Empfohlener Releaseweg
 
-Die App ist keine reine WebView-Hülle: Kalender-Cache, Trainingswetter, BAFU-Livedaten/Verläufe, Kasse/Swiss-QR, Einstellungen und lokale Integrationen sind nativ. Für eingebettete PFVR-Seiten sollte vor Veröffentlichung geklärt sein, dass der Verein bzw. Websitebetreiber die App und die Darstellung seiner Inhalte erlaubt. Wird die App direkt vom Verein herausgegeben, ist diese Zuordnung deutlich sauberer.
+1. Organisationskonto/D-U-N-S und Privacy-URL klären.
+2. Upload-Key erzeugen, Play App Signing beim ersten AAB-Upload aktivieren.
+3. `0.11.x` als **Internal testing** über Google Play verteilen.
+4. Store-Eintrag, Data Safety und Review-Zugang mit echten Angaben abschließen.
+5. Reale Gerätetests und Rückmeldungen sammeln; keine neue Funktionswelle kurz vor Release.
+6. Erst nach abgeschlossenem Store-/Review-Test auf `1.0.0` gehen.
 
-## Praktischer Testweg
+Falls stattdessen ein neues persönliches Entwicklerkonto verwendet wird, gilt für Produktionszugriff derzeit ein geschlossener Test mit mindestens 12 dauerhaft angemeldeten Testern über 14 aufeinanderfolgende Tage. Diese Hürde gilt nicht in gleicher Form für ein Organisationskonto.
 
-Ein Google-Play-**interner Test** wäre bereits vor dem öffentlichen Release sinnvoll: Tester installieren über Google Play statt per APK-Sideload. Damit entfällt auf den Testgeräten der normale Android-Dialog für Installationen aus unbekannten Quellen. `1.0.0` bleibt trotzdem für den ersten offiziellen Produktionsrelease reserviert.
+## Arbeitsdateien
+
+- `store-listing-de.md` – Store-Haupteintrag (Deutsch/Schweiz).
+- `privacy-policy-draft.md` – fachlich vorbereiteter Datenschutztext mit offenen Herausgeberdaten.
+- `data-safety-draft.md` – technische Datensicherheits-/Datenfluss-Matrix für die Play Console.
+- `play-console-checklist.md` – konkrete Console-Schritte und noch offene Entscheidungen.
+- `review-access.md` – Review-Zugang ohne persönliche Vereinsdaten.
+- `store-assets.md` – erforderliche Grafiken und Screenshotplan.
+- `upload-key.md` – sichere Erzeugung/Verwaltung des Upload-Keys.
+
+## Offizielle Referenzen
+
+- Target API: https://support.google.com/googleplay/android-developer/answer/11926878
+- Organisationskonto / D-U-N-S: https://support.google.com/googleplay/android-developer/answer/13628312
+- App-Inhalte / Review: https://support.google.com/googleplay/android-developer/answer/9859455
+- User Data / Privacy Policy: https://support.google.com/googleplay/android-developer/answer/10144311
+- Data Safety: https://support.google.com/googleplay/android-developer/answer/10787469
+- Financial Features: https://support.google.com/googleplay/android-developer/answer/13849271
+- Zahlungen / physische Waren: https://support.google.com/googleplay/android-developer/answer/9858738
+- Store-Assets: https://support.google.com/googleplay/android-developer/answer/9866151
