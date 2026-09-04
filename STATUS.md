@@ -1,9 +1,14 @@
 # Status
 
-Stand: Testversion `0.11.3` · aktualisiert 2026-09-04.
+Stand: Testversion `0.11.4` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
+- `0.11.4` ist der Google-Play-Readiness-Meilenstein: Store-Unterlagen, Datenschutz-/Data-Safety-Arbeitsstand, Review-Zugang, Store-Assets und Upload-Key-Prozess sind dokumentiert; `1.0.0` bleibt weiterhin ausschließlich für den ersten öffentlichen Produktionsrelease reserviert.
+- Die Release-CI führt zusätzlich `lintRelease`, Release-AAB-Kompilierung und einen Audit der tatsächlich zusammengeführten APK-Berechtigungen aus. Unerwartete sensible/hochwirksame Berechtigungen, bekannte persönliche PFVR-Zugangsmuster und rohe Produktions-/Upload-Key-Dateien führen zum Build-Abbruch.
+- Der Store-AAB-Workflow ist von der normalen Testsignierung getrennt: Er darf nur manuell von `main` laufen, verwendet die geschützte GitHub-Environment `play-store` und erwartet einen separaten Upload-Key ausschließlich aus Secrets.
+- Persönliche lokale PFVR-Zugänge und Teilnehmerzustände sind zusätzlich zu `allowBackup=false` explizit von Android-Cloud-Backup und Device-to-Device-Transfer ausgeschlossen.
+- Der Play-Readiness-Lint hat einen echten API-Kompatibilitätsfehler gefunden und behoben: `windowLightNavigationBar` liegt nur noch in `values-v27`, damit `minSdk 26` tatsächlich unterstützt bleibt. Die Temperaturkurve vermeidet außerdem unnötige Draw-Time-Allokationen.
 - `Schwiizerdütsch` wurde über die gesamte App-eigene Oberfläche nachgezogen und sprachlich vereinheitlicht: Landingpage, Home, Rhein, Kalender, News, Einstellungen, Kachelverwaltung, Verein, Kasse, interne native Werkzeugleiste, app-erzeugte Personenverwaltung/Statusanzeigen sowie häufige Dialoge und Rückmeldungen. App-generierte Wochentage werden ebenfalls angepasst.
 - Externe Kalender-/News-Inhalte, Termin- und Personennamen, Messquellen sowie die originale PFVR-Webseite laufen bewusst an der Dialekt-Mapping-Schicht vorbei. Gemischte App-Anzeigen werden aus separat lokalisierten Beschriftungen und unverändertem Quelltext zusammengesetzt, damit zufällige Textgleichheit keine Vereinsinhalte verändert.
 - Die lokale Erstfreigabe ist zugleich eine öffentliche Landingpage: Vor Eingabe des Freigabecodes können Sprache, der Hinweis auf Schnuppertraining schon vor der Mitgliedschaft, die PFVR-Einstiegs-/Formularseite sowie die offiziellen Kanäle auf Instagram und Facebook geöffnet werden. Live-Daten, interne WebViews und die eigentlichen App-Screens werden weiterhin erst nach erfolgreicher Freigabe aufgebaut.
@@ -46,11 +51,12 @@ Stand: Testversion `0.11.3` · aktualisiert 2026-09-04.
 - Unit-Tests prüfen Namensformatierung inklusive Bearbeiten-Symbol, mobile Matrix, Erkennung von Namen aus Button-/Input-Controls, begrenzte indexbasierte Namens-Fallbacks, Übernahme stark erweiterter Original-Personenlisten, blockierte Bulk-Personenaktionen im App-Modus, Fallback-Personenverwaltung, Initiallink-Recovery, Viewport-Kopfzeile, horizontale Synchronisierung, automatische Verkleinerung langer Kochtexte und das Zurücksetzen der Recovery-Bestätigung.
 - Sprachtests decken Landingpage, Screens, dynamische Beschriftungen und die app-erzeugte interne Personenverwaltung ab. Quellcode-Regressionstests sichern ab, dass Kalender-/News-/Personentexte roh ausgegeben, App-Texte davor lokalisiert und die offiziellen PFVR-Einstiegs-, Instagram- und Facebook-Adressen zentral verwendet werden.
 - Zusätzliche Tests prüfen absolute Wasserstände in `m ü.M.`, den bestätigten Basel-cm-Bezug sowie den sicheren Fallback auf `m ü.M.`, wenn für eine Station kein verifizierter cm-Bezug vorhanden ist. Die offiziellen Basel-Hochwassermarken werden an ihren exakten Grenzen 700/790/820 cm sowie in beiden Graph-Einheiten getestet.
-- Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
+- Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt Unit-Tests und `lintRelease` aus, baut Debug-APK sowie Release-AAB, prüft Paketname/Version/Testzertifikat, audititiert die final zusammengeführten Berechtigungen und blockiert persönliche PFVR-Zugangsmuster sowie rohe Produktions-/Upload-Key-Dateien.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Android 8 / API 26: App-Start, Navigation und Grundfunktionen prüfen; die API-27-spezifische helle Navigationsleiste darf dort keinen Ressourcenzugriffsfehler verursachen.
 - Unter `Rhein aktuell` müssen beide Stationen primär den Wasserstand in `m ü.M.` zeigen. Basel darf zusätzlich den bestätigten cm-Pegel zeigen; Rheinfelden darf keinen abgeleiteten cm-Wert anzeigen. Die beiden BAFU-Stand/Zeitstempel müssen am unteren Kartenrand auf derselben Höhe liegen.
 - Bei Basel-Rheinhalle muss der Graph zwischen `m ü.M.` und `cm` umschaltbar sein. Aktueller Pegelwert, rechte Achse, Kurve, Hinweis und Tooltip dürfen dabei keine gemischten Einheiten zeigen. Bei Rheinfelden darf kein cm-Umschalter angeboten werden.
 - Basel muss bei 700/790/820 cm sauber zwischen Normal, HWM I, Sperre IIb und Sperre IIa wechseln. Pegelwert, Badge, Hochwassermarken, Kurvenabschnitte und ausgewählte Diagrammpunkte müssen die Stufe widerspruchsfrei zeigen; Abfluss und Pegel müssen dabei trotz gemeinsamer Stufenfamilie optisch unterscheidbar bleiben.
@@ -65,9 +71,11 @@ Stand: Testversion `0.11.3` · aktualisiert 2026-09-04.
 - Hinzufügen, Entfernen, Wieder-Einblenden und Neuaufbau aus Initiallink müssen auch nach einem vollständigen App-Neustart konsistent bleiben.
 - Nach Statusänderungen müssen Farbe, serverseitige Speicherung und Scrollposition stimmen.
 - Direkte Zahlungsübernahme weiterer Banking-Apps; Yuh ist bestätigt, Neon und Revolut übernahmen das Bild im bisherigen Test nicht.
+- Erster Google-Play-Internal-Test nach Abschluss der externen Punkte aus Issue #4: Play-Installation/Update, Landingpage/Freigabe, Datenschutzlink, Review-Demozugang und Store-AAB-Signierung auf realem Gerät prüfen.
 
 ## Nächste strukturelle Schritte
 
+- Google-Play-Internal-Test gemäß `PlayStore/` und Issue #4 abschließen, sobald Organisationskonto/D-U-N-S, Datenschutz-URL, Review-Demozugang, Upload-Key und Store-Assets vorliegen.
 - Die noch große `MainActivity` weiter in Screen-, Repository- und WebView-Adapter-Komponenten aufteilen.
 - Für die private An-/Abmeldeseite langfristig einen klaren Adapter beziehungsweise dokumentierten Backend-Endpunkt verwenden, sobald Zugriff darauf besteht. Weitere DOM-Sonderfälle nicht unkontrolliert in die Hauptlogik einbauen.
 - Remote-Katalog mit Server-JSON, lokalem Cache und eingebautem Fallback vorbereiten, sobald ein pflegbarer Website-Endpunkt verfügbar ist.
