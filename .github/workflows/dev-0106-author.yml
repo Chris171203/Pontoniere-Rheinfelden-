@@ -1,0 +1,215 @@
+name: Author PFVR 0.10.6
+
+on:
+  push:
+    branches: [dev-0.10.6-author]
+
+permissions:
+  contents: write
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.10.6
+          fetch-depth: 0
+      - name: Patch source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, got {count}")
+              return text.replace(old, new, 1)
+
+          path = Path('Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java')
+          s = path.read_text()
+
+          s = replace_once(
+              s,
+              "                  var RESTORE_KEY='pfvr-attendance-restore-v1';\n",
+              "                  var RESTORE_KEY='pfvr-attendance-restore-v1';\n                  var sourceTableRef=null;\n                  var sourcePeopleObserver=null;\n",
+              'source refs'
+          )
+
+          old_remove = """                  var removePersonFromMatrix=function(name){
+                    var key=personKey(name),matrix=document.querySelector('.pfvr-attendance-matrix');if(!matrix||!key)return;
+                    Array.from(matrix.querySelectorAll('[data-pfvr-person]')).forEach(function(el){if(el.getAttribute('data-pfvr-person')===key)el.remove();});
+                    var count=matrix.querySelectorAll('.pfvr-person-header').length;
+                    matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
+                  };
+"""
+          new_remove = old_remove + """                  var appendManagedPerson=function(list,state,personName){
+                    if(!list)return;var key=personKey(personName);if(!key)return;
+                    var exists=Array.from(list.querySelectorAll('.pfvr-managed-person')).some(function(line){return line.getAttribute('data-pfvr-managed-person')===key;});if(exists)return;
+                    var line=element('div','pfvr-managed-person');line.setAttribute('data-pfvr-managed-person',key);
+                    var name=element('div','pfvr-managed-person-name');fitPersonName(name,personName);line.appendChild(name);
+                    if(key===personKey(state.primary)){
+                      var primary=element('span','pfvr-primary-label');primary.textContent='Standard';line.appendChild(primary);
+                    }else{
+                      var remove=element('button','pfvr-local-remove');remove.type='button';remove.textContent='Entfernen';remove.setAttribute('aria-label','Person aus Ansicht entfernen: '+personName);
+                      remove.addEventListener('click',function(){if(!removeDesiredPerson(state,personName))return;removePersonFromMatrix(personName);line.remove();});
+                      line.appendChild(remove);
+                    }
+                    list.appendChild(line);
+                  };
+                  var matrixHasPerson=function(matrix,name){
+                    var key=personKey(name);if(!matrix||!key)return false;
+                    return Array.from(matrix.querySelectorAll('.pfvr-person-header')).some(function(el){return el.getAttribute('data-pfvr-person')===key;});
+                  };
+                  var appendPersonColumn=function(table,row,personName,state){
+                    var matrix=document.querySelector('.pfvr-attendance-matrix');if(!table||!row||!matrix||matrixHasPerson(matrix,personName))return false;
+                    var rows=Array.from(table.rows||[]),header=rows[0];if(!header||!header.cells||header.cells.length<2)return false;
+                    var metas=Array.from(matrix.querySelectorAll('.pfvr-day-meta'));if(metas.length!==header.cells.length-1)return false;
+                    var key=personKey(personName),personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',key);
+                    matrix.insertBefore(personHeader,metas[0]||null);
+                    for(var column=1;column<header.cells.length;column++){
+                      var cell=element('div','pfvr-person-cell');cell.setAttribute('data-pfvr-person',key);
+                      var personLabel=element('div','pfvr-person-name-label');fitPersonName(personLabel,personName);cell.appendChild(personLabel);
+                      var control=element('div','pfvr-person-control');if(row.cells[column])moveChildren(row.cells[column],control);
+                      if(!control.textContent.trim()&&!control.querySelector('button,input,select,a')){var empty=element('span','pfvr-empty-status');empty.textContent='Keine Auswahl für diesen Termin';control.appendChild(empty);}
+                      cell.appendChild(control);matrix.insertBefore(cell,metas[column]||null);
+                    }
+                    var count=matrix.querySelectorAll('.pfvr-person-header').length;matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
+                    appendManagedPerson(document.querySelector('.pfvr-managed-people'),state,personName);
+                    splitStatusText(matrix);refreshInteractiveSoon(matrix);return true;
+                  };
+                  var syncAddedParticipants=function(state){
+                    var table=sourceTableRef;
+                    if(!table||!table.isConnected){
+                      var fresh=findTable();if(!fresh)return false;
+                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();
+                      sourceTableRef=null;buildMobile();return true;
+                    }
+                    var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells)return false;
+                    var headerFresh=Array.from(rows[0].cells||[]).slice(1).some(function(cell){return !!(text(cell).trim()||cell.children.length);});
+                    if(headerFresh&&document.querySelector('.pfvr-attendance-mobile')){
+                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();table.classList.remove('pfvr-attendance-source');sourceTableRef=null;buildMobile();return true;
+                    }
+                    var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
+                    var names=participantRows.map(function(row,index){var value=cleanPersonName(text(row.cells[0]));return value||('Person '+(index+1));});
+                    if(state.adoptNext){names.forEach(function(name){addDesiredPerson(state,name);});state.adoptNext=false;savePeopleState(state);}
+                    var desiredKeys={};state.desired.forEach(function(name){desiredKeys[personKey(name)]=true;});
+                    var added=false;participantRows.forEach(function(row,index){var name=names[index];if(desiredKeys[personKey(name)]&&appendPersonColumn(table,row,name,state))added=true;});return added;
+                  };
+                  var scheduleParticipantSync=function(state){[180,550,1200,2500].forEach(function(delay){setTimeout(function(){syncAddedParticipants(state);},delay);});};
+                  var bindSourcePeopleObserver=function(table,state){
+                    if(!table||!window.MutationObserver)return;if(sourcePeopleObserver)sourcePeopleObserver.disconnect();
+                    var scheduled=false;sourcePeopleObserver=new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;syncAddedParticipants(state);},90);});
+                    sourcePeopleObserver.observe(table,{subtree:true,childList:true});
+                  };
+"""
+          s = replace_once(s, old_remove, new_remove, 'people sync helpers')
+
+          start = s.index("                  var findPersonTools=function(toolInfo,state){")
+          end = s.index("\n\n                  var saveViewState=function(){", start)
+          old_tools = s[start:end]
+          new_tools = """                  var findPersonTools=function(toolInfo,state){
+                    if(!toolInfo||!toolInfo.select)return null;
+                    var anchor=toolInfo.anchor,scope=toolInfo.scope,select=toolInfo.select;
+                    var panel=element('div','pfvr-person-tools');
+                    var head=element('div','pfvr-person-tools-head');
+                    var title=element('div','pfvr-person-tools-title');title.textContent='Teilnehmende';
+                    var toggle=element('button','pfvr-person-tools-toggle');toggle.type='button';toggle.textContent='+ / − Person';
+                    head.appendChild(title);head.appendChild(toggle);panel.appendChild(head);
+                    var body=element('div','pfvr-person-tools-body');
+                    var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
+                    var proxy=select.cloneNode(true);proxy.removeAttribute('id');proxy.removeAttribute('name');proxy.removeAttribute('form');proxy.removeAttribute('onchange');proxy.onchange=null;proxy.setAttribute('aria-label','Person hinzufügen');proxy.dataset.pfvrProxy='1';proxy.selectedIndex=select.selectedIndex;
+                    body.appendChild(proxy);select.style.setProperty('display','none','important');
+                    proxy.addEventListener('change',function(){
+                      var chosen=selectedOptionName(proxy);if(chosen)addDesiredPerson(state,chosen);
+                      select.selectedIndex=proxy.selectedIndex;try{select.value=proxy.value;}catch(ignore){}
+                      select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));scheduleParticipantSync(state);
+                    },false);
+                    var actionControls=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return control!==select&&norm(control.innerText||control.value).length>0;});
+                    actionControls.forEach(function(control){
+                      var label=(control.innerText||control.value||'').trim(),action=element('button');action.type='button';action.textContent=label;action.setAttribute('aria-label',label);
+                      action.addEventListener('click',function(){if(norm(label).indexOf('alle anzeigen')>=0){state.adoptNext=true;savePeopleState(state);}control.click();scheduleParticipantSync(state);});
+                      body.appendChild(action);control.style.setProperty('display','none','important');
+                    });
+                    var list=element('div','pfvr-managed-people');
+                    var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='In deiner Ansicht';list.appendChild(listTitle);
+                    state.desired.forEach(function(personName){appendManagedPerson(list,state,personName);});
+                    body.appendChild(list);panel.appendChild(body);
+                    toggle.addEventListener('click',function(){panel.classList.toggle('open');});
+                    anchor.style.display='none';return panel;
+                  };"""
+          s = s[:start] + new_tools + s[end:]
+
+          s = replace_once(
+              s,
+              "                    var table=findTable();if(!table)return false;\n",
+              "                    var table=findTable();if(!table)return false;sourceTableRef=table;\n",
+              'remember source table'
+          )
+          s = replace_once(
+              s,
+              "                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);restoreViewState();\n",
+              "                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();\n",
+              'bind source observer'
+          )
+          path.write_text(s)
+
+          test_path = Path('Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java')
+          t = test_path.read_text()
+          t = replace_once(t, '        assertTrue(script.contains("body.appendChild(select)"));\n', '        assertFalse(script.contains("body.appendChild(select)"));\n', 'select move test')
+          marker = """    @Test public void generatedScriptPersistsRestoresRemovesAndLabelsParticipants(){
+"""
+          new_test = """    @Test public void generatedScriptKeepsOriginalPersonControlInWebsiteContextAndSyncsNewRows(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("select.cloneNode(true)"));
+        assertTrue(script.contains("proxy.removeAttribute('name')"));
+        assertTrue(script.contains("proxy.removeAttribute('onchange')"));
+        assertTrue(script.contains("select.dispatchEvent(new Event('change'"));
+        assertTrue(script.contains("control.click()"));
+        assertTrue(script.contains("scheduleParticipantSync"));
+        assertTrue(script.contains("syncAddedParticipants"));
+        assertTrue(script.contains("bindSourcePeopleObserver"));
+        assertTrue(script.contains("appendPersonColumn"));
+        assertFalse(script.contains("body.appendChild(select)"));
+    }
+
+""" + marker
+          t = replace_once(t, marker, new_test, 'new proxy/sync test')
+          test_path.write_text(t)
+
+          gradle = Path('Android/app/build.gradle')
+          g = gradle.read_text()
+          g = replace_once(g, '        versionCode 29\n        versionName \'0.10.5\'\n', '        versionCode 30\n        versionName \'0.10.6\'\n', 'version bump')
+          gradle.write_text(g)
+
+          readme = Path('Android/README.md')
+          r = readme.read_text()
+          r = r.replace('Aktuelle Android-Testversion: `0.10.5`.', 'Aktuelle Android-Testversion: `0.10.6`.', 1)
+          r = r.replace('## Gerätetest 0.10.5', '## Gerätetest 0.10.6', 1)
+          r = r.replace('0.10.5 verwendet `versionCode 29`', '0.10.6 verwendet `versionCode 30`', 1)
+          r = r.replace('- Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.\n', '- Zusatzperson über den sichtbaren App-Select hinzufügen: die Auswahl wird am unveränderten originalen Website-Control ausgelöst; die neue Personenzeile muss bei Navigation oder DOM-Aktualisierung direkt in der Matrix erscheinen.\n- Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.\n', 1)
+          readme.write_text(r)
+
+          status = Path('STATUS.md')
+          st = status.read_text()
+          st = st.replace('Stand: Testversion `0.10.5` · aktualisiert 2026-09-03.', 'Stand: Testversion `0.10.6` · aktualisiert 2026-09-04.', 1)
+          st = st.replace('## Implementiert / im Test\n', '## Implementiert / im Test\n\n- Personen-Hinzufügen lässt das originale Website-Select in seinem Formular/DOM-Kontext und verwendet in der App nur einen Proxy. Änderungen werden am echten Control ausgelöst; neue Personenzeilen werden zusätzlich über verzögerte Synchronisierung und MutationObserver in die mobile Matrix übernommen.\n', 1)
+          status.write_text(st)
+
+          changelog = Path('Android/CHANGELOG.md')
+          c = changelog.read_text()
+          c = c.replace('# Android Changelog\n\n', '# Android Changelog\n\n## 0.10.6\n- Personen-Hinzufügen verschiebt den originalen Website-Select nicht mehr aus seinem Formular. Ein App-Proxy steuert das echte Control am ursprünglichen DOM-Ort.\n- Server-/DOM-seitig neu auftauchende Teilnehmerzeilen werden ohne erzwungenen Voll-Reload in die vorhandene mobile Matrix synchronisiert; auch `Alle anzeigen` wird über das originale Website-Control ausgelöst.\n\n', 1)
+          changelog.write_text(c)
+          PY
+      - name: Commit target source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'PFVR Build Author'
+          git config user.email 'actions@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java Android/app/build.gradle Android/README.md Android/CHANGELOG.md STATUS.md
+          git diff --cached --check
+          git commit -m 'fix: preserve website context when adding people'
+          git push origin HEAD:dev-0.10.6
+          git push origin --delete dev-0.10.6-author || true
