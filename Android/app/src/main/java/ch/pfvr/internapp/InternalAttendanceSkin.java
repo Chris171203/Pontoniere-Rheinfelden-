@@ -87,6 +87,9 @@ final class InternalAttendanceSkin {
                   var RESTORE_KEY='pfvr-attendance-restore-v4';
                   var sourceTableRef=null;
                   var sourcePeopleObserver=null;
+                  var headerOverlay=null;
+                  var headerOverlayObserver=null;
+                  var headerViewportSync=null;
                   var norm=function(value){return (value||'').replace(/\\s+/g,' ').trim().toLowerCase();};
                   var text=function(el){return (el&&((el.innerText||el.textContent)||''))||'';};
                   var element=function(tag,className){var node=document.createElement(tag);if(className)node.className=className;return node;};
@@ -144,6 +147,8 @@ final class InternalAttendanceSkin {
                   .pfvr-people-recovery button{width:100%!important;min-height:42px!important;background:${COLORS.link}!important;color:#fff!important;font-size:12px!important;}
                   .pfvr-matrix-head-scroll{position:sticky!important;top:0!important;z-index:8!important;display:block!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;overflow-y:hidden!important;pointer-events:none!important;box-sizing:border-box!important;padding:0 0 6px!important;background:${COLORS.background}!important;scrollbar-width:none!important;}
                   .pfvr-matrix-head-scroll::-webkit-scrollbar{display:none!important;}
+                  .pfvr-matrix-head-scroll.pfvr-head-overlay{position:fixed!important;top:0!important;z-index:9998!important;display:none!important;max-width:none!important;margin:0!important;background:${COLORS.background}!important;box-shadow:0 4px 10px rgba(0,0,0,.20)!important;}
+                  .pfvr-matrix-head-scroll.pfvr-head-overlay.pfvr-head-overlay-visible{display:block!important;}
                   .pfvr-matrix-scroll{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:visible!important;box-sizing:border-box!important;padding:0 0 4px!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
                   .pfvr-attendance-head,.pfvr-attendance-matrix{--pfvr-day-col:96px;--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px);display:grid!important;gap:6px!important;align-items:stretch!important;width:max-content!important;min-width:100%!important;box-sizing:border-box!important;}
                   .pfvr-matrix-corner,.pfvr-person-header,.pfvr-day-meta,.pfvr-person-cell{box-sizing:border-box!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;background:${COLORS.card}!important;min-width:0!important;}
@@ -151,6 +156,7 @@ final class InternalAttendanceSkin {
                   .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
                   .pfvr-day-meta{position:sticky!important;left:0!important;z-index:3!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:12px!important;overflow-wrap:break-word!important;word-break:normal!important;box-shadow:3px 0 8px rgba(0,0,0,.04)!important;}
                   .pfvr-day-meta>*{max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
+                  .pfvr-day-fit-name{display:block!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;line-height:1.1!important;}
                   .pfvr-person-cell{width:var(--pfvr-person-col)!important;padding:8px!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;}
                   .pfvr-name-small{font-size:10px!important;}
                   .pfvr-name-tiny{font-size:9px!important;letter-spacing:-.1px!important;}
@@ -227,6 +233,25 @@ final class InternalAttendanceSkin {
                         node.parentNode.replaceChild(fragment,node);break;
                       }
                     });
+                  };
+                  var fitDayMetaElement=function(meta){
+                    if(!meta)return;
+                    Array.from(meta.querySelectorAll('*')).forEach(function(el){
+                      if(el.children.length>0||isInteractive(el)||el.closest('.pfvr-attendance-status'))return;
+                      var value=(el.textContent||'').replace(/\\s+/g,' ').trim();
+                      if(value.length<7||/\\d/.test(value)||!/[A-Za-zÄÖÜäöüß]/.test(value))return;
+                      var computed=window.getComputedStyle(el),fontSize=parseFloat(computed.fontSize);
+                      if(!Number.isFinite(fontSize)||fontSize<16)return;
+                      if(!el.dataset.pfvrBaseFont)el.dataset.pfvrBaseFont=String(fontSize);
+                      var base=parseFloat(el.dataset.pfvrBaseFont);if(!Number.isFinite(base))return;
+                      el.classList.add('pfvr-day-fit-name');el.style.setProperty('font-size',base+'px','important');
+                      var width=el.clientWidth;if(width<=0)return;
+                      var size=base;
+                      while(el.scrollWidth>width+1&&size>10){size=Math.max(10,size-0.5);el.style.setProperty('font-size',size+'px','important');}
+                    });
+                  };
+                  var fitDayMetaTexts=function(root){
+                    requestAnimationFrame(function(){(root||document).querySelectorAll('.pfvr-day-meta').forEach(fitDayMetaElement);});
                   };
 
                   var scoreTable=function(table){
@@ -422,7 +447,7 @@ final class InternalAttendanceSkin {
                   };
                   var updateMatrixColumns=function(matrix){
                     if(!matrix)return;
-                    var matrixHead=document.querySelector('.pfvr-attendance-head');
+                    var matrixHead=document.querySelector('.pfvr-attendance-head:not(.pfvr-head-overlay .pfvr-attendance-head)')||document.querySelector('.pfvr-attendance-mobile .pfvr-attendance-head');
                     var count=Array.from((matrixHead||document).querySelectorAll('.pfvr-person-header')).filter(function(header){return header.style.display!=='none';}).length;
                     var columns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
                     matrix.style.gridTemplateColumns=columns;if(matrixHead)matrixHead.style.gridTemplateColumns=columns;
@@ -460,11 +485,11 @@ final class InternalAttendanceSkin {
                     list.appendChild(line);
                   };
                   var matrixHasPerson=function(matrix,name){
-                    var matrixHead=document.querySelector('.pfvr-attendance-head');if(!matrix||!matrixHead)return false;
+                    var matrixHead=document.querySelector('.pfvr-attendance-mobile .pfvr-attendance-head');if(!matrix||!matrixHead)return false;
                     return Array.from(matrixHead.querySelectorAll('.pfvr-person-header')).some(function(el){return samePersonName(el.getAttribute('data-pfvr-person')||'',name);});
                   };
                   var appendPersonColumn=function(table,row,personName,state){
-                    var matrix=document.querySelector('.pfvr-attendance-matrix'),matrixHead=document.querySelector('.pfvr-attendance-head');if(!table||!row||!matrix||!matrixHead||matrixHasPerson(matrix,personName))return false;
+                    var matrix=document.querySelector('.pfvr-attendance-matrix'),matrixHead=document.querySelector('.pfvr-attendance-mobile .pfvr-attendance-head');if(!table||!row||!matrix||!matrixHead||matrixHasPerson(matrix,personName))return false;
                     var rows=Array.from(table.rows||[]),sourceHeader=rows[0];if(!sourceHeader||!sourceHeader.cells||sourceHeader.cells.length<2)return false;
                     var metas=Array.from(matrix.querySelectorAll('.pfvr-day-meta'));if(metas.length!==sourceHeader.cells.length-1)return false;
                     var key=personKey(personName),personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',key);
@@ -477,19 +502,53 @@ final class InternalAttendanceSkin {
                     }
                     updateMatrixColumns(matrix);
                     appendManagedPerson(document.querySelector('.pfvr-managed-people-visible'),state,personName);
-                    splitStatusText(matrix);refreshInteractiveSoon(matrix);return true;
+                    splitStatusText(matrix);fitDayMetaTexts(matrix);refreshInteractiveSoon(matrix);return true;
+                  };
+                  var cleanupHeaderOverlay=function(){
+                    if(headerOverlayObserver){headerOverlayObserver.disconnect();headerOverlayObserver=null;}
+                    if(headerViewportSync){window.removeEventListener('scroll',headerViewportSync);window.removeEventListener('resize',headerViewportSync);headerViewportSync=null;}
+                    if(headerOverlay&&headerOverlay.parentNode)headerOverlay.parentNode.removeChild(headerOverlay);
+                    headerOverlay=null;
+                  };
+                  var syncHeaderOverlayContent=function(headScroll){
+                    if(!headScroll||!headerOverlay)return;
+                    headerOverlay.innerHTML=headScroll.innerHTML;headerOverlay.scrollLeft=headScroll.scrollLeft;
+                  };
+                  var updateHeaderOverlay=function(headScroll,matrixScroll){
+                    if(!headScroll||!matrixScroll||!headerOverlay)return;
+                    var headRect=headScroll.getBoundingClientRect(),matrixRect=matrixScroll.getBoundingClientRect();
+                    var headHeight=Math.max(headScroll.offsetHeight||0,headerOverlay.offsetHeight||0);
+                    var visible=headRect.top<-1&&matrixRect.bottom>headHeight+2&&matrixRect.top<window.innerHeight;
+                    headerOverlay.classList.toggle('pfvr-head-overlay-visible',visible);
+                    if(!visible)return;
+                    headerOverlay.style.setProperty('left',Math.max(0,matrixRect.left)+'px','important');
+                    headerOverlay.style.setProperty('width',Math.max(0,matrixRect.width)+'px','important');
+                    headerOverlay.scrollLeft=matrixScroll.scrollLeft;
+                  };
+                  var bindHorizontalHeaderSync=function(headScroll,matrixScroll){
+                    if(!headScroll||!matrixScroll)return;
+                    cleanupHeaderOverlay();
+                    headScroll.scrollLeft=matrixScroll.scrollLeft;
+                    headerOverlay=headScroll.cloneNode(true);headerOverlay.classList.add('pfvr-head-overlay');document.body.appendChild(headerOverlay);
+                    headerOverlay.scrollLeft=matrixScroll.scrollLeft;
+                    headerViewportSync=function(){updateHeaderOverlay(headScroll,matrixScroll);};
+                    matrixScroll.addEventListener('scroll',function(){headScroll.scrollLeft=matrixScroll.scrollLeft;if(headerOverlay)headerOverlay.scrollLeft=matrixScroll.scrollLeft;headerViewportSync();},{passive:true});
+                    window.addEventListener('scroll',headerViewportSync,{passive:true});
+                    window.addEventListener('resize',headerViewportSync,{passive:true});
+                    if(window.MutationObserver){headerOverlayObserver=new MutationObserver(function(){syncHeaderOverlayContent(headScroll);headerViewportSync();});headerOverlayObserver.observe(headScroll,{subtree:true,childList:true,characterData:true,attributes:true});}
+                    requestAnimationFrame(headerViewportSync);
                   };
                   var syncAddedParticipants=function(state){
                     var table=sourceTableRef;
                     if(!table||!table.isConnected){
                       var fresh=findTable();if(!fresh)return false;
-                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();
+                      cleanupHeaderOverlay();var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();
                       sourceTableRef=null;buildMobile();return true;
                     }
                     var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells)return false;
                     var headerFresh=Array.from(rows[0].cells||[]).slice(1).some(function(cell){return !!(text(cell).trim()||cell.children.length);});
                     if(headerFresh&&document.querySelector('.pfvr-attendance-mobile')){
-                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();table.classList.remove('pfvr-attendance-source');sourceTableRef=null;buildMobile();return true;
+                      cleanupHeaderOverlay();var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();table.classList.remove('pfvr-attendance-source');sourceTableRef=null;buildMobile();return true;
                     }
                     var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
                     var toolInfo=findPersonToolScope(),names=resolvePersonNames(participantRows,toolInfo&&toolInfo.select,state);
@@ -503,7 +562,13 @@ final class InternalAttendanceSkin {
                     sourcePeopleObserver.observe(table,{subtree:true,childList:true});
                   };
 
-                  var closePersonManager=function(){var panel=document.querySelector('.pfvr-person-tools');if(panel)panel.classList.remove('open');var backdrop=document.querySelector('.pfvr-person-tools-backdrop');if(backdrop)backdrop.remove();};
+                  var resetRecoveryConfirm=function(scope){
+                    (scope||document).querySelectorAll('[data-pfvr-recovery-reset="1"]').forEach(function(reset){
+                      if(reset.pfvrConfirmTimer){clearTimeout(reset.pfvrConfirmTimer);reset.pfvrConfirmTimer=null;}
+                      reset.dataset.pfvrConfirm='0';reset.textContent='Aus Initiallink neu aufbauen';
+                    });
+                  };
+                  var closePersonManager=function(){resetRecoveryConfirm(document);var panel=document.querySelector('.pfvr-person-tools');if(panel)panel.classList.remove('open');var backdrop=document.querySelector('.pfvr-person-tools-backdrop');if(backdrop)backdrop.remove();};
                   var clearLocalPeopleState=function(){
                     try{localStorage.removeItem(PEOPLE_KEY);localStorage.removeItem(LEGACY_PEOPLE_KEY);}catch(ignore){}
                     try{sessionStorage.removeItem(RESTORE_KEY);sessionStorage.removeItem(STORAGE_KEY);}catch(ignore){}
@@ -519,13 +584,14 @@ final class InternalAttendanceSkin {
                     var recovery=element('div','pfvr-people-recovery');
                     var title=element('div','pfvr-people-recovery-title');title.textContent='Ansicht bereinigen';recovery.appendChild(title);
                     var note=element('div','pfvr-people-recovery-note');note.textContent='Falls die Personenansicht festhängt oder zu viele Personen geladen wurden, kann sie aus dem gespeicherten persönlichen Initiallink vollständig neu aufgebaut werden.';recovery.appendChild(note);
-                    var reset=element('button');reset.type='button';reset.textContent='Aus Initiallink neu aufbauen';
+                    var reset=element('button');reset.type='button';reset.dataset.pfvrRecoveryReset='1';reset.textContent='Aus Initiallink neu aufbauen';
                     reset.addEventListener('click',function(){
                       if(reset.dataset.pfvrConfirm!=='1'){
-                        reset.dataset.pfvrConfirm='1';reset.textContent='Nochmal tippen: wirklich neu aufbauen';
-                        setTimeout(function(){if(reset&&reset.isConnected){reset.dataset.pfvrConfirm='0';reset.textContent='Aus Initiallink neu aufbauen';}},5000);return;
+                        resetRecoveryConfirm(recovery);reset.dataset.pfvrConfirm='1';reset.textContent='Nochmal tippen: wirklich neu aufbauen';
+                        reset.pfvrConfirmTimer=setTimeout(function(){resetRecoveryConfirm(recovery);},5000);return;
                       }
-                      if(!resetPeopleViewFromBase()){reset.dataset.pfvrConfirm='0';reset.textContent='Initiallink nicht verfügbar';}
+                      if(reset.pfvrConfirmTimer){clearTimeout(reset.pfvrConfirmTimer);reset.pfvrConfirmTimer=null;}
+                      if(!resetPeopleViewFromBase()){reset.dataset.pfvrConfirm='0';reset.textContent='Initiallink nicht verfügbar';reset.pfvrConfirmTimer=setTimeout(function(){resetRecoveryConfirm(recovery);},2500);}
                     });
                     recovery.appendChild(reset);body.appendChild(recovery);
                   };
@@ -561,14 +627,10 @@ final class InternalAttendanceSkin {
                     var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='Aktuelle Personen';list.appendChild(listTitle);
                     (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);
                     appendPeopleRecovery(body);panel.appendChild(body);
+                    panel.addEventListener('click',function(event){var reset=event.target&&event.target.closest&&event.target.closest('[data-pfvr-recovery-reset="1"]');if(!reset)resetRecoveryConfirm(panel);},true);
                     if(anchor&&scope&&anchor!==scope)anchor.style.display='none';return panel;
                   };
 
-                  var bindHorizontalHeaderSync=function(headScroll,matrixScroll){
-                    if(!headScroll||!matrixScroll)return;
-                    headScroll.scrollLeft=matrixScroll.scrollLeft;
-                    matrixScroll.addEventListener('scroll',function(){headScroll.scrollLeft=matrixScroll.scrollLeft;},{passive:true});
-                  };
                   var saveViewState=function(){
                     try{
                       var matrixScroll=document.querySelector('.pfvr-matrix-scroll');
@@ -582,7 +644,8 @@ final class InternalAttendanceSkin {
                       requestAnimationFrame(function(){
                         window.scrollTo(0,state.y||0);
                         var matrixScroll=document.querySelector('.pfvr-matrix-scroll');if(matrixScroll)matrixScroll.scrollLeft=state.x||0;
-                        var matrixHeadScroll=document.querySelector('.pfvr-matrix-head-scroll');if(matrixHeadScroll)matrixHeadScroll.scrollLeft=state.x||0;
+                        var matrixHeadScroll=document.querySelector('.pfvr-attendance-mobile .pfvr-matrix-head-scroll');if(matrixHeadScroll)matrixHeadScroll.scrollLeft=state.x||0;
+                        if(headerOverlay)headerOverlay.scrollLeft=state.x||0;
                       });
                     }catch(ignore){}
                   };
@@ -606,7 +669,7 @@ final class InternalAttendanceSkin {
                     var scheduled=false;
                     var observer=new MutationObserver(function(){
                       if(scheduled)return;scheduled=true;
-                      setTimeout(function(){scheduled=false;styleInteractive(root);},40);
+                      setTimeout(function(){scheduled=false;styleInteractive(root);fitDayMetaTexts(root);},40);
                     });
                     observer.observe(root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['value','selected','class']});
                   };
@@ -614,6 +677,7 @@ final class InternalAttendanceSkin {
                   var buildMobile=function(){
                     suppressBulkPeopleActions(document);
                     if(document.querySelector('.pfvr-attendance-mobile'))return true;
+                    cleanupHeaderOverlay();
                     var table=findTable();if(!table)return false;sourceTableRef=table;
                     var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells||rows[0].cells.length<2)return false;
                     var header=rows[0];
@@ -647,7 +711,8 @@ final class InternalAttendanceSkin {
                     }
                     matrixScroll.appendChild(matrix);mobile.appendChild(matrixScroll);bindHorizontalHeaderSync(matrixHeadScroll,matrixScroll);
                     table.classList.add('pfvr-attendance-source');
-                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();
+                    splitStatusText(mobile);fitDayMetaTexts(matrix);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();
+                    setTimeout(function(){fitDayMetaTexts(matrix);if(headerViewportSync)headerViewportSync();},120);
                     return true;
                   };
                   var buildFallbackPeopleManager=function(){
@@ -661,7 +726,7 @@ final class InternalAttendanceSkin {
                     if(!panel){buildMobile();panel=document.querySelector('.pfvr-person-tools');}
                     if(!panel)panel=buildFallbackPeopleManager();
                     if(!panel)return false;
-                    closePersonManager();var backdrop=element('div','pfvr-person-tools-backdrop');backdrop.addEventListener('click',closePersonManager);document.body.appendChild(backdrop);panel.classList.add('open');panel.scrollTop=0;return true;
+                    closePersonManager();resetRecoveryConfirm(panel);var backdrop=element('div','pfvr-person-tools-backdrop');backdrop.addEventListener('click',closePersonManager);document.body.appendChild(backdrop);panel.classList.add('open');panel.scrollTop=0;return true;
                   };
 
                   bindBulkPeopleGuard();
