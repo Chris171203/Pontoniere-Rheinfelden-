@@ -24,13 +24,13 @@ Aktuelle Android-Testversion: `0.10.8`.
 - Zusatzperson über den sichtbaren App-Select hinzufügen: jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit; nur ausdrücklich lokal entfernte Personen werden ausgeblendet.
 - Unterschiedliche Reihenfolge oder Schreibweise von Auswahltext und Tabellenname darf die Person nicht mehr herausfiltern. Für die Wiederherstellung wird zusätzlich der Optionswert gespeichert und der Name tokenbasiert verglichen.
 - Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.
-- Unter `+ / − Person` eine Zusatzperson lokal entfernen: sie muss sofort aus der Matrix verschwinden und nach Neustart entfernt bleiben; die Standardperson darf nicht entfernbar sein.
+- In `Personen` eine Zusatzperson entfernen: sie muss sofort aus der Matrix verschwinden und nach Neustart entfernt bleiben; die Standardperson darf nicht entfernbar sein.
 - Auch weit unten in der Terminliste muss in jeder Personenzelle der Name sichtbar sein; lange Namen dürfen höchstens zwei Zeilen belegen und die Personenspalte nicht verbreitern.
 - Die interne App-Ansicht ist eine gemeinsame Matrix: Termine/Kochinfo links, jede Person als feste Spalte rechts über alle Tage hinweg.
 - Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
 - Nach einer Statusauswahl muss sich die Farbe des echten Buttons/Selects passend aktualisieren: grün `Mit Essen`, gelb `Ohne Essen`, rot `Komme nicht`, grau `Nicht gewählt`.
 - Danach einmal `Neu laden` oder `Original` prüfen: bleibt der Status erhalten, ist die Auswahl serverseitig gespeichert.
-- Unter `+ / − Person` ist nur der App-Proxy sichtbar. Das originale Website-Select bleibt unverändert an seinem ursprünglichen Formular-/DOM-Ort und wird dort ausgelöst; `Entfernen` nimmt Zusatzpersonen nur aus der lokalen Ansicht und verändert keine serverseitigen An-/Abmeldedaten.
+- Im `Personen`-Dialog ist nur der App-Proxy sichtbar. Das originale Website-Select bleibt unverändert an seinem ursprünglichen Formular-/DOM-Ort und wird dort ausgelöst; `Entfernen` nimmt Zusatzpersonen nur aus der lokalen Ansicht und verändert keine serverseitigen An-/Abmeldedaten.
 - Prüfen, dass Köche/Termin-Metadaten nicht als Teilnehmer erscheinen und unterschiedliche zulässige Essens-/Anmeldeoptionen unverändert von der Website übernommen werden.
 - Nach serverseitiger Navigation sollen vertikale Position und gemeinsame horizontale Matrixposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
