@@ -4,16 +4,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.junit.Test;
 
 public class FirstUseGateSourceTest {
     private static String source() throws Exception {
-        return Files.readString(
-                Path.of("app/src/main/java/ch/pfvr/internapp/MainActivity.java"),
-                StandardCharsets.UTF_8
+        byte[] bytes = Files.readAllBytes(
+                Paths.get("app/src/main/java/ch/pfvr/internapp/MainActivity.java")
         );
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Test public void firstUseGateIsAttachedToActivityContent() throws Exception {
