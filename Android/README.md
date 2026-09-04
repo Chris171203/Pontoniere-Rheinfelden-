@@ -8,6 +8,7 @@ Aktuelle Android-Testversion: `0.10.8`.
 - Java 17.
 - `minSdk 26`, `targetSdk 36`, `compileSdk 36`.
 - CI verwendet Gradle 8.13 und führt Unit-Tests, APK-Build sowie Signatur-, Paket- und Versionsprüfung aus.
+- Eingebettetes JavaScript in Java-Textblöcken wird immer durch einen vollständigen Java-CI-Build geprüft; insbesondere RegExp-Backslashes müssen auf beiden Sprachebenen korrekt escaped sein.
 - Der allgemeine Android-CI-Lauf auf dem finalen Branch-Commit ist das verbindliche Build-Artefakt für Gerätetests.
 - Gebaut wird ausschließlich der eingecheckte Quellstand; Build-Workflows dürfen den Anwendungscode nicht patchen.
 - APK/AAB-Binärdateien werden nicht ins Repository eingecheckt, sondern ausschließlich als GitHub-Actions-Artefakte bereitgestellt.
