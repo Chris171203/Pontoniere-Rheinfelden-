@@ -10,7 +10,7 @@ Aktuelle Android-Testversion: `0.10.9`.
 - CI verwendet Gradle 8.13 und führt Unit-Tests, APK-Build sowie Signatur-, Paket- und Versionsprüfung aus.
 - Eingebettetes JavaScript in Java-Textblöcken wird immer durch einen vollständigen Java-CI-Build geprüft; insbesondere RegExp-Backslashes müssen auf beiden Sprachebenen korrekt escaped sein.
 - Der allgemeine Android-CI-Lauf auf dem finalen Branch-Commit ist das verbindliche Build-Artefakt für Gerätetests.
-- Der finale 0.10.8-Gerätebuild wird ausschließlich aus diesem eingecheckten Zielbranch erzeugt.
+- Der finale 0.10.9-Gerätebuild wird ausschließlich aus diesem eingecheckten Zielbranch erzeugt.
 - Gebaut wird ausschließlich der eingecheckte Quellstand; Build-Workflows dürfen den Anwendungscode nicht patchen.
 - APK/AAB-Binärdateien werden nicht ins Repository eingecheckt, sondern ausschließlich als GitHub-Actions-Artefakte bereitgestellt.
 - Banking-Kompatibilität wird zentral in `BankingAppRegistry.java` gepflegt.
@@ -24,7 +24,7 @@ Aktuelle Android-Testversion: `0.10.9`.
 - In der App-Ansicht öffnet der Werkzeugleistenbutton `Personen` die Verwaltung zum Hinzufügen und Entfernen. Der Zurückpfeil neben dem Logo ist im internen Bereich entfernt; Navigation erfolgt über die untere Leiste, und Android-Zurück führt von dort direkt zu Home statt durch die WebView-Historie.
 - Der Website-Befehl `Alle anzeigen/hinzufügen` wird im App-Modus bewusst nicht angeboten und bleibt der unveränderten Originalansicht vorbehalten.
 - Ist die zweite Person in `Original` bereits sichtbar, muss sie nach Wechsel zu `App` dauerhaft als zweite feste Personenspalte stehen bleiben und darf nicht mehr kurz aufblitzen und wieder verschwinden.
-- Zusatzperson über die Verwaltung hinzufügen: Jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit; nur ausdrücklich lokal entfernte Personen werden ausgeblendet.
+- Zusatzperson über die Verwaltung hinzufügen: Jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit.
 - Unterschiedliche Reihenfolge oder Schreibweise von Auswahltext und Tabellenname darf die Person nicht herausfiltern. Für die Wiederherstellung wird zusätzlich der Optionswert gespeichert und der Name tokenbasiert verglichen.
 - Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: Die App-Ansicht soll die gespeicherte Personenliste über das originale Website-Select wiederherstellen.
 - In der Personenverwaltung eine Zusatzperson entfernen: Die App lädt automatisch den persönlichen Basislink neu und stellt danach nur die verbleibenden Zusatzpersonen über die echten Website-Controls wieder her. Kein manueller Neu-laden-Schritt darf nötig sein; die Standardperson darf nicht entfernbar sein.
@@ -33,14 +33,14 @@ Aktuelle Android-Testversion: `0.10.9`.
 - Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
 - Nach einer Statusauswahl muss sich die Farbe des echten Buttons oder Selects passend aktualisieren: grün `Mit Essen`, gelb `Ohne Essen`, rot `Komme nicht`, grau `Nicht gewählt`.
 - Danach einmal `Neu laden` oder `Original` prüfen: Bleibt der Status erhalten, ist die Auswahl serverseitig gespeichert.
-- Im App-Modus ist nur der Proxy zur Personenwahl sichtbar. Das originale Website-Select bleibt unverändert an seinem Formular- und DOM-Ort und wird dort ausgelöst; lokales Entfernen verändert keine serverseitigen An-/Abmeldedaten.
+- Im App-Modus ist nur der Proxy zur Personenwahl sichtbar. Das originale Website-Select bleibt unverändert an seinem Formular- und DOM-Ort und wird dort ausgelöst. `Entfernen` verändert keine An-/Abmeldeentscheidung einer Person, sondern baut nur die aktuell dargestellte Personenliste ohne diese Zusatzperson neu auf.
 - Prüfen, dass Köche und Termin-Metadaten nicht als Teilnehmer erscheinen und unterschiedliche zulässige Essens- beziehungsweise Anmeldeoptionen unverändert von der Website übernommen werden.
-- Nach serverseitiger Navigation sollen vertikale Position und gemeinsame horizontale Matrixposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload.
+- Nach serverseitiger Navigation sollen vertikale Position und gemeinsame horizontale Matrixposition wiederhergestellt werden. Die App selbst erzwingt bei Statusänderungen keinen zusätzlichen Voll-Reload; das Neuaufbauen der Personenliste nach `Entfernen` erfolgt dagegen bewusst automatisch.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
 
 ## Lokale Daten
 
-Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellungen auf dem Endgerät gespeichert und darf nicht ins Repository eingecheckt werden. Auch Kachelreihenfolge, ausgeblendete Kacheln und die bevorzugte Banking-App bleiben lokal. Die gewünschte Teilnehmeransicht wird im WebView-Speicher des internen PFVR-Ursprungs gehalten und überlebt normale App-Neustarts; beim Löschen der App- oder Website-Daten wird sie zurückgesetzt.
+Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellungen auf dem Endgerät gespeichert und darf nicht ins Repository eingecheckt werden. Auch Kachelreihenfolge und die bevorzugte Banking-App bleiben lokal. Die gewünschte Teilnehmerliste wird im WebView-Speicher des internen PFVR-Ursprungs gehalten und überlebt normale App-Neustarts; beim Löschen der App- oder Website-Daten wird sie zurückgesetzt.
 
 ## Testpaket und Release
 
