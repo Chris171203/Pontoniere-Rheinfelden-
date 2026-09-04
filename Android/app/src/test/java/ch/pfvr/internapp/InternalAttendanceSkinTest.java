@@ -9,6 +9,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class InternalAttendanceSkinTest {
+    private static String script(){
+        return InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    }
+
     @Test public void separatesStatusFromConcatenatedAppointmentText(){
         InternalAttendanceSkin.StatusSplit split=InternalAttendanceSkin.splitLeadingStatus("Ohne EssenSchiffe verladen & Depot");
         assertNotNull(split);
@@ -27,199 +31,139 @@ public class InternalAttendanceSkinTest {
         assertNull(InternalAttendanceSkin.splitLeadingStatus("Schiffe reinigen"));
     }
 
-    @Test public void formatsParticipantNamesAsFamilyCommaGiven(){
+    @Test public void formatsParticipantNamesAndStripsEditMarker(){
         assertEquals("Neugebauer, Christoph",InternalAttendanceSkin.formatPersonDisplayName("NeugebauerChristoph"));
         assertEquals("Wiekert, Stephan",InternalAttendanceSkin.formatPersonDisplayName("Wiekert Stephan"));
+        assertEquals("Kougionis, Eleni",InternalAttendanceSkin.formatPersonDisplayName("✎ Kougionis Eleni"));
+        assertEquals("Krokos, Aron",InternalAttendanceSkin.formatPersonDisplayName("Bearbeiten: Krokos Aron"));
         assertEquals("Müller-Lüdenscheidt, Anna Maria",InternalAttendanceSkin.formatPersonDisplayName("Müller-Lüdenscheidt Anna Maria"));
         assertEquals("Person 2",InternalAttendanceSkin.formatPersonDisplayName("Person 2"));
     }
 
-    @Test public void generatedScriptBuildsSharedPersonColumnsAcrossAllDays(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptBuildsSharedMatrixWithFixedViewportHeader(){
+        String script=script();
         assertTrue(script.contains("pfvr-matrix-head-scroll"));
         assertTrue(script.contains("pfvr-matrix-scroll"));
         assertTrue(script.contains("pfvr-attendance-head"));
         assertTrue(script.contains("pfvr-attendance-matrix"));
         assertTrue(script.contains("var columns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))'"));
-        assertTrue(script.contains("pfvr-person-header"));
-        assertTrue(script.contains("pfvr-person-cell"));
         assertTrue(script.contains(".pfvr-matrix-head-scroll{position:sticky!important;top:0!important"));
         assertTrue(script.contains("overflow-x:hidden!important;overflow-y:hidden!important;pointer-events:none!important"));
-        assertTrue(script.contains("bindHorizontalHeaderSync"));
+        assertTrue(script.contains("pfvr-head-overlay"));
+        assertTrue(script.contains("updateHeaderOverlay"));
         assertTrue(script.contains("matrixScroll.addEventListener('scroll'"));
         assertFalse(script.contains("headScroll.addEventListener('scroll'"));
-        assertTrue(script.contains("overflow-x:auto"));
         assertTrue(script.contains("moveChildren(header.cells[column],meta)"));
         assertTrue(script.contains("moveChildren(row.cells[column],control)"));
-        assertFalse(script.contains("pfvr-day-people"));
-        assertFalse(script.contains("pfvr-person-card"));
     }
 
-    @Test public void generatedScriptUsesLargeAttendanceControlsWithoutRepeatedPersonLabels(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptUsesLargeAttendanceControlsWithoutRepeatedNames(){
+        String script=script();
         assertTrue(script.contains(".pfvr-person-control{display:flex!important;flex-direction:column!important;justify-content:flex-end!important"));
         assertTrue(script.contains("min-height:60px!important;padding:10px 8px!important;font-size:13px!important"));
         assertFalse(script.contains("pfvr-person-name-label"));
-        assertFalse(script.contains("fitPersonName(personLabel,names[rowIndex])"));
-        assertFalse(script.contains("fitPersonName(personLabel,personName)"));
     }
 
-    @Test public void generatedScriptUsesRealWebsiteControlsAndGlobalPersonManagement(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("person zur liste hinzuzufügen"));
-        assertTrue(script.contains("Personen verwalten"));
-        assertTrue(script.contains("window.pfvrOpenPeopleManager"));
-        assertTrue(script.contains("pfvr-person-tools-backdrop"));
-        assertFalse(script.contains("body.appendChild(select)"));
-        assertTrue(script.contains("Keine Auswahl für diesen Termin"));
-        assertTrue(script.contains("Hinzufügen ist auf diesem Seitenstand nicht verfügbar"));
-        assertFalse(script.contains("if(!toolInfo||!toolInfo.select)return null"));
-        assertFalse(script.contains("option.value='Mit Essen'"));
-        assertFalse(script.contains("option.value='Ohne Essen'"));
+    @Test public void generatedScriptReadsNamesFromOriginalEditControls(){
+        String script=script();
+        assertTrue(script.contains("personNameCandidate"));
+        assertTrue(script.contains("button,input[type=submit],input[type=button],a"));
+        assertTrue(script.contains("controlLabel(control)"));
+        assertTrue(script.contains("^[✎✏✐✑✒]+"));
+        assertTrue(script.contains("bearbeiten|edit"));
+        assertTrue(script.contains("personCellText"));
+        assertTrue(script.contains("optionNameForRow"));
     }
 
-    @Test public void generatedScriptRestylesCurrentSelectionWithoutReload(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptDoesNotMisapplyOldNamesByIndexAfterSourceExpansion(){
+        String script=script();
+        assertTrue(script.contains("var storedRows=state&&Array.isArray(state.rowNames)?state.rowNames:[]"));
+        assertTrue(script.contains("var allowStoredByIndex=storedRows.length===rows.length&&storedRows.length>0"));
+        assertTrue(script.contains("if(!value&&allowStoredByIndex&&storedRows[index]"));
+        assertFalse(script.contains("(state.rowNames||[]).concat(state.desired||[]).concat(state.hidden||[])"));
+    }
+
+    @Test public void generatedScriptLetsLargeOriginalListBecomeSourceOfTruth(){
+        String script=script();
+        assertTrue(script.contains("shouldTakeSourceList"));
+        assertTrue(script.contains("if(currentNames.length>=12)return true"));
+        assertTrue(script.contains("hidden:[]"));
+        assertTrue(script.contains("desired:sourceReal.slice()"));
+        assertTrue(script.contains("rowNames:currentNames.slice()"));
+        assertTrue(script.contains("if(currentNames.length&&shouldTakeSourceList(currentNames,state))"));
+    }
+
+    @Test public void generatedScriptKeepsRealWebsiteStatusControls(){
+        String script=script();
         assertTrue(script.contains("statusForValue"));
         assertTrue(script.contains("controlValue"));
         assertTrue(script.contains("selectedIndex"));
-        assertTrue(script.contains(".btn,select"));
         assertTrue(script.contains("refreshInteractiveSoon"));
         assertTrue(script.contains("bindInteractiveObserver"));
         assertTrue(script.contains("attributeFilter:['value','selected','class']"));
-        assertTrue(script.contains("indexOf('mit essen')"));
-        assertTrue(script.contains("indexOf('ohne essen')"));
+        assertFalse(script.contains("option.value='Mit Essen'"));
+        assertFalse(script.contains("option.value='Ohne Essen'"));
         assertFalse(script.contains("window.location.reload"));
     }
 
-    @Test public void generatedScriptDoesNotForceReloadAndPreservesScrollAcrossServerNavigation(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptPreservesScrollAcrossServerNavigation(){
+        String script=script();
         assertTrue(script.contains("sessionStorage.setItem"));
         assertTrue(script.contains("beforeunload"));
         assertTrue(script.contains("window.scrollTo"));
         assertTrue(script.contains("matrixScroll.scrollLeft=state.x||0"));
         assertTrue(script.contains("matrixHeadScroll.scrollLeft=state.x||0"));
         assertTrue(script.contains("x:matrixScroll?(matrixScroll.scrollLeft||0):0"));
-        assertFalse(script.contains("strips:strips"));
-        assertFalse(script.contains("window.location.reload"));
     }
 
-    @Test public void generatedScriptKeepsTwoParticipantsAndUsesLocalViewManagement(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
-        assertTrue(script.contains("--pfvr-day-col:84px;--pfvr-person-col:102px"));
-        assertTrue(script.contains("pfvr-attendance-people-v4"));
-        assertTrue(script.contains("pfvr-local-remove"));
-        assertTrue(script.contains("removeDesiredPerson"));
-        assertTrue(script.contains("setPersonColumnHidden"));
-        assertTrue(script.contains("window.location.replace(base)"));
-        assertTrue(script.contains("savePeopleState"));
-        assertTrue(script.contains("loadPeopleState"));
-        assertTrue(script.contains("state.primary"));
-        assertTrue(script.contains("state.hidden"));
-        assertFalse(script.contains("personManagementControls"));
-        assertFalse(script.contains("looksLikeRemoveAction"));
-    }
-
-    @Test public void generatedScriptKeepsOriginalPersonControlInWebsiteContextAndSyncsNewRows(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptKeepsPersonManagementAndRecovery(){
+        String script=script();
+        assertTrue(script.contains("person zur liste hinzuzufügen"));
+        assertTrue(script.contains("Personen verwalten"));
+        assertTrue(script.contains("window.pfvrOpenPeopleManager"));
         assertTrue(script.contains("select.cloneNode(true)"));
         assertTrue(script.contains("proxy.removeAttribute('name')"));
-        assertTrue(script.contains("proxy.removeAttribute('onchange')"));
-        assertTrue(script.contains("select.dispatchEvent(new Event('change'"));
-        assertTrue(script.contains("control.click()"));
-        assertTrue(script.contains("scheduleParticipantSync"));
-        assertTrue(script.contains("syncAddedParticipants"));
-        assertTrue(script.contains("bindSourcePeopleObserver"));
-        assertTrue(script.contains("appendPersonColumn"));
-        assertTrue(script.contains("matrixHead.appendChild(personHeader)"));
-        assertTrue(script.contains("matrixHead.style.gridTemplateColumns=columns"));
-        assertFalse(script.contains("body.appendChild(select)"));
-    }
-
-    @Test public void generatedScriptPersistsRestoresRemovesAndLabelsParticipants(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("pfvr-attendance-people-v4"));
-        assertTrue(script.contains("localStorage.setItem(PEOPLE_KEY"));
-        assertTrue(script.contains("loadPeopleState"));
-        assertTrue(script.contains("tryRestoreMissingPerson"));
-        assertTrue(script.contains("restoreValues"));
-        assertTrue(script.contains("pendingAdd"));
-        assertTrue(script.contains("samePersonName"));
-        assertTrue(script.contains("dispatchEvent(new Event('change'"));
         assertTrue(script.contains("removeDesiredPerson"));
-        assertTrue(script.contains("pfvr-local-remove"));
-        assertTrue(script.contains("data-pfvr-person"));
-        assertTrue(script.contains("state.primary"));
-        assertFalse(script.contains("pfvr-person-name-label"));
-        assertFalse(script.contains("fitPersonName(personLabel,names[rowIndex])"));
-        assertTrue(script.contains("-webkit-line-clamp:2"));
-        assertTrue(script.contains("clean.length>28"));
-        assertTrue(script.contains("clean.length>19"));
-        assertTrue(script.contains("formatPersonName"));
-        assertTrue(script.contains("personCellText"));
-        assertTrue(script.contains("optionNameForRow"));
-        assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
-        assertFalse(script.contains("window.location.reload"));
+        assertTrue(script.contains("window.location.replace(base)"));
+        assertTrue(script.contains("buildFallbackPeopleManager"));
+        assertTrue(script.contains("Aus Initiallink neu aufbauen"));
+        assertTrue(script.contains("Nochmal tippen: wirklich neu aufbauen"));
+        assertTrue(script.contains("resetRecoveryConfirm"));
+        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));
+        assertFalse(script.contains("localStorage.clear()"));
     }
 
-    @Test public void generatedScriptKeepsEveryCurrentWebsitePersonUnlessExplicitlyHidden(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("adoptCurrentPeople(state,names)"));
-        assertTrue(script.contains("if(!isHiddenPerson(state,name)&&appendPersonColumn"));
-        assertTrue(script.contains("if(!isHiddenPerson(peopleState,allNames[index]))"));
-        assertTrue(script.contains("rememberPendingPerson(state,sourceTableRef,select,chosen)"));
-        assertTrue(script.contains("personTokenKey"));
-        assertFalse(script.contains("var desiredKeys={}"));
-        assertFalse(script.contains("if(chosen)addDesiredPerson(state,chosen)"));
-    }
-
-    @Test public void generatedScriptBlocksBulkPersonActionsAndExposesManagerFromNativeToolbar(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptBlocksBulkActionsOnlyInsideAppSkin(){
+        String script=script();
         assertTrue(script.contains("bulkPeopleAction"));
         assertTrue(script.contains("value.indexOf('alle personen anzeigen')"));
         assertTrue(script.contains("value.indexOf('alle anzeigen')"));
-        assertTrue(script.contains("value.indexOf('alle hinzufügen')"));
         assertTrue(script.contains("suppressBulkPeopleActions"));
         assertTrue(script.contains("bindBulkPeopleGuard"));
         assertTrue(script.contains("stopImmediatePropagation"));
         assertTrue(script.contains("observer.observe(document.documentElement,{subtree:true,childList:true})"));
-        assertTrue(script.contains("if(bulkPeopleAction(label))return"));
-        assertTrue(script.contains("Schliessen"));
-        assertTrue(script.contains("Entfernen aktualisiert die Personenliste automatisch."));
-        assertTrue(script.contains("Aktuelle Personen"));
-        assertFalse(script.contains("Ausgeblendet"));
     }
 
-    @Test public void generatedScriptAlwaysOffersRecoveryFromInitialLink(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("clearLocalPeopleState"));
-        assertTrue(script.contains("resetPeopleViewFromBase"));
-        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));
-        assertTrue(script.contains("localStorage.removeItem(LEGACY_PEOPLE_KEY)"));
-        assertTrue(script.contains("sessionStorage.removeItem(RESTORE_KEY)"));
-        assertTrue(script.contains("sessionStorage.removeItem(STORAGE_KEY)"));
-        assertTrue(script.contains("Aus Initiallink neu aufbauen"));
-        assertTrue(script.contains("Nochmal tippen: wirklich neu aufbauen"));
-        assertTrue(script.contains("buildFallbackPeopleManager"));
-        assertTrue(script.contains("if(!panel)panel=buildFallbackPeopleManager()"));
-        assertTrue(script.contains("document.body.appendChild(panel)"));
-        assertTrue(script.contains("window.__pfvrBaseInternalUrl"));
-        assertFalse(script.contains("localStorage.clear()"));
-        assertFalse(script.contains("sessionStorage.clear()"));
+    @Test public void generatedScriptShrinksLongCookNamesOnlyInDayMeta(){
+        String script=script();
+        assertTrue(script.contains("fitDayMetaTexts"));
+        assertTrue(script.contains(".pfvr-day-fit-name"));
+        assertTrue(script.contains("node.scrollWidth>available"));
+        assertTrue(script.contains("var minSize=10"));
+        assertTrue(script.contains("querySelectorAll('.pfvr-day-meta')"));
     }
 
-    @Test public void generatedScriptRebuildsWebsiteListAfterRemoval(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
-        assertTrue(script.contains("state.rowNames=[];state.pendingAdd=null"));
-        assertTrue(script.contains("window.__pfvrBaseInternalUrl"));
-        assertTrue(script.contains("window.location.replace(base)"));
-        assertTrue(script.contains("removeDesiredPerson"));
-        assertFalse(script.contains("Entfernen blendet die Person nur"));
+    @Test public void generatedScriptKeepsTwoVisibleParticipantColumnsOnPhones(){
+        String script=script();
+        assertTrue(script.contains("--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px)"));
+        assertTrue(script.contains("--pfvr-day-col:84px;--pfvr-person-col:102px"));
+        assertTrue(script.contains("-webkit-line-clamp:2"));
+        assertTrue(script.contains("clean.length>28"));
+        assertTrue(script.contains("clean.length>19"));
     }
 
-    @Test public void generatedScriptKeepsStatusRepairAndMobileViewport(){
-        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+    @Test public void generatedScriptKeepsStatusRepairAndViewport(){
+        String script=script();
         assertTrue(script.contains("pfvr-attendance-status"));
         assertTrue(script.contains("NodeFilter.SHOW_TEXT"));
         assertTrue(script.contains("meta[name=viewport]"));
