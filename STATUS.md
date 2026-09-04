@@ -1,6 +1,6 @@
 # Status
 
-Stand: Testversion `0.10.21` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.22` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
@@ -9,6 +9,7 @@ Stand: Testversion `0.10.21` · aktualisiert 2026-09-04.
 - Die Kopfzeile besitzt weiterhin keine eigene Touch-/Scrollfläche. Horizontal gewischt wird nur bei Tagen und An-/Abmelde-Controls; Originalkopf und fixer Fallback werden programmgesteuert synchronisiert.
 - Teilnehmernamen werden nur noch in der Kopfzeile angezeigt; die frühere Wiederholung über jedem An-/Abmelde-Control bleibt entfernt.
 - Lange Koch-/Verantwortlichkeitsnamen in der linken Terminspalte werden nach dem Rendern anhand der tatsächlich verfügbaren Breite verkleinert. Datum, Zähler, Statusbadges und normaler Termintext werden davon nicht verändert.
+- Koch-/Verantwortlichkeitsnamen werden in der App-Matrix ausschließlich als nicht editierbarer Anzeigetext dargestellt; zugrunde liegende Website-Textfelder bleiben unsichtbar für die Formularfunktion erhalten. Lange Namen werden bis zu einer definierten Mindestschriftgröße verkleinert, und das Datum in der Terminspalte wird fett hervorgehoben.
 - Die An-/Abmelde-Controls in den Personenspalten besitzen größere Touch-Flächen und größere Schrift. Auf sehr schmalen Geräten wird die Größe moderat reduziert.
 - Teilnehmernamen werden aus tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen, Bearbeiten-/Namens-Controls und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Insbesondere Namen, die die Originalseite ausschließlich als Button-/Input-Beschriftung wie `✎ Kougionis Eleni` ausliefert, werden jetzt als Name erkannt und als `Kougionis, Eleni` dargestellt.
 - Beim Wechsel von einer stark erweiterten Originaltabelle – insbesondere nach `Alle anzeigen` – übernimmt die App die aktuell vorhandene Personenliste als neue Quelle der Wahrheit. Alte lokale Ausblendungen werden in diesem Fall verworfen, damit wirklich alle gerade in der Originalansicht sichtbaren Personen übernommen werden.
