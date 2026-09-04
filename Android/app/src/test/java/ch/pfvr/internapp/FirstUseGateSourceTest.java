@@ -4,16 +4,25 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.junit.Test;
 
 public class FirstUseGateSourceTest {
     private static String source() throws Exception {
-        byte[] bytes = Files.readAllBytes(
-                Paths.get("app/src/main/java/ch/pfvr/internapp/MainActivity.java")
-        );
-        return new String(bytes, StandardCharsets.UTF_8);
+        String relative = "src/main/java/ch/pfvr/internapp/MainActivity.java";
+        Path[] candidates = new Path[]{
+                Paths.get(relative),
+                Paths.get("app", relative),
+                Paths.get("Android", "app", relative)
+        };
+        for (Path candidate : candidates) {
+            if (Files.isRegularFile(candidate)) {
+                return new String(Files.readAllBytes(candidate), StandardCharsets.UTF_8);
+            }
+        }
+        throw new IllegalStateException("MainActivity.java not found from " + System.getProperty("user.dir"));
     }
 
     @Test public void firstUseGateIsAttachedToActivityContent() throws Exception {
