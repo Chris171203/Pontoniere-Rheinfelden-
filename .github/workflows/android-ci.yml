@@ -8,12 +8,14 @@ on:
     paths:
       - 'Android/**'
       - '.github/workflows/android-ci.yml'
+      - '.github/workflows/play-release.yml'
   pull_request:
     branches:
       - main
     paths:
       - 'Android/**'
       - '.github/workflows/android-ci.yml'
+      - '.github/workflows/play-release.yml'
   workflow_dispatch:
 
 permissions:
@@ -45,6 +47,14 @@ jobs:
             exit 1
           fi
 
+      - name: Verify production package configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "applicationId 'ch.pfvr.app'" Android/app/build.gradle
+          grep -Eq 'targetSdk[[:space:]]+36' Android/app/build.gradle
+          grep -Fq "applicationIdSuffix '.test'" Android/app/build.gradle
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -62,9 +72,9 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
 
-      - name: Unit tests and debug APK
+      - name: Unit tests, debug APK and unsigned release bundle
         working-directory: Android
-        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug bundleRelease
 
       - name: Verify and package APK
         shell: bash
@@ -81,6 +91,10 @@ jobs:
           grep -Fqi "$EXPECTED_CERT" signature.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ch.pfvr.app.test' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
 
+          RELEASE_AAB=Android/app/build/outputs/bundle/release/app-release.aab
+          test -s "$RELEASE_AAB"
+          unzip -t "$RELEASE_AAB" >/dev/null
+
           mkdir -p dist
           OUT="PFVR-Rheinfelden-test-${VERSION_NAME}-debug.apk"
           cp "$APK" "dist/$OUT"
@@ -92,6 +106,7 @@ jobs:
             echo "Commit: $GITHUB_SHA"
             echo "Certificate SHA-256: $EXPECTED_CERT"
             echo 'Signing: stable public PFVR test key; production signing is separate'
+            echo 'Release variant: bundleRelease compiled successfully without production signing secrets'
           } > dist/build-info.txt
 
       - uses: actions/upload-artifact@v4
