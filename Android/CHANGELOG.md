@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.16
+- `Rhein aktuell` zeigt bei beiden Messpunkten Abfluss und Pegel als eigene, klar beschriftete Werte. Basel-Rheinhalle verwendet für den Pegel weiterhin `cm`, Rheinfelden `m ü.M.`.
+- Rheinfelden zeigt die Wassertemperatur weiterhin zusätzlich unter den beiden Hauptwerten.
+- Die Messdaten-Zeitstempel werden in den gleich hohen Rhein-Kurzkarten an den unteren Kartenrand gedrückt und liegen dadurch auf derselben Höhe.
+
 ## 0.10.15
 - Der Pegel Basel-Rheinhalle wird in der App konsequent als operativer Schifffahrtspegel in Zentimetern dargestellt. Der BAFU-Rohwert `W` in m ü.M. wird mit dem offiziellen Bezug `247.20 m ü.M. = 720 cm` auf den Pegel umgerechnet (`(W - 240.00 m) × 100`).
 - Die stationsabhängige Pegel-Darstellung ist zentralisiert: Basel nutzt `cm` ohne Nachkommastellen, Rheinfelden bleibt beim absoluten Wasserstand in `m ü.M.` mit zwei Nachkommastellen. Kurzkarte, Detailwerte, Verlauf und Tooltips verwenden dieselbe Logik.
