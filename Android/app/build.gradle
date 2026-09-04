@@ -22,8 +22,8 @@ android {
         applicationId 'ch.pfvr.app'
         minSdk 26
         targetSdk 36
-        versionCode 46
-        versionName '0.10.22'
+        versionCode 47
+        versionName '0.11.0'
         manifestPlaceholders = [appLabel: 'PFVR Rheinfelden']
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
