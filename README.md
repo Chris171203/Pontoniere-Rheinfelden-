@@ -4,7 +4,7 @@ Mobile Vereins-App für den Pontonierfahrverein Rheinfelden mit Terminen, Traini
 
 ## Aktueller Entwicklungsstand
 
-Android-Testversion `0.11.3` auf `main`.
+Aktueller Android-Teststand: `0.11.3`.
 
 Schwerpunkte des aktuellen Stands:
 
