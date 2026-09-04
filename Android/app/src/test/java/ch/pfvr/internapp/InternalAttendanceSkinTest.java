@@ -191,6 +191,24 @@ public class InternalAttendanceSkinTest {
         assertFalse(script.contains("Ausgeblendet"));
     }
 
+    @Test public void generatedScriptAlwaysOffersRecoveryFromInitialLink(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("clearLocalPeopleState"));
+        assertTrue(script.contains("resetPeopleViewFromBase"));
+        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));
+        assertTrue(script.contains("localStorage.removeItem(LEGACY_PEOPLE_KEY)"));
+        assertTrue(script.contains("sessionStorage.removeItem(RESTORE_KEY)"));
+        assertTrue(script.contains("sessionStorage.removeItem(STORAGE_KEY)"));
+        assertTrue(script.contains("Aus Initiallink neu aufbauen"));
+        assertTrue(script.contains("Nochmal tippen: wirklich neu aufbauen"));
+        assertTrue(script.contains("buildFallbackPeopleManager"));
+        assertTrue(script.contains("if(!panel)panel=buildFallbackPeopleManager()"));
+        assertTrue(script.contains("document.body.appendChild(panel)"));
+        assertTrue(script.contains("window.__pfvrBaseInternalUrl"));
+        assertFalse(script.contains("localStorage.clear()"));
+        assertFalse(script.contains("sessionStorage.clear()"));
+    }
+
     @Test public void generatedScriptRebuildsWebsiteListAfterRemoval(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("state.rowNames=[];state.pendingAdd=null"));
