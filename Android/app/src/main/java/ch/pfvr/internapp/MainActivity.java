@@ -113,6 +113,7 @@ public class MainActivity extends Activity {
     private static final String PREF_RIVER_WARN = "river_warn";
     private static final String PREF_RIVER_ALARM = "river_alarm";
     private static final String PREF_RIVER_RANGE = "river_range";
+    private static final String PREF_RIVER_GRAPH_LEVEL_UNIT = "river_graph_level_unit";
     private static final String PREF_RIVER_SLOT1_STATION = "river_slot1_station";
     private static final String PREF_RIVER_SLOT2_STATION = "river_slot2_station";
     private static final String PREF_RIVER_SLOT2_ENABLED = "river_slot2_enabled";
@@ -494,6 +495,10 @@ private View homeRiverChartsTile(){
     rangeLabel.setPadding(dp(2),0,0,dp(5));
     group.addView(rangeLabel);
     group.addView(riverRangeSelector(riverRange()),new LinearLayout.LayoutParams(-1,dp(42)));
+    TextView levelUnitLabel=txt("PEGEL-EINHEIT",10,MUTED,true);
+    levelUnitLabel.setPadding(dp(2),dp(9),0,dp(5));
+    group.addView(levelUnitLabel);
+    group.addView(riverGraphLevelUnitSelector(),new LinearLayout.LayoutParams(-1,dp(42)));
     boolean secondRiver=riverSlotEnabled(2);
     addRiverStationCharts(group,1,!secondRiver);
     if(secondRiver)addRiverStationCharts(group,2,true);
@@ -614,7 +619,9 @@ private void rebuildHomePreservingScroll(){
     private LinearLayout riverSummaryCard(int slot){
         HydroStation station=riverStation(slot);
         double flow=currentHydroValue(station,"Q");
-        double level=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));
+        double rawLevel=currentHydroValue(station,"W");
+        double level=displayHydroValue(station,RiverMetric.LEVEL,rawLevel);
+        double gaugeCm=RiverDisplay.gaugeCentimetres(station,rawLevel);
         double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;
         RiverStatus status=riverStatus(station,flow);
         int statusColor=statusTextColor(status.bg);
@@ -642,6 +649,11 @@ private void rebuildHomePreservingScroll(){
         LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));
         levelMetric.setPadding(0,dp(5),0,0);
         c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));
+        if(Double.isFinite(gaugeCm)){
+            TextView gaugeView=txt(String.format(Locale.GERMAN,"%.0f cm",gaugeCm),10,MUTED,false);
+            gaugeView.setPadding(0,dp(1),0,0);
+            c.addView(gaugeView);
+        }
 
         if(Double.isFinite(temperature)){
             TextView temperatureView=txt("Wasser "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);
@@ -762,7 +774,7 @@ private void rebuildHomePreservingScroll(){
         TrendSeries flow=hydroSeries(station,"Q",range);
         TrendSeries level=hydroSeries(station,"W",range);
         double flowNow=currentHydroValue(station,"Q");
-        double levelNow=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));
+        double levelNow=graphLevelValue(station,currentHydroValue(station,"W"));
         RiverStatus status=riverStatus(station,flowNow);
         int flowColor=statusTextColor(status.bg);
 
@@ -793,7 +805,7 @@ private void rebuildHomePreservingScroll(){
         levelBox.setOrientation(LinearLayout.VERTICAL);
         levelBox.setGravity(Gravity.END);
         TextView levelTitle=txt("Pegel",11,MUTED,true);levelTitle.setGravity(Gravity.END);levelBox.addView(levelTitle);
-        TextView w=txt(Double.isFinite(levelNow)?formatMetric(station,RiverMetric.LEVEL,levelNow)+" "+metricUnit(station,RiverMetric.LEVEL):"–",18,WATER,true);
+        TextView w=txt(Double.isFinite(levelNow)?formatGraphLevel(levelNow)+" "+graphLevelUnit():"–",18,WATER,true);
         w.setGravity(Gravity.END);levelBox.addView(w);
         values.addView(levelBox,new LinearLayout.LayoutParams(0,-2,1));
         card.addView(values);
@@ -805,7 +817,7 @@ private void rebuildHomePreservingScroll(){
         if(flow.values.size()>=2&&level.values.size()>=2){
             DualRiverTrendView graph=new DualRiverTrendView(this,flow,level,range,station);
             card.addView(graph,new LinearLayout.LayoutParams(-1,dp(224)));
-            TextView hint=txt("Abfluss links · Pegel rechts · Diagramm berühren für Einzelwerte",10,MUTED,false);
+            TextView hint=txt("Abfluss links · Pegel rechts ("+graphLevelUnit()+") · Diagramm berühren für Einzelwerte",10,MUTED,false);
             hint.setGravity(Gravity.CENTER);
             hint.setPadding(0,dp(4),0,0);
             card.addView(hint);
@@ -844,6 +856,45 @@ private void rebuildHomePreservingScroll(){
             outer.addView(option,segmentParams(outer));
         }
         return outer;
+    }
+
+    private boolean riverGraphLevelCentimetres(){
+        return "cm".equals(prefs.getString(PREF_RIVER_GRAPH_LEVEL_UNIT,"m"));
+    }
+
+    private View riverGraphLevelUnitSelector(){
+        LinearLayout outer=segmentedBackground();
+        boolean centimetres=riverGraphLevelCentimetres();
+        TextView absolute=segmentOption("m ü.M.",!centimetres);
+        absolute.setContentDescription("Pegel im Diagramm in Meter über Meer");
+        absolute.setOnClickListener(v->{
+            prefs.edit().putString(PREF_RIVER_GRAPH_LEVEL_UNIT,"m").apply();
+            if(current==Screen.HOME)refreshHomeLiveViews();
+        });
+        outer.addView(absolute,segmentParams(outer));
+        TextView relative=segmentOption("cm",centimetres);
+        relative.setContentDescription("Pegel im Diagramm in Zentimetern");
+        relative.setOnClickListener(v->{
+            prefs.edit().putString(PREF_RIVER_GRAPH_LEVEL_UNIT,"cm").apply();
+            if(current==Screen.HOME)refreshHomeLiveViews();
+        });
+        outer.addView(relative,segmentParams(outer));
+        return outer;
+    }
+
+    private double graphLevelValue(HydroStation station,double rawValue){
+        return RiverDisplay.graphLevelValue(station,rawValue,riverGraphLevelCentimetres());
+    }
+
+    private String graphLevelUnit(){
+        return RiverDisplay.graphLevelUnit(riverGraphLevelCentimetres());
+    }
+
+    private String formatGraphLevel(double value){
+        if(!Double.isFinite(value))return "–";
+        return RiverDisplay.graphLevelDecimals(riverGraphLevelCentimetres())==0
+                ?String.format(Locale.GERMAN,"%.0f",value)
+                :String.format(Locale.GERMAN,"%.2f",value);
     }
 
     private LinearLayout segmentedBackground(){
@@ -1197,7 +1248,7 @@ private void rebuildHomePreservingScroll(){
         }
         if("W".equals(parameter)){
             for(int index=0;index<result.values.size();index++){
-                result.values.set(index,RiverDisplay.levelValue(station,result.values.get(index)));
+                result.values.set(index,graphLevelValue(station,result.values.get(index)));
             }
         }
         return result;
@@ -3359,7 +3410,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             long timestamp=Math.max(flow.times.get(qi),level.times.get(wi));
             ZonedDateTime time=java.time.Instant.ofEpochMilli(timestamp).atZone(ZoneId.of("Europe/Zurich"));
             DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.MM. HH:mm",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
-            String text=time.format(formatter)+" · "+formatMetric(station,RiverMetric.FLOW,q)+" m³/s · "+formatMetric(station,RiverMetric.LEVEL,w)+" "+metricUnit(station,RiverMetric.LEVEL);
+            String text=time.format(formatter)+" · "+formatMetric(station,RiverMetric.FLOW,q)+" m³/s · "+formatGraphLevel(w)+" "+graphLevelUnit();
             tooltipText.setColor(darkMode?DARK_TEXT:Color.WHITE);
             float textWidth=tooltipText.measureText(text),textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
             float boxWidth=Math.min(right-left,textWidth+dp(16));float boxLeft=Math.max(left,Math.min(right-boxWidth,x-boxWidth/2f));
