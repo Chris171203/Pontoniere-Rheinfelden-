@@ -42,11 +42,22 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("pfvr-person-header"));
         assertTrue(script.contains("pfvr-person-cell"));
         assertTrue(script.contains("position:sticky"));
+        assertTrue(script.contains(".pfvr-matrix-corner{position:sticky!important;top:0!important;left:0!important"));
+        assertTrue(script.contains(".pfvr-person-header{position:sticky!important;top:0!important"));
         assertTrue(script.contains("overflow-x:auto"));
         assertTrue(script.contains("moveChildren(header.cells[column],meta)"));
         assertTrue(script.contains("moveChildren(row.cells[column],control)"));
         assertFalse(script.contains("pfvr-day-people"));
         assertFalse(script.contains("pfvr-person-card"));
+    }
+
+    @Test public void generatedScriptUsesLargeAttendanceControlsWithoutRepeatedPersonLabels(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains(".pfvr-person-control{display:flex!important;flex-direction:column!important;justify-content:flex-end!important"));
+        assertTrue(script.contains("min-height:60px!important;padding:10px 8px!important;font-size:13px!important"));
+        assertFalse(script.contains("pfvr-person-name-label"));
+        assertFalse(script.contains("fitPersonName(personLabel,names[rowIndex])"));
+        assertFalse(script.contains("fitPersonName(personLabel,personName)"));
     }
 
     @Test public void generatedScriptUsesRealWebsiteControlsAndGlobalPersonManagement(){
@@ -131,8 +142,8 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("pfvr-local-remove"));
         assertTrue(script.contains("data-pfvr-person"));
         assertTrue(script.contains("state.primary"));
-        assertTrue(script.contains("pfvr-person-name-label"));
-        assertTrue(script.contains("fitPersonName(personLabel,names[rowIndex])"));
+        assertFalse(script.contains("pfvr-person-name-label"));
+        assertFalse(script.contains("fitPersonName(personLabel,names[rowIndex])"));
         assertTrue(script.contains("-webkit-line-clamp:2"));
         assertTrue(script.contains("clean.length>28"));
         assertTrue(script.contains("clean.length>19"));
