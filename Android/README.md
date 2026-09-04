@@ -1,18 +1,30 @@
 # Android
 
-Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
+Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
 
 ## Entwicklung
 
 - Projektordner `Android/` in Android Studio öffnen.
 - Java 17.
 - `minSdk 26`, `targetSdk 36`, `compileSdk 36`.
-- CI verwendet Gradle 8.13 und führt Unit-Tests, APK-Build sowie Signatur-, Paket- und Versionsprüfung aus.
+- CI verwendet Gradle 8.13 und führt Unit-Tests, `lintRelease`, Debug-APK-Build, Release-AAB-Kompilierung sowie Signatur-, Paket-, Versions- und Berechtigungsprüfung aus.
+- CI exportiert die tatsächlich zusammengeführten APK-Berechtigungen und bricht bei unerwarteten sensiblen/hochwirksamen Berechtigungen ab.
 - Gebaut wird ausschließlich der eingecheckte Quellstand; Build-Workflows dürfen den Anwendungscode nicht patchen.
-- APK/AAB-Binärdateien werden nicht ins Repository eingecheckt, sondern ausschließlich als GitHub-Actions-Artefakte bereitgestellt.
+- CI blockiert bekannte persönliche PFVR-Zugangsmuster und rohe Keystore-/PKCS-Schlüsseldateien im Repository.
+- APK/AAB-Binärdateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 - Banking-Kompatibilität wird zentral in `BankingAppRegistry.java` gepflegt.
 - Kachelreihenfolge und Sichtbarkeit werden zentral in `TileLayoutStore.java` gepflegt. Stabile Tile-IDs erhalten bestehende Benutzerlayouts über App-Updates hinweg.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
+
+## Play-Store-Readiness 0.11.4
+
+- Produktions-Paket: `ch.pfvr.app`; Debug/Test bleibt `ch.pfvr.app.test`.
+- Der Play-Bundle-Workflow darf ausschließlich manuell von `main` laufen und verwendet die geschützte GitHub-Environment `play-store`.
+- Produktions-/Upload-Signierung benötigt einen separaten Upload-Key über CI-Secrets; der feste öffentliche Testschlüssel darf niemals für den Store verwendet werden.
+- `lintRelease` ist verpflichtender Teil der CI. Der in der Vorbereitung gefundene API-27-only Wert `windowLightNavigationBar` liegt nun ausschließlich in `values-v27`, sodass `minSdk 26` tatsächlich kompatibel bleibt.
+- `android:allowBackup="false"` wird durch explizite Backup-/Data-Extraction-Regeln ergänzt. App-Dateien, Datenbanken, Shared Preferences und externe App-Dateien sind aus Cloud-Backup und Device-to-Device-Transfer ausgeschlossen, damit insbesondere persönliche PFVR-Zugänge nicht auf andere Geräte migriert werden.
+- Das kleine `pfvr_logo.jpg` ist weiterhin nur ein Laufzeit-Asset. Für Google Play wird ein vom Verein freigegebenes hochauflösendes bzw. vektorbasiertes Masterlogo benötigt.
+- Store-, Datenschutz-, Data-Safety-, Review-, Asset- und Upload-Key-Unterlagen liegen in `PlayStore/`; Release-Sicherheitsentscheidungen in `decisions/play-store-security.md`.
 
 ## Sprache und Erstfreigabe
 
@@ -47,7 +59,7 @@ Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
-## Gerätetest 0.11.3
+## Gerätetest 0.11.4
 
 - Frische Installation/App-Daten: Die Landingpage muss sichtbar sein, zwischen Deutsch und Schwiizerdütsch umschalten und die hinterlegten PFVR-Ziele für Schnuppertraining/Formulare, Instagram sowie Facebook ohne Freigabe öffnen. Home, Live-Daten und interner WebView dürfen vor Codeeingabe nicht initialisiert werden.
 - Schwiizerdütsch: Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse sowie die app-erzeugte Personenverwaltung/Anmeldestatus auf verbliebene hochdeutsche App-Texte prüfen. Inhalte aus Kalender, News, Personennamen und Original-PFVR-Seite müssen unverändert bleiben.
@@ -62,14 +74,18 @@ Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 - `Original → Alle anzeigen → App-Ansicht`: alle Originalpersonen müssen mit echtem Namen, korrekter Reihenfolge und ihrem eigenen Status übernommen werden.
 - `Personen`: Hinzufügen, Entfernen und Neuaufbau aus Initiallink auch nach App-Neustart prüfen.
 - Beim langen vertikalen Scrollen müssen `Termin` und die aktuell sichtbaren Teilnehmernamen stehen bleiben; horizontales Wischen muss Kopf und Personenspalten exakt synchron halten.
-- Koch-/Verantwortlichkeitsnamen in der Terminspalte dürfen nicht fokussierbar oder editierbar sein und beim Antippen keine Tastatur öffnen. Lange Namen müssen sich verkleinern; das Datum soll fett bleiben, ohne Zähler oder Termintext mitzuskaliert.
+- Koch-/Verantwortlichkeitsnamen in der Terminspalte dürfen nicht fokussierbar oder editierbar sein und beim Antippen keine Tastatur öffnen. Lange Namen müssen sich verkleinern; das Datum soll fett bleiben, ohne Zähler oder Termintext mitzuskalieren.
+- Android 8/API 26: App-Start und Navigation testen; die API-27-spezifische helle Navigationsleiste darf dort keinen Ressourcenzugriffsfehler verursachen.
+- Play-Vorbereitung: finale zusammengeführte Berechtigungsliste im CI-Artefakt prüfen; keine sensiblen Laufzeitberechtigungen dürfen auftauchen.
 
 ## Lokale Daten
 
 Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellungen auf dem Endgerät gespeichert und darf nicht ins Repository eingecheckt werden. Kachelreihenfolge, bevorzugte Banking-App, Graphdarstellung und gewünschte Teilnehmerliste bleiben ebenfalls lokal.
 
+Cloud-Backup und Android-Device-to-Device-Transfer für die App-Daten sind bewusst deaktiviert bzw. explizit ausgeschlossen, damit persönliche Intern-Links und Teilnehmerzustände nicht automatisch auf ein anderes Gerät übernommen werden.
+
 ## Testpaket und Release
 
 Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
-Bis zum offiziellen Release werden `0.x.y`-Versionen verwendet. `1.0.0` ist für den ersten offiziellen Release reserviert.
+Ein signiertes Play-AAB wird ausschließlich über `.github/workflows/play-release.yml` aus `main` und mit einem separaten Upload-Key erzeugt. `1.0.0` bleibt für den ersten offiziellen Produktionsrelease reserviert.
