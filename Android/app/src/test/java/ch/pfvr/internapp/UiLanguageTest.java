@@ -31,6 +31,7 @@ public class UiLanguageTest {
         assertEquals("Schnuppertraining & Mitglied werde", UiLanguage.translate("Schnuppertraining & Mitglied werden", UiLanguage.SWISS_GERMAN));
         assertEquals("Es Schnuppertraining isch au vor de Mitgliedschaft möglich. Infos zum Iistig, zur Mitgliedschaft und zu de Formular findsch uf pfvr.ch.", UiLanguage.translate("Schnuppertraining ist auch vor der Mitgliedschaft möglich. Infos zu Einstieg, Mitgliedschaft und Formularen findest du auf pfvr.ch.", UiLanguage.SWISS_GERMAN));
         assertEquals("Über de Verein", UiLanguage.translate("Über den Verein", UiLanguage.SWISS_GERMAN));
+        assertEquals("Folg eus", UiLanguage.translate("Folge uns", UiLanguage.SWISS_GERMAN));
     }
 
     @Test public void dynamicAppOwnedLabelsAreTranslatedWithoutTouchingPayload() {
@@ -45,6 +46,7 @@ public class UiLanguageTest {
         assertEquals("JP-Prüfungen & Endfahren", UiLanguage.translate("JP-Prüfungen & Endfahren", UiLanguage.SWISS_GERMAN));
         assertEquals("Kougionis Eleni", UiLanguage.translate("Kougionis Eleni", UiLanguage.SWISS_GERMAN));
     }
+
     @Test public void swissGermanCoversProjectedAttendanceAndSettingsDetails() {
         assertEquals("Mit Ässe", UiLanguage.translate("Mit Essen", UiLanguage.SWISS_GERMAN));
         assertEquals("Ohni Ässe", UiLanguage.translate("Ohne Essen", UiLanguage.SWISS_GERMAN));
@@ -55,5 +57,4 @@ public class UiLanguageTest {
         assertEquals("Rhy-Kachle", UiLanguage.translate("Rhein-Kachel", UiLanguage.SWISS_GERMAN));
         assertEquals("Direkti QR-Übergab dokumentiert", UiLanguage.translate("Direkte QR-Übergabe dokumentiert", UiLanguage.SWISS_GERMAN));
     }
-
 }
