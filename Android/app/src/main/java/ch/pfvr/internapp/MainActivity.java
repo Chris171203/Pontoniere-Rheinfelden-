@@ -134,6 +134,7 @@ public class MainActivity extends Activity {
     private static final String CLUB_PAYMENT_NOTE = "Konsumation Vereinsbeiz";
     private static final String TWINT_QR_PDF = "https://www.pfvr.ch/wp-content/uploads/Seiten/vereinsbeiz_zahlung/Twint_QR.pdf";
     private static final String TWINT_DIRECT_URL = "https://www.pfvr.ch/vereinsbeiz-zahlung/";
+    private static final String RIVER_NAVIGATION_SOURCE = "https://port-of-switzerland.ch/hafenservice/pegel/";
 
 
     private static final int NAVY = Color.rgb(12,45,72);
@@ -619,8 +620,9 @@ private void rebuildHomePreservingScroll(){
         double level=displayHydroValue(station,RiverMetric.LEVEL,rawLevel);
         double gaugeCm=RiverDisplay.hasVerifiedGaugeCentimetres(station)?RiverDisplay.gaugeCentimetres(station,rawLevel):Double.NaN;
         double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;
-        RiverStatus status=riverStatus(station,flow);
-        int statusColor=statusTextColor(status.bg);
+        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
+        int levelColor=navigationLevelColor(stage);
+        int flowColor=navigationFlowColor(stage);
 
         LinearLayout c=card();
         c.setOrientation(LinearLayout.VERTICAL);
@@ -631,25 +633,29 @@ private void rebuildHomePreservingScroll(){
         stationName.setMaxLines(1);
         c.addView(stationName);
 
-        LinearLayout flowRow=new LinearLayout(this);
-        flowRow.setGravity(Gravity.CENTER_VERTICAL);
-        flowRow.setPadding(0,dp(6),0,0);
-        String flowText=Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–";
-        flowRow.addView(riverSummaryMetric("Abfluss",flowText,"m³/s",statusColor),new LinearLayout.LayoutParams(0,-2,1));
-        LinearLayout.LayoutParams statusParams=new LinearLayout.LayoutParams(-2,-2);
-        statusParams.setMargins(dp(6),dp(8),0,0);
-        flowRow.addView(riverStatusCompact(status),statusParams);
-        c.addView(flowRow);
-
+        LinearLayout levelRow=new LinearLayout(this);
+        levelRow.setGravity(Gravity.CENTER_VERTICAL);
+        levelRow.setPadding(0,dp(6),0,0);
         String levelText=Double.isFinite(level)?formatMetric(station,RiverMetric.LEVEL,level):"–";
-        LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));
-        levelMetric.setPadding(0,dp(5),0,0);
-        c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));
+        levelRow.addView(riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),levelColor,25),new LinearLayout.LayoutParams(0,-2,1));
+        if(station==HydroStation.BASEL_RHEINHALLE){
+            LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(-2,-2);
+            badgeParams.setMargins(dp(6),dp(8),0,0);
+            levelRow.addView(navigationBadge(stage),badgeParams);
+        }
+        c.addView(levelRow);
+
         if(Double.isFinite(gaugeCm)){
-            TextView gaugeView=txt(String.format(Locale.GERMAN,"%.0f cm",gaugeCm),10,MUTED,false);
+            TextView gaugeView=txt(String.format(Locale.GERMAN,"%.0f cm",gaugeCm),10,levelColor,true);
+            gaugeView.setTextColor(levelColor);
             gaugeView.setPadding(0,dp(1),0,0);
             c.addView(gaugeView);
         }
+
+        String flowText=Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–";
+        LinearLayout flowMetric=riverSummaryMetric("Abfluss",flowText,"m³/s",flowColor,17);
+        flowMetric.setPadding(0,dp(6),0,0);
+        c.addView(flowMetric,new LinearLayout.LayoutParams(-1,-2));
 
         if(Double.isFinite(temperature)){
             TextView temperatureView=txt("Wasser "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);
@@ -667,14 +673,14 @@ private void rebuildHomePreservingScroll(){
         return c;
     }
 
-    private LinearLayout riverSummaryMetric(String label,String value,String unit,int color){
+    private LinearLayout riverSummaryMetric(String label,String value,String unit,int color,float valueSize){
         LinearLayout metric=new LinearLayout(this);
         metric.setOrientation(LinearLayout.VERTICAL);
         TextView labelView=txt(label,9,MUTED,true);
         metric.addView(labelView);
         LinearLayout valueLine=new LinearLayout(this);
         valueLine.setGravity(Gravity.CENTER_VERTICAL);
-        TextView valueView=txt(value,20,color,true);
+        TextView valueView=txt(value,valueSize,color,true);
         valueView.setTextColor(color);
         valueLine.addView(valueView);
         TextView unitView=txt(unit,10,color,true);
@@ -683,6 +689,16 @@ private void rebuildHomePreservingScroll(){
         valueLine.addView(unitView);
         metric.addView(valueLine);
         return metric;
+    }
+
+    private View navigationBadge(RhineNavigation.Stage stage){
+        int color=navigationLevelColor(stage);
+        TextView badge=txt(RhineNavigation.shortLabel(stage),10,color,true);
+        badge.setTextColor(color);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dp(8),dp(4),dp(8),dp(4));
+        badge.setBackground(statusBadge(color));
+        return badge;
     }
 
     private View riverStatusCompact(RiverStatus status){
@@ -771,8 +787,9 @@ private void rebuildHomePreservingScroll(){
         TrendSeries level=hydroSeries(station,"W",range);
         double flowNow=currentHydroValue(station,"Q");
         double levelNow=graphLevelValue(station,currentHydroValue(station,"W"));
-        RiverStatus status=riverStatus(station,flowNow);
-        int flowColor=statusTextColor(status.bg);
+        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
+        int flowColor=navigationFlowColor(stage);
+        int levelColor=navigationLevelColor(stage);
 
         LinearLayout card=card();
         card.setOrientation(LinearLayout.VERTICAL);
@@ -792,7 +809,7 @@ private void rebuildHomePreservingScroll(){
         LinearLayout flowBox=new LinearLayout(this);
         flowBox.setOrientation(LinearLayout.VERTICAL);
         flowBox.addView(txt("Abfluss",11,MUTED,true));
-        TextView q=txt(Double.isFinite(flowNow)?formatMetric(station,RiverMetric.FLOW,flowNow)+" m³/s":"–",18,flowColor,true);
+        TextView q=txt(Double.isFinite(flowNow)?formatMetric(station,RiverMetric.FLOW,flowNow)+" m³/s":"–",16,flowColor,true);
         q.setTextColor(flowColor);
         flowBox.addView(q);
         values.addView(flowBox,new LinearLayout.LayoutParams(0,-2,1));
@@ -800,11 +817,28 @@ private void rebuildHomePreservingScroll(){
         LinearLayout levelBox=new LinearLayout(this);
         levelBox.setOrientation(LinearLayout.VERTICAL);
         levelBox.setGravity(Gravity.END);
-        TextView levelTitle=txt("Pegel",11,MUTED,true);levelTitle.setGravity(Gravity.END);levelBox.addView(levelTitle);
-        TextView w=txt(Double.isFinite(levelNow)?formatGraphLevel(station,levelNow)+" "+graphLevelUnit(station):"–",18,WATER,true);
-        w.setGravity(Gravity.END);levelBox.addView(w);
+        TextView levelTitle=txt("Pegel",11,MUTED,true);
+        levelTitle.setGravity(Gravity.END);
+        levelBox.addView(levelTitle);
+        TextView w=txt(Double.isFinite(levelNow)?formatGraphLevel(station,levelNow)+" "+graphLevelUnit(station):"–",24,levelColor,true);
+        w.setTextColor(levelColor);
+        w.setGravity(Gravity.END);
+        levelBox.addView(w);
         values.addView(levelBox,new LinearLayout.LayoutParams(0,-2,1));
         card.addView(values);
+
+        if(station==HydroStation.BASEL_RHEINHALLE){
+            TextView navigation=txt("Schifffahrtslage · "+RhineNavigation.shortLabel(stage),11,levelColor,true);
+            navigation.setTextColor(levelColor);
+            card.addView(navigation);
+            TextView navigationDetail=txt(RhineNavigation.detail(stage),10,MUTED,false);
+            navigationDetail.setPadding(0,dp(2),0,dp(5));
+            card.addView(navigationDetail);
+        }else{
+            TextView basis=txt("Schifffahrtslage richtet sich nach Pegel Basel-Rheinhalle.",10,MUTED,false);
+            basis.setPadding(0,0,0,dp(5));
+            card.addView(basis);
+        }
 
         if(RiverDisplay.hasVerifiedGaugeCentimetres(station)){
             TextView levelUnitLabel=txt("PEGEL-EINHEIT",9,MUTED,true);
@@ -812,10 +846,6 @@ private void rebuildHomePreservingScroll(){
             card.addView(levelUnitLabel);
             card.addView(riverGraphLevelUnitSelector(station),new LinearLayout.LayoutParams(-1,dp(38)));
         }
-
-        TextView limits=txt(String.format(Locale.GERMAN,"Abfluss · Niedrig < %.0f · Warn ab %.0f · Alarm ab %.0f m³/s",riverLow(station),riverWarn(station),riverAlarm(station)),10,MUTED,false);
-        limits.setPadding(0,0,0,dp(4));
-        card.addView(limits);
 
         if(flow.values.size()>=2&&level.values.size()>=2){
             DualRiverTrendView graph=new DualRiverTrendView(this,flow,level,range,station);
@@ -905,6 +935,36 @@ private void rebuildHomePreservingScroll(){
         return RiverDisplay.graphLevelDecimals(station,riverGraphLevelCentimetres(station))==0
                 ?String.format(Locale.GERMAN,"%.0f",value)
                 :String.format(Locale.GERMAN,"%.2f",value);
+    }
+
+    private RhineNavigation.Stage navigationStage(){
+        double raw=currentHydroValue(HydroStation.BASEL_RHEINHALLE,"W");
+        return RhineNavigation.fromBaselGaugeCm(RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,raw));
+    }
+
+    private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){
+        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;
+        if(!Double.isFinite(displayedLevel))return RhineNavigation.Stage.UNKNOWN;
+        double centimetres=riverGraphLevelCentimetres(station)
+                ?displayedLevel
+                :RiverDisplay.gaugeCentimetres(station,displayedLevel);
+        return RhineNavigation.fromBaselGaugeCm(centimetres);
+    }
+
+    private int navigationLevelColor(RhineNavigation.Stage stage){
+        if(stage==RhineNavigation.Stage.UNKNOWN)return themeText(MUTED);
+        if(stage==RhineNavigation.Stage.NORMAL)return themeText(WATER);
+        if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(255,216,92):Color.rgb(205,143,0);
+        if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(255,148,86):Color.rgb(220,92,38);
+        return darkMode?Color.rgb(255,105,105):Color.rgb(200,55,55);
+    }
+
+    private int navigationFlowColor(RhineNavigation.Stage stage){
+        if(stage==RhineNavigation.Stage.UNKNOWN)return themeText(MUTED);
+        if(stage==RhineNavigation.Stage.NORMAL)return themeText(RiverMetric.FLOW.color);
+        if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(224,169,72):Color.rgb(174,103,0);
+        if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(225,111,76):Color.rgb(166,66,31);
+        return darkMode?Color.rgb(210,77,88):Color.rgb(139,39,45);
     }
 
     private LinearLayout segmentedBackground(){
@@ -1618,9 +1678,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         body.addView(riverSlotSettingCard(1),margin(-1,-2,0,0,0,9));
         body.addView(riverSlotSettingCard(2),margin(-1,-2,0,0,0,12));
 
-        section(body,"Rhein-Grenzwerte","Status basiert auf dem Abfluss der jeweiligen BAFU-Station");
-        body.addView(riverThresholdSettingsCard(HydroStation.BASEL_RHEINHALLE),margin(-1,-2,0,0,0,9));
-        body.addView(riverThresholdSettingsCard(HydroStation.RHEINFELDEN),margin(-1,-2,0,0,0,12));
+        section(body,"Schifffahrtslage","Offizielle Hochwassermarken des Pegels Basel-Rheinhalle; der Abfluss bleibt ein separater Messwert.");
+        body.addView(riverNavigationSettingsCard(),margin(-1,-2,0,0,0,12));
     }
 
     private void addPaymentSettings(LinearLayout body){
@@ -1639,6 +1698,41 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     private void openPaymentSettings(){
         settingsTab=SettingsTab.PAYMENT;
         navigate(Screen.SETTINGS);
+    }
+
+    private View riverNavigationSettingsCard(){
+        LinearLayout card=card();
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.addView(txt("Pegel Basel-Rheinhalle · offizielle Schifffahrtslage",15,TEXT,true));
+        TextView intro=txt("Ausschlaggebend für die Hochwassermarken ist der Pegel Basel-Rheinhalle. Abflusswerte werden nur ergänzend angezeigt.",12,MUTED,false);
+        intro.setPadding(0,dp(5),0,dp(8));
+        card.addView(intro);
+        card.addView(navigationRuleRow("700 cm","HWM I · Voralarm","Hochwassermarke I",navigationLevelColor(RhineNavigation.Stage.HWM_I)));
+        card.addView(navigationRuleRow("790 cm","HWM IIb · Sperre","Kleinschifffahrt und Fähren Basel–Rheinfelden gesperrt",navigationLevelColor(RhineNavigation.Stage.HWM_IIB)));
+        card.addView(navigationRuleRow("820 cm","HWM IIa · Sperre","Schifffahrt Rheinfelden–Kembs gesperrt",navigationLevelColor(RhineNavigation.Stage.HWM_IIA)));
+        TextView source=txt("Quelle: Schweizerische Rheinhäfen  ↗",10,WATER,true);
+        source.setPadding(0,dp(9),0,0);
+        source.setOnClickListener(v->external(RIVER_NAVIGATION_SOURCE));
+        card.addView(source);
+        return card;
+    }
+
+    private View navigationRuleRow(String level,String labelText,String detail,int color){
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0,dp(5),0,dp(5));
+        View dot=new View(this);
+        dot.setBackground(statusDot(color));
+        row.addView(dot,new LinearLayout.LayoutParams(dp(9),dp(9)));
+        LinearLayout copy=new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(8),0,0,0);
+        TextView title=txt(level+" · "+labelText,12,color,true);
+        title.setTextColor(color);
+        copy.addView(title);
+        copy.addView(txt(detail,10,MUTED,false));
+        row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        return row;
     }
 
     private View riverSlotSettingCard(int slot){
@@ -3340,8 +3434,9 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             if(maxTime<=minTime)maxTime=minTime+1;
             HydroMath.AxisScale flowScale=HydroMath.niceAxis(flow.values);
             HydroMath.AxisScale levelScale=HydroMath.niceAxis(level.values);
-            int flowColor=statusTextColor(riverStatus(station,currentHydroValue(station,"Q")).bg);
-            int levelColor=themeText(WATER);
+            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
+            int flowColor=navigationFlowColor(currentStage);
+            int levelColor=navigationLevelColor(currentStage);
 
             grid.setColor(darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234));
             label.setColor(themeText(MUTED));
@@ -3358,24 +3453,48 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
                 canvas.drawText(wText,right+dp(5),y+dp(3),label);
             }
             drawDualTimeGrid(canvas,left,right,top,bottom,minTime,maxTime);
-            drawDualThresholds(canvas,flowScale,left,right,top,bottom);
-            drawDualSeries(canvas,flow,flowScale,left,right,top,bottom,minTime,maxTime,flowLine,flowColor);
-            drawDualSeries(canvas,level,levelScale,left,right,top,bottom,minTime,maxTime,levelLine,levelColor);
+            drawNavigationThresholds(canvas,levelScale,left,right,top,bottom);
+            drawDualSeries(canvas,flow,flowScale,left,right,top,bottom,minTime,maxTime,flowLine,false,flowColor);
+            drawDualSeries(canvas,level,levelScale,left,right,top,bottom,minTime,maxTime,levelLine,true,levelColor);
 
             if(selectedTime!=Long.MIN_VALUE)drawDualSelection(canvas,flowScale,levelScale,left,right,top,bottom,minTime,maxTime,flowColor,levelColor);
         }
 
-        private void drawDualSeries(Canvas canvas,TrendSeries series,HydroMath.AxisScale scale,float left,float right,float top,float bottom,long minTime,long maxTime,Paint paint,int color){
+        private RhineNavigation.Stage navigationStageAtGraphTime(long timestamp){
+            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;
+            int index=HydroMath.nearestIndex(level.times,timestamp);
+            if(index<0)return RhineNavigation.Stage.UNKNOWN;
+            return navigationStageForGraphValue(station,level.values.get(index));
+        }
+
+        private void drawDualSeries(Canvas canvas,TrendSeries series,HydroMath.AxisScale scale,float left,float right,float top,float bottom,long minTime,long maxTime,Paint paint,boolean levelSeries,int fallbackColor){
             if(series.values.size()<2)return;
-            Path path=new Path();
-            boolean started=false;
+            if(station!=HydroStation.BASEL_RHEINHALLE){
+                Path path=new Path();
+                boolean started=false;
+                for(int i=0;i<series.values.size();i++){
+                    double value=series.values.get(i);if(!Double.isFinite(value))continue;
+                    float x=left+(right-left)*(series.times.get(i)-minTime)/(float)(maxTime-minTime);
+                    float y=(float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));
+                    if(!started){path.moveTo(x,y);started=true;}else path.lineTo(x,y);
+                }
+                paint.setColor(fallbackColor);
+                canvas.drawPath(path,paint);
+                return;
+            }
+            boolean previous=false;
+            float previousX=0f,previousY=0f;
             for(int i=0;i<series.values.size();i++){
-                double value=series.values.get(i);if(!Double.isFinite(value))continue;
+                double value=series.values.get(i);if(!Double.isFinite(value)){previous=false;continue;}
                 float x=left+(right-left)*(series.times.get(i)-minTime)/(float)(maxTime-minTime);
                 float y=(float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));
-                if(!started){path.moveTo(x,y);started=true;}else path.lineTo(x,y);
+                if(previous){
+                    RhineNavigation.Stage segmentStage=navigationStageAtGraphTime(series.times.get(i));
+                    paint.setColor(levelSeries?navigationLevelColor(segmentStage):navigationFlowColor(segmentStage));
+                    canvas.drawLine(previousX,previousY,x,y,paint);
+                }
+                previous=true;previousX=x;previousY=y;
             }
-            paint.setColor(color);canvas.drawPath(path,paint);
         }
 
         private void drawDualTimeGrid(Canvas canvas,float left,float right,float top,float bottom,long minTime,long maxTime){
@@ -3393,13 +3512,20 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             }
         }
 
-        private void drawDualThresholds(Canvas canvas,HydroMath.AxisScale scale,float left,float right,float top,float bottom){
-            double[] values={riverLow(station),riverWarn(station),riverAlarm(station)};
-            int[] colors={STATUS_LOW,STATUS_WARN,STATUS_ALARM};
-            for(int i=0;i<values.length;i++){
-                double value=values[i];if(value<scale.min||value>scale.max)continue;
-                float y=(float)(bottom-(value-scale.min)/(scale.max-scale.min)*(bottom-top));
-                threshold.setColor(statusTextColor(colors[i]));canvas.drawLine(left,y,right,y,threshold);
+        private void drawNavigationThresholds(Canvas canvas,HydroMath.AxisScale levelScale,float left,float right,float top,float bottom){
+            if(station!=HydroStation.BASEL_RHEINHALLE)return;
+            boolean centimetres=riverGraphLevelCentimetres(station);
+            for(RhineNavigation.Stage mark:RhineNavigation.officialThresholdStages()){
+                double value=RhineNavigation.thresholdGraphValue(mark,centimetres);
+                if(!Double.isFinite(value)||value<levelScale.min||value>levelScale.max)continue;
+                float y=(float)(bottom-(value-levelScale.min)/(levelScale.max-levelScale.min)*(bottom-top));
+                int color=navigationLevelColor(mark);
+                threshold.setColor(color);
+                canvas.drawLine(left,y,right,y,threshold);
+                String marker=RhineNavigation.thresholdMarker(mark,centimetres);
+                label.setColor(color);
+                float markerWidth=label.measureText(marker);
+                canvas.drawText(marker,Math.max(left+dp(4),right-markerWidth-dp(4)),Math.max(top+dp(10),y-dp(3)),label);
             }
         }
 
@@ -3410,6 +3536,11 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             Paint cross=new Paint(Paint.ANTI_ALIAS_FLAG);cross.setColor(Color.argb(darkMode?150:100,128,145,155));cross.setStrokeWidth(dp(1));canvas.drawLine(x,top,x,bottom,cross);
 
             double q=flow.values.get(qi),w=level.values.get(wi);
+            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.NORMAL;
+            if(station==HydroStation.BASEL_RHEINHALLE){
+                flowColor=navigationFlowColor(selectedStage);
+                levelColor=navigationLevelColor(selectedStage);
+            }
             float qx=left+(right-left)*(flow.times.get(qi)-minTime)/(float)(maxTime-minTime);
             float qy=(float)(bottom-(q-flowScale.min)/(flowScale.max-flowScale.min)*(bottom-top));
             float wx=left+(right-left)*(level.times.get(wi)-minTime)/(float)(maxTime-minTime);
@@ -3420,7 +3551,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             long timestamp=Math.max(flow.times.get(qi),level.times.get(wi));
             ZonedDateTime time=java.time.Instant.ofEpochMilli(timestamp).atZone(ZoneId.of("Europe/Zurich"));
             DateTimeFormatter formatter=range==RiverRange.WEEK?DateTimeFormatter.ofPattern("EE dd.MM. HH:mm",Locale.GERMAN):DateTimeFormatter.ofPattern("HH:mm",Locale.GERMAN);
-            String text=time.format(formatter)+" · "+formatMetric(station,RiverMetric.FLOW,q)+" m³/s · "+formatGraphLevel(station,w)+" "+graphLevelUnit(station);
+            String text=time.format(formatter)+" · "+formatMetric(station,RiverMetric.FLOW,q)+" m³/s · "+formatGraphLevel(station,w)+" "+graphLevelUnit(station)+(station==HydroStation.BASEL_RHEINHALLE?" · "+RhineNavigation.shortLabel(selectedStage):"");
             tooltipText.setColor(darkMode?DARK_TEXT:Color.WHITE);
             float textWidth=tooltipText.measureText(text),textHeight=Math.abs(tooltipText.ascent())+Math.abs(tooltipText.descent());
             float boxWidth=Math.min(right-left,textWidth+dp(16));float boxLeft=Math.max(left,Math.min(right-boxWidth,x-boxWidth/2f));

@@ -37,7 +37,7 @@ Stand: Testversion `0.10.20` · aktualisiert 2026-09-04.
 ## Automatisch geprüft
 
 - Unit-Tests prüfen Namensformatierung inklusive Bearbeiten-Symbol, mobile Matrix, Erkennung von Namen aus Button-/Input-Controls, begrenzte indexbasierte Namens-Fallbacks, Übernahme stark erweiterter Original-Personenlisten, blockierte Bulk-Personenaktionen im App-Modus, Fallback-Personenverwaltung, Initiallink-Recovery, Viewport-Kopfzeile, horizontale Synchronisierung, automatische Verkleinerung langer Kochtexte und das Zurücksetzen der Recovery-Bestätigung.
-- Zusätzliche Tests prüfen absolute Wasserstände in `m ü.M.`, den bestätigten Basel-cm-Bezug sowie den sicheren Fallback auf `m ü.M.`, wenn für eine Station kein verifizierter cm-Bezug vorhanden ist.
+- Zusätzliche Tests prüfen absolute Wasserstände in `m ü.M.`, den bestätigten Basel-cm-Bezug sowie den sicheren Fallback auf `m ü.M.`, wenn für eine Station kein verifizierter cm-Bezug vorhanden ist. Die offiziellen Basel-Hochwassermarken werden an ihren exakten Grenzen 700/790/820 cm sowie in beiden Graph-Einheiten getestet.
 - Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
@@ -45,6 +45,7 @@ Stand: Testversion `0.10.20` · aktualisiert 2026-09-04.
 
 - Unter `Rhein aktuell` müssen beide Stationen primär den Wasserstand in `m ü.M.` zeigen. Basel darf zusätzlich den bestätigten cm-Pegel zeigen; Rheinfelden darf keinen abgeleiteten cm-Wert anzeigen. Die beiden BAFU-Stand/Zeitstempel müssen am unteren Kartenrand auf derselben Höhe liegen.
 - Bei Basel-Rheinhalle muss der Graph zwischen `m ü.M.` und `cm` umschaltbar sein. Aktueller Pegelwert, rechte Achse, Kurve, Hinweis und Tooltip dürfen dabei keine gemischten Einheiten zeigen. Bei Rheinfelden darf kein cm-Umschalter angeboten werden.
+- Basel muss bei 700/790/820 cm sauber zwischen Normal, HWM I, Sperre IIb und Sperre IIa wechseln. Pegelwert, Badge, Hochwassermarken, Kurvenabschnitte und ausgewählte Diagrammpunkte müssen die Stufe widerspruchsfrei zeigen; Abfluss und Pegel müssen dabei trotz gemeinsamer Stufenfamilie optisch unterscheidbar bleiben.
 - Beim Verschieben oder Ein-/Ausblenden von Kacheln muss die Kachelverwaltung ungefähr an derselben vertikalen Position bleiben und darf nicht mehr nach ganz oben springen.
 - In der Originalansicht `Alle anzeigen` auslösen, anschließend zurück auf `App-Ansicht` wechseln: alle sichtbaren Personen müssen mit ihren echten Namen und exakt den Statuswerten ihrer jeweiligen Originalzeile übernommen werden; `Teilnehmer 3`, `Teilnehmer 44` usw. dürfen nicht mehr als Ersatznamen erscheinen, sofern die Originalzeile einen Namen enthält.
 - Die Personenverwaltung muss nach dieser Übernahme dieselben echten Namen in derselben Reihenfolge zeigen; Entfernen muss weiterhin die richtige Person betreffen.

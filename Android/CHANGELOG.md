@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.20
+- Die offizielle Schifffahrtslage wird ausschließlich aus dem Pegel Basel-Rheinhalle abgeleitet: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs. Abflusswerte steuern keine Sperrampel mehr.
+- `Rhein aktuell` priorisiert den Pegel wieder visuell. Basel-Pegel und Statusbadge verwenden die aktuelle Hochwasserstufe; der Abfluss bleibt kleiner und erhält je Stufe eine unterscheidbare Schwesterfarbe. Rheinfelden bleibt mangels eigenem offiziellem Sperrbezug neutral.
+- Im Basel-Diagramm liegen die drei offiziellen Hochwassermarken auf der Pegelachse. Pegel- und Abflusskurve werden abschnittsweise nach der zeitgleichen Pegelstufe eingefärbt, bleiben aber farblich voneinander unterscheidbar; Auswahlpunkte und Tooltip übernehmen die historische Stufe.
+- Die bisherigen frei einstellbaren Abfluss-Grenzwerte werden in den Rhein-Einstellungen nicht mehr als Schifffahrtsstatus angeboten. Stattdessen werden die offiziellen Pegelmarken samt Quelle dargestellt.
+
 ## 0.10.19
 - Rheinfelden wird nicht mehr auf einen relativen cm-Pegel umgerechnet. Ohne belastbar bestätigten aktuellen Pegelnullpunkt bleibt dort ausschließlich der vom BAFU gelieferte Wasserstand in `m ü.M.` maßgeblich.
 - `Rhein aktuell` zeigt bei beiden Stationen den Wasserstand primär in `m ü.M.`; nur Basel-Rheinhalle erhält darunter zusätzlich den verifizierbaren relativen Pegel in `cm`.
