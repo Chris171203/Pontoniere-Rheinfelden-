@@ -82,6 +82,7 @@ final class TileLayoutStore {
         ));
         CATALOG.put(Area.CLUB, List.of(
                 spec(Area.CLUB, "club_about", "Über den Verein", Width.WIDE, false),
+                spec(Area.CLUB, "club_join", "Schnuppertraining & Mitglied werden", Width.WIDE, false),
                 spec(Area.CLUB, "club_news", "Vereinsnews", Width.COMPACT, false),
                 spec(Area.CLUB, "club_program", "Jahresprogramm", Width.COMPACT, false),
                 spec(Area.CLUB, "club_board", "Vorstand", Width.COMPACT, false),
@@ -89,7 +90,9 @@ final class TileLayoutStore {
                 spec(Area.CLUB, "club_depot", "Depot & Route", Width.COMPACT, false),
                 spec(Area.CLUB, "club_phone", "Telefon", Width.COMPACT, false),
                 spec(Area.CLUB, "club_email", "E-Mail", Width.COMPACT, false),
-                spec(Area.CLUB, "club_contact", "Kontaktseite", Width.COMPACT, false)
+                spec(Area.CLUB, "club_contact", "Kontaktseite", Width.COMPACT, false),
+                spec(Area.CLUB, "club_instagram", "Instagram", Width.COMPACT, false),
+                spec(Area.CLUB, "club_facebook", "Facebook", Width.COMPACT, false)
         ));
     }
 

@@ -25,13 +25,15 @@ public class FirstUseGateSourceTest {
         throw new IllegalStateException("MainActivity.java not found from " + System.getProperty("user.dir"));
     }
 
-    @Test public void firstUseGateIsAttachedToActivityContent() throws Exception {
-        String source = source();
+    private static String gate(String source) {
         int start = source.indexOf("private void showFirstUseGate()");
         int end = source.indexOf("private void scheduleBackgroundRefresh()", start);
         assertTrue(start >= 0 && end > start);
-        String gate = source.substring(start, end);
-        assertTrue(gate.contains("setContentView(root);"));
+        return source.substring(start, end);
+    }
+
+    @Test public void firstUseGateIsAttachedToActivityContent() throws Exception {
+        assertTrue(gate(source()).contains("setContentView(root);"));
     }
 
     @Test public void lockedStartupRoutesToFirstUseGate() throws Exception {
@@ -42,5 +44,18 @@ public class FirstUseGateSourceTest {
         String startup = source.substring(start, end);
         assertTrue(startup.contains("if(!prefs.getBoolean(PREF_ACCESS_UNLOCKED,false))"));
         assertTrue(startup.contains("showFirstUseGate();"));
+    }
+
+    @Test public void publicLandingOffersDiscoveryAndSocialLinksBeforeUnlock() throws Exception {
+        String source = source();
+        String gate = gate(source);
+        assertTrue(source.contains("https://www.pfvr.ch/schnuppertraining-mitglied-werden-formulare/"));
+        assertTrue(source.contains("https://www.facebook.com/PontoniereRheinfelden"));
+        assertTrue(source.contains("https://www.instagram.com/pontoniererheinfelden"));
+        assertTrue(gate.contains("Schnuppertraining & Mitglied werden"));
+        assertTrue(gate.contains("external(JOIN_INFO)"));
+        assertTrue(gate.contains("external(INSTAGRAM)"));
+        assertTrue(gate.contains("external(FACEBOOK)"));
+        assertTrue(gate.contains("setUiLanguage(UiLanguage.SWISS_GERMAN)"));
     }
 }

@@ -60,4 +60,15 @@ public class TileLayoutStoreTest {
         assertEquals("club_news",normalized.get(1));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
+
+    @Test public void clubCatalogAddsPublicDiscoveryAndSocialTilesToOlderLayouts(){
+        List<String> normalized=TileLayoutStore.normalizeOrder(
+                TileLayoutStore.Area.CLUB,
+                List.of("club_about","club_news","club_contact")
+        );
+        assertTrue(normalized.contains("club_join"));
+        assertTrue(normalized.contains("club_instagram"));
+        assertTrue(normalized.contains("club_facebook"));
+        assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
+    }
 }

@@ -128,6 +128,9 @@ public class MainActivity extends Activity {
     private static final String HISTORY = "https://www.pfvr.ch/verein/geschichte/";
     private static final String PROGRAM = "https://www.pfvr.ch/verein/jahresprogramm/";
     private static final String CONTACT = "https://www.pfvr.ch/kontakt/";
+    private static final String JOIN_INFO = "https://www.pfvr.ch/schnuppertraining-mitglied-werden-formulare/";
+    private static final String FACEBOOK = "https://www.facebook.com/PontoniereRheinfelden";
+    private static final String INSTAGRAM = "https://www.instagram.com/pontoniererheinfelden";
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
     private static final String CALENDAR_WEB = "https://calendar.google.com/calendar/embed?src=a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com&ctz=Europe%2FZurich";
 
@@ -297,11 +300,15 @@ public class MainActivity extends Activity {
     }
 
     private void showFirstUseGate(){
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(24),dp(42),dp(24),dp(32));
-        root.setBackgroundColor(themeBg(SURFACE));
+        ScrollView root=new ScrollView(this);
+        root.setFillViewport(true);
+
+        LinearLayout page=new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setGravity(Gravity.CENTER_HORIZONTAL);
+        page.setPadding(dp(24),dp(34),dp(24),dp(32));
+        page.setBackgroundColor(themeBg(SURFACE));
+        root.addView(page,new ScrollView.LayoutParams(-1,-2));
 
         ImageView logo=new ImageView(this);
         logo.setImageResource(R.drawable.pfvr_logo);
@@ -309,22 +316,62 @@ public class MainActivity extends Activity {
         logo.setBackground(round(Color.WHITE,14));
         logo.setClipToOutline(true);
         LinearLayout.LayoutParams logoParams=new LinearLayout.LayoutParams(dp(84),dp(84));
-        logoParams.setMargins(0,0,0,dp(18));
-        root.addView(logo,logoParams);
+        logoParams.setMargins(0,0,0,dp(14));
+        page.addView(logo,logoParams);
 
         TextView title=txt("PFVR Rheinfelden",24,TEXT,true);
         title.setGravity(Gravity.CENTER);
-        root.addView(title);
+        page.addView(title);
         TextView subtitle=txt("Erstfreigabe",16,WATER,true);
         subtitle.setGravity(Gravity.CENTER);
-        subtitle.setPadding(0,dp(5),0,dp(20));
-        root.addView(subtitle);
+        subtitle.setPadding(0,dp(5),0,dp(12));
+        page.addView(subtitle);
+
+        LinearLayout languageOptions=segmentedBackground();
+        boolean swissGerman=UiLanguage.isSwissGerman(uiMode());
+        TextView german=segmentOption("Deutsch",!swissGerman);
+        TextView swiss=segmentOption("Schwiizerdütsch",swissGerman);
+        german.setOnClickListener(v->setUiLanguage(UiLanguage.DE));
+        swiss.setOnClickListener(v->setUiLanguage(UiLanguage.SWISS_GERMAN));
+        languageOptions.addView(german,segmentParams(languageOptions));
+        languageOptions.addView(swiss,segmentParams(languageOptions));
+        LinearLayout.LayoutParams languageParams=new LinearLayout.LayoutParams(-1,dp(42));
+        languageParams.setMargins(0,0,0,dp(14));
+        page.addView(languageOptions,languageParams);
+
+        LinearLayout publicInfo=card();
+        publicInfo.setOrientation(LinearLayout.VERTICAL);
+        publicInfo.setPadding(dp(18),dp(17),dp(18),dp(17));
+        page.addView(publicInfo,margin(-1,-2,0,0,0,12));
+        publicInfo.addView(txt("Neu beim PFVR?",19,TEXT,true));
+        TextView publicText=txt("Schnuppertraining, Mitgliedschaft und Formulare findest du auf pfvr.ch.",13,MUTED,false);
+        publicText.setPadding(0,dp(5),0,dp(11));
+        publicInfo.addView(publicText);
+        Button join=btn("Schnuppertraining & Mitglied werden",NAVY,Color.WHITE);
+        join.setOnClickListener(v->external(JOIN_INFO));
+        publicInfo.addView(join,new LinearLayout.LayoutParams(-1,dp(46)));
+        TextView follow=txt("Folge uns",11,MUTED,true);
+        follow.setPadding(0,dp(13),0,dp(6));
+        publicInfo.addView(follow);
+        LinearLayout socials=new LinearLayout(this);
+        Button instagram=btn("Instagram",Color.rgb(232,240,244),NAVY);
+        instagram.setOnClickListener(v->external(INSTAGRAM));
+        socials.addView(instagram,new LinearLayout.LayoutParams(0,dp(42),1));
+        Button facebook=btn("Facebook",Color.rgb(232,240,244),NAVY);
+        facebook.setOnClickListener(v->external(FACEBOOK));
+        LinearLayout.LayoutParams facebookParams=new LinearLayout.LayoutParams(0,dp(42),1);
+        facebookParams.setMargins(dp(8),0,0,0);
+        socials.addView(facebook,facebookParams);
+        publicInfo.addView(socials);
 
         LinearLayout gate=card();
         gate.setOrientation(LinearLayout.VERTICAL);
         gate.setPadding(dp(18),dp(18),dp(18),dp(18));
-        root.addView(gate,new LinearLayout.LayoutParams(-1,-2));
-        gate.addView(txt("Diese App kann interne Vereinsinformationen anzeigen. Gib den Freigabecode ein.",14,TEXT,false));
+        page.addView(gate,new LinearLayout.LayoutParams(-1,-2));
+        gate.addView(txt("App freischalten",18,TEXT,true));
+        TextView gateText=txt("Diese App kann interne Vereinsinformationen anzeigen. Gib den Freigabecode ein.",14,TEXT,false);
+        gateText.setPadding(0,dp(6),0,0);
+        gate.addView(gateText);
         TextView note=txt("Der Code wird nur zur lokalen Erstfreigabe geprüft. Persönliche PFVR-Links bleiben weiterhin ausschließlich auf diesem Gerät.",12,MUTED,false);
         note.setPadding(0,dp(8),0,dp(14));
         gate.addView(note);
@@ -500,6 +547,11 @@ private View home() {
     LinearLayout.LayoutParams payParams = new LinearLayout.LayoutParams(0,dp(46),1);
     payParams.setMargins(dp(9),0,0,0);
     actions.addView(pay,payParams);
+    TextView joinInfo=txt("Schnuppertraining & Mitglied werden  →",12,Color.WHITE,true);
+    joinInfo.setGravity(Gravity.END);
+    joinInfo.setPadding(dp(4),dp(12),dp(2),0);
+    joinInfo.setOnClickListener(v->external(JOIN_INFO));
+    hero.addView(joinInfo);
     homeLiveStack=new LinearLayout(this);
     homeLiveStack.setOrientation(LinearLayout.VERTICAL);
     body.addView(homeLiveStack,new LinearLayout.LayoutParams(-1,-2));
@@ -613,7 +665,7 @@ private View homeEventsTile(){
 }
 
 private View homeNewsTile(){
-    LinearLayout group=tileGroup("Aktuell vom Verein","News von pfvr.ch · "+newsStatus());
+    LinearLayout group=tileGroup("Aktuell vom Verein",ui("News von pfvr.ch")+" · "+newsStatus());
     if(news.isEmpty()){
         LinearLayout loading=card();
         loading.setGravity(Gravity.CENTER_VERTICAL);
@@ -919,7 +971,7 @@ private void rebuildHomePreservingScroll(){
         card.addView(values);
 
         if(station==HydroStation.BASEL_RHEINHALLE){
-            TextView navigation=txt("Schifffahrtslage · "+RhineNavigation.shortLabel(stage),11,levelColor,true);
+            TextView navigation=txt(ui("Schifffahrtslage")+" · "+ui(RhineNavigation.shortLabel(stage)),11,levelColor,true);
             navigation.setTextColor(levelColor);
             card.addView(navigation);
             TextView navigationDetail=txt(RhineNavigation.detail(stage),10,MUTED,false);
@@ -941,7 +993,7 @@ private void rebuildHomePreservingScroll(){
         if(flow.values.size()>=2&&level.values.size()>=2){
             DualRiverTrendView graph=new DualRiverTrendView(this,flow,level,range,station);
             card.addView(graph,new LinearLayout.LayoutParams(-1,dp(224)));
-            TextView hint=txt("Abfluss links · Pegel rechts ("+graphLevelUnit(station)+") · Diagramm berühren für Einzelwerte",10,MUTED,false);
+            TextView hint=txt(ui("Abfluss links")+" · "+ui("Pegel rechts")+" ("+graphLevelUnit(station)+") · "+ui("Diagramm berühren für Einzelwerte"),10,MUTED,false);
             hint.setGravity(Gravity.CENTER);
             hint.setPadding(0,dp(4),0,0);
             card.addView(hint);
@@ -972,7 +1024,7 @@ private void rebuildHomePreservingScroll(){
         LinearLayout outer=segmentedBackground();
         for(RiverRange range:RiverRange.values()){
             TextView option=segmentOption(range.label,range==selected);
-            option.setContentDescription("Rheinwerte "+range.label);
+            option.setContentDescription(ui("Rheinwerte")+" "+range.label);
             option.setOnClickListener(v->{
                 prefs.edit().putString(PREF_RIVER_RANGE,range.label).apply();
                 if(current==Screen.HOME)refreshHomeLiveViews();
@@ -997,14 +1049,14 @@ private void rebuildHomePreservingScroll(){
         LinearLayout outer=segmentedBackground();
         boolean centimetres=riverGraphLevelCentimetres(station);
         TextView absolute=segmentOption("m ü.M.",!centimetres);
-        absolute.setContentDescription("Pegel "+station.label+" im Diagramm in Meter über Meer");
+        absolute.setContentDescription(ui("Pegel")+" "+station.label+" "+ui("im Diagramm in Meter über Meer"));
         absolute.setOnClickListener(v->{
             prefs.edit().putString(riverGraphLevelUnitPreferenceKey(station),"m").apply();
             if(current==Screen.HOME)refreshHomeLiveViews();
         });
         outer.addView(absolute,segmentParams(outer));
         TextView relative=segmentOption("cm",centimetres);
-        relative.setContentDescription("Pegel "+station.label+" im Diagramm in Zentimetern");
+        relative.setContentDescription(ui("Pegel")+" "+station.label+" "+ui("im Diagramm in Zentimetern"));
         relative.setOnClickListener(v->{
             prefs.edit().putString(riverGraphLevelUnitPreferenceKey(station),"cm").apply();
             if(current==Screen.HOME)refreshHomeLiveViews();
@@ -1210,11 +1262,11 @@ private void rebuildHomePreservingScroll(){
             }
             ZonedDateTime start=day.atTime(regularTrainingStart(day)).atZone(zone);
             ZonedDateTime end=day.atTime(regularTrainingEnd(day)).atZone(zone);
-            if(end.isAfter(now))return new TrainingSlot(start,end,false,"Regelmässiges Training");
+            if(end.isAfter(now))return new TrainingSlot(start,end,false,ui("Regelmässiges Training"));
         }
         LocalDate fallback=first.plusDays(1);
         while(!regularTrainingDay(fallback))fallback=fallback.plusDays(1);
-        return new TrainingSlot(fallback.atTime(regularTrainingStart(fallback)).atZone(zone),fallback.atTime(regularTrainingEnd(fallback)).atZone(zone),false,"Regelmässiges Training");
+        return new TrainingSlot(fallback.atTime(regularTrainingStart(fallback)).atZone(zone),fallback.atTime(regularTrainingEnd(fallback)).atZone(zone),false,ui("Regelmässiges Training"));
     }
 
     private TrainingSlot trainingSlotFromEvent(Event event){
@@ -1263,12 +1315,12 @@ private void rebuildHomePreservingScroll(){
 
     private String[] weatherSummary(){
         TrainingSlot slot=nextTrainingSlot();
-        String date=cap(slot.start.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN)))+" · "+trainingTimeLabel(slot);
+        String date=localizedDateWords(cap(slot.start.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN))))+" · "+trainingTimeLabel(slot);
         if(slot.fromCalendar&&slot.title!=null&&!slot.title.isBlank())date+="\n"+slot.title;
         String raw=prefs.getString(PREF_WEATHER_CACHE,"");
         long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
         String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
-        String provenance=(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
+        String provenance=ui(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
         if(raw.trim().isEmpty())return new String[]{"NÄCHSTES TRAINING",date,"Wetter wird geladen …","Prognose wird im Hintergrund aktualisiert.",provenance,"◌"};
         try{
             JSONObject hourly=new JSONObject(raw).getJSONObject("hourly");
@@ -1292,7 +1344,7 @@ private void rebuildHomePreservingScroll(){
             String temperatureText=Double.isNaN(firstTemperature)?"":String.format(Locale.GERMAN,"%.0f °C",firstTemperature);
             if(Double.isFinite(lastTemperature)&&Double.isFinite(firstTemperature)&&Math.abs(lastTemperature-firstTemperature)>=1.0)temperatureText+=String.format(Locale.GERMAN," → %.0f °C",lastTemperature);
             String main=temperatureText+(temperatureText.isEmpty()?"":" · ")+weatherCode(codeValue);
-            String details="Regen "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\nWind "+Math.round(windMax)+" km/h · Böen "+Math.round(gustMax)+" km/h";
+            String details=ui("Regen")+" "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\n"+ui("Wind")+" "+Math.round(windMax)+" km/h · "+ui("Böen")+" "+Math.round(gustMax)+" km/h";
             if(Double.isFinite(uvMax))details+="\nUV "+String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax);
             return new String[]{"NÄCHSTES TRAINING",date,main,details,provenance,weatherIcon(codeValue)};
         }catch(Exception e){
@@ -1300,12 +1352,12 @@ private void rebuildHomePreservingScroll(){
         }
     }
 
-    private String uvLabel(double uv){if(uv<3)return "niedrig";if(uv<6)return "mässig";if(uv<8)return "hoch";if(uv<11)return "sehr hoch";return "extrem";}
+    private String uvLabel(double uv){if(uv<3)return ui("niedrig");if(uv<6)return ui("mässig");if(uv<8)return ui("hoch");if(uv<11)return ui("sehr hoch");return ui("extrem");}
 
     private String weatherIcon(int c){if(c==0)return "☀";if(c<=2)return "⛅";if(c==3)return "☁";if(c==45||c==48)return "🌫";if(c>=51&&c<=67)return "🌧";if(c>=71&&c<=77)return "❄";if(c>=80&&c<=82)return "🌦";if(c>=85&&c<=86)return "🌨";if(c>=95)return "⚡";return "◌";}
 
-    private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?" · Cache "+(min/60)+" h":" · vor "+min+" min");}
-    private String weatherCode(int c){if(c==0)return "klar";if(c<=2)return "leicht bewölkt";if(c==3)return "bewölkt";if(c==45||c==48)return "Nebel";if(c>=51&&c<=57)return "Nieselregen";if(c>=61&&c<=67)return "Regen";if(c>=71&&c<=77)return "Schnee";if(c>=80&&c<=82)return "Schauer";if(c>=85&&c<=86)return "Schneeschauer";if(c>=95)return "Gewitter";return "Wetter";}
+    private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?" · Cache "+(min/60)+" h":" · "+ui("vor")+" "+min+" min");}
+    private String weatherCode(int c){if(c==0)return ui("klar");if(c<=2)return ui("leicht bewölkt");if(c==3)return ui("bewölkt");if(c==45||c==48)return ui("Nebel");if(c>=51&&c<=57)return ui("Nieselregen");if(c>=61&&c<=67)return ui("Regen");if(c>=71&&c<=77)return ui("Schnee");if(c>=80&&c<=82)return ui("Schauer");if(c>=85&&c<=86)return ui("Schneeschauer");if(c>=95)return ui("Gewitter");return ui("Wetter");}
 
     private double currentHydroValue(HydroStation station,String parameter){
         String raw=prefs.getString(station.liveCacheKey(),"");
@@ -1351,8 +1403,8 @@ private void rebuildHomePreservingScroll(){
     private String[] hydroSummary(HydroStation station){
         String raw=prefs.getString(station.liveCacheKey(),"");
         long cache=prefs.getLong(station.liveUpdatedKey(),0L);
-        String title="RHEIN · "+station.label+" · "+station.id;
-        if(raw.isBlank())return new String[]{title,"Wird geladen …","Abfluss · Pegel"+(station.supportsTemperature?" · Temperatur":""),"BAFU Live-Daten"};
+        String title=ui("RHEIN")+" · "+station.label+" · "+station.id;
+        if(raw.isBlank())return new String[]{title,ui("Wird geladen …"),ui("Abfluss")+" · "+ui("Pegel")+(station.supportsTemperature?" · "+ui("Temperatur"):""),"BAFU Live-Daten"};
         try{
             JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
             Map<String,Double> values=new HashMap<>();
@@ -1369,13 +1421,13 @@ private void rebuildHomePreservingScroll(){
             String latest="";for(String timestamp:timestamps.values())if(timestamp.compareTo(latest)>0)latest=timestamp;
             String main=Double.isNaN(q)?station.label:String.format(Locale.GERMAN,"%.0f m³/s",q);
             StringBuilder sub=new StringBuilder();
-            if(Double.isFinite(w))sub.append("Pegel ").append(formatMetric(station,RiverMetric.LEVEL,w)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
-            if(station.supportsTemperature&&!Double.isNaN(wt)){if(sub.length()>0)sub.append("\n");sub.append(String.format(Locale.GERMAN,"Wasser %.1f °C",wt));}
+            if(Double.isFinite(w))sub.append(ui("Pegel")).append(' ').append(formatMetric(station,RiverMetric.LEVEL,w)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
+            if(station.supportsTemperature&&!Double.isNaN(wt)){if(sub.length()>0)sub.append("\n");sub.append(ui("Wasser")).append(' ').append(String.format(Locale.GERMAN,"%.1f °C",wt));}
             String stand="BAFU "+station.id;
             try{if(!latest.isBlank())stand+=" · Stand "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}
             if(cache>0&&(System.currentTimeMillis()-cache)>45*60000L)stand+=" · Cache";
-            return new String[]{title,main,sub.length()==0?"Messwerte derzeit unvollständig":sub.toString(),stand};
-        }catch(Exception ignored){return new String[]{title,"Gespeicherter Stand","Messdaten nicht lesbar","BAFU · Cache"};}
+            return new String[]{title,main,sub.length()==0?ui("Messwerte derzeit unvollständig"):sub.toString(),stand};
+        }catch(Exception ignored){return new String[]{title,ui("Gespeicherter Stand"),ui("Messdaten nicht lesbar"),"BAFU · Cache"};}
     }
 
     private TrendSeries hydroSeries(HydroStation station,String parameter,RiverRange range){
@@ -1572,7 +1624,7 @@ private void rebuildHomePreservingScroll(){
         LinearLayout tabs=segmentedBackground();
         for(SettingsTab tab:SettingsTab.values()){
             TextView option=segmentOption(tab.label,tab==settingsTab);
-            option.setContentDescription("Einstellungen "+tab.label);
+            option.setContentDescription(ui("Einstellungen")+" "+ui(tab.label));
             option.setOnClickListener(v->{
                 settingsTab=tab;
                 navigate(Screen.SETTINGS);
@@ -1648,7 +1700,7 @@ private void rebuildHomePreservingScroll(){
         reload.setOnClickListener(v->{
             refreshEvents(true,()->{});
             refreshLive(true);
-            Toast.makeText(this,"Aktualisierung gestartet.",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,ui("Aktualisierung gestartet."),Toast.LENGTH_SHORT).show();
         });
         data.addView(reload,new LinearLayout.LayoutParams(-1,dp(44)));
 
@@ -1664,7 +1716,7 @@ private void rebuildHomePreservingScroll(){
             boolean next=!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
             prefs.edit().putBoolean(PREF_BACKGROUND_REFRESH,next).apply();
             scheduleBackgroundRefresh();
-            background.setText("Hintergrundaktualisierung: "+(next?"Ein":"Aus"));
+            background.setText(ui("Hintergrundaktualisierung: "+(next?"Ein":"Aus")));
         });
         LinearLayout.LayoutParams backgroundParams=new LinearLayout.LayoutParams(-1,dp(44));
         backgroundParams.setMargins(0,dp(8),0,0);
@@ -1679,7 +1731,7 @@ private void rebuildHomePreservingScroll(){
         about.setOrientation(LinearLayout.VERTICAL);
         body.addView(about,margin(-1,-2,0,0,0,8));
         about.addView(txt("PFVR Rheinfelden",16,TEXT,true));
-        about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · 1.0.0 bleibt für den ersten offiziellen Release reserviert.",13,MUTED,false));
+        about.addView(txt("Testversion "+BuildConfig.VERSION_NAME+" · "+ui("1.0.0 bleibt für den ersten offiziellen Release reserviert."),13,MUTED,false));
     }
 
     private View tileSettingsScreen(){
@@ -1701,10 +1753,10 @@ private void rebuildHomePreservingScroll(){
         body.addView(tileSettingsRow(spec),margin(-1,-2,0,0,0,9));
     }
 
-    Button reset=btn(tileSettingsArea.label+" auf Standard zurücksetzen",Color.rgb(232,240,244),NAVY);
+    Button reset=btn(ui(tileSettingsArea.label)+" "+ui("auf Standard zurücksetzen"),Color.rgb(232,240,244),NAVY);
     reset.setOnClickListener(v->{
         tileLayoutStore.reset(tileSettingsArea);
-        Toast.makeText(this,tileSettingsArea.label+"-Kacheln zurückgesetzt.",Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,ui(tileSettingsArea.label)+" "+ui("Kacheln zurückgesetzt."),Toast.LENGTH_SHORT).show();
         rebuildTileSettingsPreservingScroll();
     });
     body.addView(reset,margin(-1,dp(46),0,6,0,12));
@@ -1741,7 +1793,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     LinearLayout copy=new LinearLayout(this);
     copy.setOrientation(LinearLayout.VERTICAL);
     copy.addView(txt(spec.label,15,TEXT,true));
-    copy.addView(txt(spec.width.label+(spec.pinned?" · fixiert":""),11,MUTED,false));
+    copy.addView(txt(ui(spec.width.label)+(spec.pinned?" · "+ui("fixiert"):""),11,MUTED,false));
     titleRow.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
     int stateColor=visible?STATUS_GOOD:MUTED;
     TextView state=txt(spec.pinned?"Immer an":(visible?"Sichtbar":"Aus"),10,stateColor,true);
@@ -1757,12 +1809,12 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     boolean canUp=tileLayoutStore.canMove(spec.area,spec.id,-1);
     boolean canDown=tileLayoutStore.canMove(spec.area,spec.id,1);
     Button up=btn("↑",Color.rgb(232,240,244),NAVY);
-    up.setContentDescription(spec.label+" nach oben");
+    up.setContentDescription(ui(spec.label)+" "+ui("nach oben"));
     up.setEnabled(canUp);up.setAlpha(canUp?1f:0.35f);
     up.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,-1);rebuildTileSettingsPreservingScroll();});
     actions.addView(up,new LinearLayout.LayoutParams(0,dp(42),0.8f));
     Button down=btn("↓",Color.rgb(232,240,244),NAVY);
-    down.setContentDescription(spec.label+" nach unten");
+    down.setContentDescription(ui(spec.label)+" "+ui("nach unten"));
     down.setEnabled(canDown);down.setAlpha(canDown?1f:0.35f);
     down.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,1);rebuildTileSettingsPreservingScroll();});
     LinearLayout.LayoutParams downParams=new LinearLayout.LayoutParams(0,dp(42),0.8f);
@@ -1892,7 +1944,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
                     prefs.edit().putString(stationKey,stations[which].id).apply();
                     dialog.dismiss();
                     navigate(Screen.SETTINGS);
-                }).setNegativeButton("Abbrechen",null).show();
+                }).setNegativeButton(ui("Abbrechen"),null).show();
     }
 
     private View riverThresholdSettingsCard(HydroStation station){
@@ -1956,9 +2008,9 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     }
 
     private String dataAge(long updated){
-        if(updated<=0)return "kein Stand";
+        if(updated<=0)return ui("kein Stand");
         long minutes=Math.max(0,(System.currentTimeMillis()-updated)/60000L);
-        if(minutes<1)return "gerade eben";
+        if(minutes<1)return ui("gerade eben");
         if(minutes<60)return minutes+" min";
         long hours=minutes/60;
         if(hours<24)return hours+" h";
@@ -1969,10 +2021,10 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         String mode=prefs==null?"system":prefs.getString(PREF_THEME,"system"); if("dark".equals(mode))return true; if("light".equals(mode))return false;
         int night=getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK; return night==Configuration.UI_MODE_NIGHT_YES;
     }
-    private String themeLabel(){String mode=prefs.getString(PREF_THEME,"system");if("dark".equals(mode))return "Dunkel";if("light".equals(mode))return "Hell";return "System · folgt Android";}
+    private String themeLabel(){String mode=prefs.getString(PREF_THEME,"system");if("dark".equals(mode))return ui("Dunkel");if("light".equals(mode))return ui("Hell");return ui("System · folgt Android");}
     private void chooseTheme(){
-        String[] labels={"System · folgt Android","Hell","Dunkel"}; String mode=prefs.getString(PREF_THEME,"system"); int selected="light".equals(mode)?1:("dark".equals(mode)?2:0);
-        new AlertDialog.Builder(this,dialogTheme()).setTitle("Farbschema").setSingleChoiceItems(labels,selected,(d,which)->{String value=which==1?"light":(which==2?"dark":"system");prefs.edit().putString(PREF_THEME,value).apply();d.dismiss();recreate();}).setNegativeButton("Abbrechen",null).show();
+        String[] labels={ui("System · folgt Android"),ui("Hell"),ui("Dunkel")}; String mode=prefs.getString(PREF_THEME,"system"); int selected="light".equals(mode)?1:("dark".equals(mode)?2:0);
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(ui("Farbschema")).setSingleChoiceItems(labels,selected,(d,which)->{String value=which==1?"light":(which==2?"dark":"system");prefs.edit().putString(PREF_THEME,value).apply();d.dismiss();recreate();}).setNegativeButton(ui("Abbrechen"),null).show();
     }
     private int dialogTheme(){return darkMode?android.R.style.Theme_Material_Dialog_Alert:android.R.style.Theme_Material_Light_Dialog_Alert;}
     private void applyWindowTheme(){
@@ -1986,7 +2038,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         for(HydroStation station:HydroStation.values())editor.remove(station.liveCacheKey()).remove(station.liveUpdatedKey()).remove(station.fineCacheKey()).remove(station.fineUpdatedKey()).remove(station.historyCacheKey()).remove(station.historyUpdatedKey());
         editor.apply();
         events=new ArrayList<>();eventsUpdated=0L;news=new ArrayList<>();newsUpdated=0L;
-        Toast.makeText(this,"Daten-Cache geleert. Neue Daten werden nachgeladen.",Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,ui("Daten-Cache geleert. Neue Daten werden nachgeladen."),Toast.LENGTH_SHORT).show();
         refreshEvents(false,()->{});refreshNews(false);refreshLive(true);
     }
 
@@ -1996,14 +2048,14 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         box.addView(txt("Niedrig",12,MUTED,true));box.addView(low,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView w1=txt("Warnung",12,MUTED,true);w1.setPadding(0,dp(10),0,0);box.addView(w1);box.addView(warn,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView a1=txt("Alarm",12,MUTED,true);a1.setPadding(0,dp(10),0,0);box.addView(a1);box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(48)));
-        new AlertDialog.Builder(this,dialogTheme()).setTitle(station.label+" · Grenzwerte").setView(box).setPositiveButton("Speichern",(d,w)->{
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(station.label+" · Grenzwerte").setView(box).setPositiveButton(ui("Speichern"),(d,w)->{
             try{
                 float l=Float.parseFloat(low.getText().toString().replace(',','.')),wa=Float.parseFloat(warn.getText().toString().replace(',','.')),al=Float.parseFloat(alarm.getText().toString().replace(',','.'));
                 if(l<0||!(l<wa&&wa<al))throw new Exception();
                 prefs.edit().putFloat(station.lowPreferenceKey(),l).putFloat(station.warnPreferenceKey(),wa).putFloat(station.alarmPreferenceKey(),al).apply();
                 navigate(Screen.SETTINGS);
-            }catch(Exception e){Toast.makeText(this,"Grenzwerte müssen aufsteigend sein: Niedrig < Warnung < Alarm.",Toast.LENGTH_LONG).show();}
-        }).setNegativeButton("Abbrechen",null).show();
+            }catch(Exception e){Toast.makeText(this,ui("Grenzwerte müssen aufsteigend sein: Niedrig < Warnung < Alarm."),Toast.LENGTH_LONG).show();}
+        }).setNegativeButton(ui("Abbrechen"),null).show();
     }
     private EditText thresholdInput(String hint,float value){EditText e=new EditText(this);e.setHint(hint);e.setText(String.format(Locale.US,"%.0f",value));e.setSingleLine(true);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setTextColor(themeText(TEXT));e.setHintTextColor(themeText(MUTED));e.setBackground(round(Color.rgb(238,243,246),12));e.setPadding(dp(12),0,dp(12),0);return e;}
 
@@ -2014,10 +2066,10 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     }
 
     private String newsStatus(){
-        if(newsUpdated<=0L)return newsLoading?"Abruf läuft":"noch kein Stand";
+        if(newsUpdated<=0L)return ui(newsLoading?"Abruf läuft":"noch kein Stand");
         ZonedDateTime time=java.time.Instant.ofEpochMilli(newsUpdated).atZone(ZoneId.of("Europe/Zurich"));
-        if(time.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich"))))return "Stand "+time.format(DateTimeFormatter.ofPattern("HH:mm"));
-        return "Stand "+time.format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"));
+        if(time.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich"))))return ui("Stand")+" "+time.format(DateTimeFormatter.ofPattern("HH:mm"));
+        return ui("Stand")+" "+time.format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"));
     }
 
     private String newsDate(NewsRepository.Article article){
@@ -2063,8 +2115,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
             try{
                 String raw=NewsRepository.fetchRaw();List<NewsRepository.Article> parsed=NewsRepository.parse(raw);if(parsed.isEmpty())throw new Exception("Keine News");
                 long updated=System.currentTimeMillis();prefs.edit().putString(NewsRepository.PREF_CACHE,raw).putLong(NewsRepository.PREF_UPDATED,updated).apply();
-                runOnUiThread(()->{news=parsed;newsUpdated=updated;newsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" News aktualisiert",Toast.LENGTH_SHORT).show();if(current==Screen.HOME)rebuildHomePreservingScroll();else if(current==Screen.NEWS)navigate(Screen.NEWS);});
-            }catch(Exception ignored){runOnUiThread(()->{newsLoading=false;if(toast)Toast.makeText(this,news.isEmpty()?"News konnten gerade nicht geladen werden.":"Keine Verbindung – gespeicherte News bleiben sichtbar.",Toast.LENGTH_LONG).show();if(current==Screen.NEWS)navigate(Screen.NEWS);});}
+                runOnUiThread(()->{news=parsed;newsUpdated=updated;newsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" "+ui("News aktualisiert"),Toast.LENGTH_SHORT).show();if(current==Screen.HOME)rebuildHomePreservingScroll();else if(current==Screen.NEWS)navigate(Screen.NEWS);});
+            }catch(Exception ignored){runOnUiThread(()->{newsLoading=false;if(toast)Toast.makeText(this,ui(news.isEmpty()?"News konnten gerade nicht geladen werden.":"Keine Verbindung – gespeicherte News bleiben sichtbar."),Toast.LENGTH_LONG).show();if(current==Screen.NEWS)navigate(Screen.NEWS);});}
         }).start();
     }
 
@@ -2178,23 +2230,23 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     }
 
     private String eventWhenCompact(Event event){
-        String text=cap(event.start.format(DateTimeFormatter.ofPattern("EEEE",Locale.GERMAN)));
+        String text=localizedDateWords(cap(event.start.format(DateTimeFormatter.ofPattern("EEEE",Locale.GERMAN))));
         if(!event.allDay){
             text+=" · "+event.start.format(DateTimeFormatter.ofPattern("HH:mm"));
             if(event.end!=null&&event.end.toLocalDate().equals(event.start.toLocalDate()))text+="–"+event.end.format(DateTimeFormatter.ofPattern("HH:mm"));
             text+=" Uhr";
-        }else text+=" · ganztägig";
+        }else text+=" · "+ui("ganztägig");
         return text;
     }
 
     private String eventWhen(Event event){
         DateTimeFormatter date=DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy",Locale.GERMAN);
         DateTimeFormatter time=DateTimeFormatter.ofPattern("HH:mm");
-        String start=cap(event.start.format(date));
-        if(event.allDay)return start+" · ganztägig";
+        String start=localizedDateWords(cap(event.start.format(date)));
+        if(event.allDay)return start+" · "+ui("ganztägig");
         if(event.end==null)return start+" · "+event.start.format(time)+" Uhr";
         if(event.end.toLocalDate().equals(event.start.toLocalDate()))return start+" · "+event.start.format(time)+"–"+event.end.format(time)+" Uhr";
-        return start+" · "+event.start.format(time)+" Uhr\n"+cap(event.end.format(date))+" · "+event.end.format(time)+" Uhr";
+        return start+" · "+event.start.format(time)+" Uhr\n"+localizedDateWords(cap(event.end.format(date)))+" · "+event.end.format(time)+" Uhr";
     }
 
     private void showEventDetails(Event event){
@@ -2216,7 +2268,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         box.addView(when);
 
         if(event.location!=null&&!event.location.isBlank()){
-            TextView location=txt("Ort\n"+event.location,13,WATER,false);
+            TextView location=txt(ui("Ort")+"\n"+event.location,13,WATER,false);
             location.setPadding(0,dp(14),0,0);
             box.addView(location);
             Button route=btn("Route öffnen",Color.rgb(232,240,244),NAVY);
@@ -2248,7 +2300,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         actions.addView(add,addParams);
         box.addView(actions);
 
-        new AlertDialog.Builder(this,dialogTheme()).setView(scroll).setNegativeButton("Schliessen",null).show();
+        new AlertDialog.Builder(this,dialogTheme()).setView(scroll).setNegativeButton(ui("Schliessen"),null).show();
     }
 
     private void shareEvent(Event event){
@@ -2258,7 +2310,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         share.setType("text/plain");
         share.putExtra(Intent.EXTRA_SUBJECT,event.title);
         share.putExtra(Intent.EXTRA_TEXT,body.toString());
-        try{startActivity(Intent.createChooser(share,"Termin teilen"));}catch(Exception ignored){Toast.makeText(this,"Teilen ist auf diesem Gerät nicht verfügbar.",Toast.LENGTH_SHORT).show();}
+        try{startActivity(Intent.createChooser(share,ui("Termin teilen")));}catch(Exception ignored){Toast.makeText(this,ui("Teilen ist auf diesem Gerät nicht verfügbar."),Toast.LENGTH_SHORT).show();}
     }
 
     private void addEventToCalendar(Event event){
@@ -2270,7 +2322,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         insert.putExtra(CalendarContract.Events.ALL_DAY,event.allDay);
         if(event.location!=null&&!event.location.isBlank())insert.putExtra(CalendarContract.Events.EVENT_LOCATION,event.location);
         if(event.description!=null&&!event.description.isBlank())insert.putExtra(CalendarContract.Events.DESCRIPTION,event.description);
-        try{startActivity(insert);}catch(Exception ignored){Toast.makeText(this,"Keine Kalender-App gefunden.",Toast.LENGTH_SHORT).show();}
+        try{startActivity(insert);}catch(Exception ignored){Toast.makeText(this,ui("Keine Kalender-App gefunden."),Toast.LENGTH_SHORT).show();}
     }
 
     private void openLocation(String location){
@@ -2365,7 +2417,7 @@ private View cashCartTile(){
 private View cashCategoryTile(String categoryId){
     CashCatalog.Catalog catalog=cashCatalog();
     if(catalog==null){
-        LinearLayout group=tileGroup("Auswahl","Preisliste konnte nicht geladen werden.");
+        LinearLayout group=tileGroup("Auswahl",ui("Preisliste konnte nicht geladen werden."));
         LinearLayout unavailable=card();
         unavailable.addView(txt("Die lokale Preisliste ist derzeit nicht verfügbar.",13,MUTED,false));
         group.addView(unavailable);
@@ -2373,7 +2425,7 @@ private View cashCategoryTile(String categoryId){
     }
     CashCatalog.Category category=findCashCategory(catalog,categoryId);
     if(category==null)return null;
-    LinearLayout group=tileGroup(category.label,"Preisliste Vereinsbeiz · Stand "+catalog.validFrom);
+    LinearLayout group=tileGroup(category.label,ui("Preisliste Vereinsbeiz · Stand")+" "+catalog.validFrom);
     LinearLayout categoryCard=card();
     categoryCard.setOrientation(LinearLayout.VERTICAL);
     for(int index=0;index<category.items.size();index++){
@@ -2621,7 +2673,7 @@ private View cashPaymentDetailsTile(){
 
     private void payWithPreferredBank(EditText amountInput){
         if(!hasPreferredBank()){
-            Toast.makeText(this,"Bitte unter Einstellungen → Zahlung eine Banking-App festlegen.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,ui("Bitte unter Einstellungen → Zahlung eine Banking-App festlegen."),Toast.LENGTH_LONG).show();
             openPaymentSettings();
             return;
         }
@@ -2690,20 +2742,20 @@ private View cashPaymentDetailsTile(){
 
     private EditText cartAmountInput(){
         CashCatalog.Catalog catalog=cashCatalog();
-        if(catalog==null||catalog.itemCount(cashCart)<=0){Toast.makeText(this,"Der Warenkorb ist leer.",Toast.LENGTH_SHORT).show();return null;}
+        if(catalog==null||catalog.itemCount(cashCart)<=0){Toast.makeText(this,ui("Der Warenkorb ist leer."),Toast.LENGTH_SHORT).show();return null;}
         EditText input=new EditText(this);input.setText(String.format(Locale.US,"%.2f",catalog.total(cashCart)));return input;
     }
 
     private void openTwintDirect(EditText amountInput){
         String a=amount(amountInput==null?null:amountInput.getText().toString());
-        if(a==null){Toast.makeText(this,"Bitte einen gültigen CHF-Betrag eingeben oder das Feld leer lassen.",Toast.LENGTH_LONG).show();return;}
+        if(a==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben oder das Feld leer lassen."),Toast.LENGTH_LONG).show();return;}
         if(!a.isBlank())copy("PFVR TWINT-Betrag",a,"CHF "+a+" kopiert – auf der PFVR-Seite eintragen.");
         external(TWINT_DIRECT_URL);
     }
 
     private void sharePaymentQr(EditText amountInput){
         String value=amount(amountInput==null?null:amountInput.getText().toString());
-        if(value==null){Toast.makeText(this,"Bitte einen gültigen CHF-Betrag eingeben.",Toast.LENGTH_LONG).show();return;}
+        if(value==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben."),Toast.LENGTH_LONG).show();return;}
         try{
             Bitmap qr=makeSwissQr(value);
             pendingQrBitmap=qr;
@@ -2739,7 +2791,7 @@ private View cashPaymentDetailsTile(){
                 textShare.putExtra(Intent.EXTRA_TEXT,paymentText);
                 textShare.setPackage(preferred);
                 if(startIfResolvable(textShare)){
-                    Toast.makeText(this,"Zahlungsdaten an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this,ui("Zahlungsdaten an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
                     return;
                 }
 
@@ -2749,13 +2801,13 @@ private View cashPaymentDetailsTile(){
 
             Intent send=qrShareIntent(uri,paymentText,"image/png",null);
             if(packageManager.queryIntentActivities(send,0).isEmpty()){
-                Toast.makeText(this,"Keine App unterstützt die direkte QR-Übergabe. QR wird stattdessen angezeigt.",Toast.LENGTH_LONG).show();
+                Toast.makeText(this,ui("Keine App unterstützt die direkte QR-Übergabe. QR wird stattdessen angezeigt."),Toast.LENGTH_LONG).show();
                 showPaymentQr(amountInput);
                 return;
             }
             startActivity(Intent.createChooser(send,"Swiss QR an Banking-App übergeben"));
         }catch(Exception e){
-            Toast.makeText(this,"Direkte QR-Übergabe nicht möglich. QR wird stattdessen angezeigt.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,ui("Direkte QR-Übergabe nicht möglich. QR wird stattdessen angezeigt."),Toast.LENGTH_LONG).show();
             showPaymentQr(amountInput);
         }
     }
@@ -2783,7 +2835,7 @@ private View cashPaymentDetailsTile(){
     private boolean tryQrImageHandoff(String preferred,Uri uri,String paymentText){
         Intent direct=qrShareIntent(uri,paymentText,"image/png",preferred);
         if(startIfResolvable(direct)){
-            Toast.makeText(this,"Swiss QR an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,ui("Swiss QR an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
             return true;
         }
 
@@ -2793,13 +2845,13 @@ private View cashPaymentDetailsTile(){
         imageView.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         imageView.setPackage(preferred);
         if(startIfResolvable(imageView)){
-            Toast.makeText(this,"Swiss QR mit "+selectedBankLabel()+" geöffnet.",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,ui("Swiss QR mit")+" "+selectedBankLabel()+" "+ui("geöffnet."),Toast.LENGTH_SHORT).show();
             return true;
         }
 
         Intent genericImage=qrShareIntent(uri,paymentText,"image/*",preferred);
         if(startIfResolvable(genericImage)){
-            Toast.makeText(this,"Zahlungsbild an "+selectedBankLabel()+" übergeben.",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,ui("Zahlungsbild an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;
@@ -2808,13 +2860,13 @@ private View cashPaymentDetailsTile(){
     private void launchPreferredBankWithCopiedData(String preferred,String paymentText,String reason){
         Intent launch=getPackageManager().getLaunchIntentForPackage(preferred);
         if(launch==null){
-            Toast.makeText(this,"Die gewählte Banking-App ist nicht mehr verfügbar.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,ui("Die gewählte Banking-App ist nicht mehr verfügbar."),Toast.LENGTH_LONG).show();
             openPaymentSettings();
             return;
         }
         copy("PFVR Zahlung",paymentText,"Zahlungsdaten kopiert");
         startActivity(launch);
-        Toast.makeText(this,reason,Toast.LENGTH_LONG).show();
+        Toast.makeText(this,ui(reason),Toast.LENGTH_LONG).show();
     }
 
     private void showBankFileImportFallback(Bitmap qr,String value,String paymentText,String preferred){
@@ -2832,9 +2884,9 @@ private View cashPaymentDetailsTile(){
         new AlertDialog.Builder(this,dialogTheme())
                 .setTitle(selectedBankLabel()+" · QR-Datei")
                 .setView(box)
-                .setPositiveButton("Banking-App öffnen",(d,w)->launchPreferredBankWithCopiedData(preferred,paymentText,"Zahlungsdaten kopiert – QR-Datei bei Bedarf in der Banking-App auswählen."))
-                .setNeutralButton("QR speichern",(d,w)->saveQr(value))
-                .setNegativeButton("Schliessen",null)
+                .setPositiveButton(ui("Banking-App öffnen"),(d,w)->launchPreferredBankWithCopiedData(preferred,paymentText,"Zahlungsdaten kopiert – QR-Datei bei Bedarf in der Banking-App auswählen."))
+                .setNeutralButton(ui("QR speichern"),(d,w)->saveQr(value))
+                .setNegativeButton(ui("Schliessen"),null)
                 .show();
     }
 
@@ -2847,7 +2899,7 @@ private View cashPaymentDetailsTile(){
 
     private void showPaymentQr(EditText amountInput) {
         String a=amount(amountInput==null?null:amountInput.getText().toString());
-        if(a==null){Toast.makeText(this,"Bitte einen gültigen CHF-Betrag eingeben oder Feld leer/0 für offenen Betrag lassen.",Toast.LENGTH_LONG).show();return;}
+        if(a==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben oder Feld leer/0 für offenen Betrag lassen."),Toast.LENGTH_LONG).show();return;}
         try {
             Bitmap qr=makeSwissQr(a);
             pendingQrBitmap=qr;
@@ -2857,14 +2909,14 @@ private View cashPaymentDetailsTile(){
             TextView details=txt(amountLine+"\n"+CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE,14,TEXT,false); details.setGravity(Gravity.CENTER); details.setPadding(0,dp(8),0,dp(4)); box.addView(details);
             TextView note=txt("Direkte Übergabe versucht den QR als temporäres Bild an eine kompatible Banking-App zu senden. Falls die Bank das nicht unterstützt, bleibt Speichern/Öffnen als Fallback.",12,MUTED,false); note.setGravity(Gravity.CENTER); box.addView(note);
             new AlertDialog.Builder(this,dialogTheme())
-                    .setTitle("Bankzahlung · Swiss QR")
+                    .setTitle(ui("Bankzahlung · Swiss QR"))
                     .setView(box)
-                    .setPositiveButton("Direkt an Banking-App",(d,w)->sharePaymentQr(amountInput))
-                    .setNeutralButton("QR speichern",(d,w)->saveQr(a))
-                    .setNegativeButton("Schliessen",null)
+                    .setPositiveButton(ui("Direkt an Banking-App"),(d,w)->sharePaymentQr(amountInput))
+                    .setNeutralButton(ui("QR speichern"),(d,w)->saveQr(a))
+                    .setNegativeButton(ui("Schliessen"),null)
                     .show();
         } catch(Exception e) {
-            Toast.makeText(this,"Swiss QR konnte nicht erzeugt werden.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,ui("Swiss QR konnte nicht erzeugt werden."),Toast.LENGTH_LONG).show();
         }
     }
 
@@ -2896,11 +2948,11 @@ private View cashPaymentDetailsTile(){
     }
 
     private void saveQr(String amount) {
-        if(pendingQrBitmap==null){Toast.makeText(this,"Kein QR-Code vorhanden.",Toast.LENGTH_SHORT).show();return;}
+        if(pendingQrBitmap==null){Toast.makeText(this,ui("Kein QR-Code vorhanden."),Toast.LENGTH_SHORT).show();return;}
         Intent save=new Intent(Intent.ACTION_CREATE_DOCUMENT);
         save.addCategory(Intent.CATEGORY_OPENABLE); save.setType("image/png");
         save.putExtra(Intent.EXTRA_TITLE,PaymentQrFileName.forAmount(amount));
-        try{startActivityForResult(save,REQ_SAVE_QR);}catch(Exception e){Toast.makeText(this,"Speichern ist auf diesem Gerät nicht verfügbar.",Toast.LENGTH_LONG).show();}
+        try{startActivityForResult(save,REQ_SAVE_QR);}catch(Exception e){Toast.makeText(this,ui("Speichern ist auf diesem Gerät nicht verfügbar."),Toast.LENGTH_LONG).show();}
     }
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
@@ -2908,8 +2960,8 @@ private View cashPaymentDetailsTile(){
         if(requestCode==REQ_SAVE_QR && resultCode==RESULT_OK && data!=null && data.getData()!=null && pendingQrBitmap!=null){
             try(OutputStream out=getContentResolver().openOutputStream(data.getData())){
                 if(out==null||!pendingQrBitmap.compress(Bitmap.CompressFormat.PNG,100,out))throw new Exception("write failed");
-                Toast.makeText(this,"Swiss QR gespeichert.",Toast.LENGTH_SHORT).show();
-            }catch(Exception e){Toast.makeText(this,"QR-Code konnte nicht gespeichert werden.",Toast.LENGTH_LONG).show();}
+                Toast.makeText(this,ui("Swiss QR gespeichert."),Toast.LENGTH_SHORT).show();
+            }catch(Exception e){Toast.makeText(this,ui("QR-Code konnte nicht gespeichert werden."),Toast.LENGTH_LONG).show();}
         }
     }
 
@@ -2986,13 +3038,13 @@ private View cashPaymentDetailsTile(){
         }
 
         new AlertDialog.Builder(this,dialogTheme())
-                .setTitle("Banking-App auswählen")
+                .setTitle(ui("Banking-App auswählen"))
                 .setSingleChoiceItems(labels,selected,(dialog,index)->{
                     saveBankChoice(found.get(index));
                     dialog.dismiss();
                 })
-                .setNeutralButton("Alle Apps",(dialog,which)->chooseAnyInstalledApp())
-                .setNegativeButton("Abbrechen",null)
+                .setNeutralButton(ui("Alle Apps"),(dialog,which)->chooseAnyInstalledApp())
+                .setNegativeButton(ui("Abbrechen"),null)
                 .show();
     }
 
@@ -3022,7 +3074,7 @@ private View cashPaymentDetailsTile(){
         List<AppChoice> apps=new ArrayList<>(byPackage.values());
         apps.sort(Comparator.comparing(app->app.label.toLowerCase(Locale.ROOT)));
         if(apps.isEmpty()){
-            Toast.makeText(this,"Keine weitere installierte App gefunden.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,ui("Keine weitere installierte App gefunden."),Toast.LENGTH_LONG).show();
             return;
         }
         String[] labels=new String[apps.size()];
@@ -3034,12 +3086,12 @@ private View cashPaymentDetailsTile(){
             if(app.pkg.equals(currentPackage))selected=index;
         }
         new AlertDialog.Builder(this,dialogTheme())
-                .setTitle("Installierte App auswählen")
+                .setTitle(ui("Installierte App auswählen"))
                 .setSingleChoiceItems(labels,selected,(dialog,index)->{
                     saveBankChoice(apps.get(index));
                     dialog.dismiss();
                 })
-                .setNegativeButton("Abbrechen",null)
+                .setNegativeButton(ui("Abbrechen"),null)
                 .show();
     }
 
@@ -3048,13 +3100,13 @@ private View cashPaymentDetailsTile(){
                 .putString(PREF_BANK_PACKAGE,choice.pkg)
                 .putString(PREF_BANK_LABEL,choice.label)
                 .apply();
-        Toast.makeText(this,choice.label+" festgelegt.",Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,choice.label+" "+ui("festgelegt."),Toast.LENGTH_SHORT).show();
         if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
     }
 
 
     private String amount(String raw) { if(raw==null||raw.trim().isEmpty())return ""; try{double n=Double.parseDouble(raw.trim().replace(',','.')); if(n<0||n>100000)return null; if(n==0)return ""; return String.format(Locale.US,"%.2f",n);}catch(Exception e){return null;} }
-    private void copy(String label,String value,String toast){ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE); if(cm!=null)cm.setPrimaryClip(ClipData.newPlainText(label,value)); Toast.makeText(this,toast,Toast.LENGTH_SHORT).show();}
+    private void copy(String label,String value,String toast){ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE); if(cm!=null)cm.setPrimaryClip(ClipData.newPlainText(label,value)); Toast.makeText(this,ui(toast),Toast.LENGTH_SHORT).show();}
 
     private View club() {
     ScrollView scroll=new ScrollView(this);
@@ -3084,6 +3136,7 @@ private View cashPaymentDetailsTile(){
 private View clubTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
         case "club_about":return clubAboutTile();
+        case "club_join":return clubActionTile("Schnuppertraining & Mitglied werden","Infos, Einstieg und Formulare",v->external(JOIN_INFO));
         case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
         case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
@@ -3092,6 +3145,8 @@ private View clubTileView(TileLayoutStore.Spec spec){
         case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
         case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
         case "club_contact":return clubActionTile("Kontaktseite","Weitere Ansprechwege",v->openInApp(CONTACT,"Kontakt"));
+        case "club_instagram":return clubActionTile("Instagram","@pontoniererheinfelden",v->external(INSTAGRAM));
+        case "club_facebook":return clubActionTile("Facebook","Pontoniere Rheinfelden",v->external(FACEBOOK));
         default:return null;
     }
 }
@@ -3138,7 +3193,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
         Button people=btn("Personen",Color.WHITE,NAVY);
-        people.setContentDescription("Personen hinzufügen oder entfernen");
+        people.setContentDescription(ui("Personen hinzufügen oder entfernen"));
         people.setVisibility(appView?View.VISIBLE:View.GONE);
         people.setOnClickListener(v->openInternalPeopleManager(web,0));
         tools.addView(people,new LinearLayout.LayoutParams(0,dp(40),1));
@@ -3160,7 +3215,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         String script="(function(){try{return !!(window.pfvrOpenPeopleManager&&window.pfvrOpenPeopleManager());}catch(e){return false;}})();";
         web.evaluateJavascript(script,result->{
             if("true".equalsIgnoreCase(String.valueOf(result)))return;
-            if(attempt>=2){Toast.makeText(this,"Personenverwaltung ist auf dieser Seite nicht verfügbar.",Toast.LENGTH_SHORT).show();return;}
+            if(attempt>=2){Toast.makeText(this,ui("Personenverwaltung ist auf dieser Seite nicht verfügbar."),Toast.LENGTH_SHORT).show();return;}
             if(attempt==0)internalSkin(web);
             new Handler(Looper.getMainLooper()).postDelayed(()->openInternalPeopleManager(web,attempt+1),attempt==0?260L:650L);
         });
@@ -3169,7 +3224,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private void showInternalLoadError(WebView v,String message){
         String safe=message.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
         String bg=darkMode?"#11171C":"#FFFFFF",text=darkMode?"#ECF1F4":"#15232E",muted=darkMode?"#A0B0BA":"#60717E";
-        String html="<html><head><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='color-scheme' content='"+(darkMode?"dark":"light")+"'></head><body style='font-family:sans-serif;background:"+bg+";color:"+text+";padding:24px'><h2>Interner Bereich konnte nicht geladen werden</h2><p>"+safe+"</p><p style='color:"+muted+"'>Prüfe den persönlichen Link unter Einstellungen oder tippe oben auf Neu laden.</p></body></html>";
+        String html="<html><head><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='color-scheme' content='"+(darkMode?"dark":"light")+"'></head><body style='font-family:sans-serif;background:"+bg+";color:"+text+";padding:24px'><h2>"+ui("Interner Bereich konnte nicht geladen werden")+"</h2><p>"+safe+"</p><p style='color:"+muted+"'>"+ui("Prüfe den persönlichen Link unter Einstellungen oder tippe oben auf Neu laden.")+"</p></body></html>";
         v.loadDataWithBaseURL("https://intern.pfvr.ch/",html,"text/html","UTF-8",null);
     }
 
@@ -3196,10 +3251,10 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
 
     private void editInternalSetting(){
         EditText input=new EditText(this); input.setText(prefs.getString(PREF_INTERNAL_URL,"")); input.setHint("https://intern.pfvr.ch/…"); input.setTextColor(themeText(TEXT)); input.setHintTextColor(themeText(MUTED)); input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI); input.setPadding(dp(12),dp(10),dp(12),dp(10)); input.setBackground(round(Color.rgb(238,243,246),12));
-        new AlertDialog.Builder(this,dialogTheme()).setTitle("Persönlichen Intern-Link ändern").setView(input)
-            .setPositiveButton("Speichern",(d,w)->{String x=normalizeInternalUrl(input.getText().toString().trim());if(validInternal(x)){prefs.edit().putString(PREF_INTERNAL_URL,x).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);}else Toast.makeText(this,"Bitte den persönlichen An-/Abmelde-Link (what=abmeldung) verwenden.",Toast.LENGTH_LONG).show();})
-            .setNeutralButton("Entfernen",(d,w)->{prefs.edit().remove(PREF_INTERNAL_URL).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);})
-            .setNegativeButton("Abbrechen",null).show();
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(ui("Persönlichen Intern-Link ändern")).setView(input)
+            .setPositiveButton(ui("Speichern"),(d,w)->{String x=normalizeInternalUrl(input.getText().toString().trim());if(validInternal(x)){prefs.edit().putString(PREF_INTERNAL_URL,x).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);}else Toast.makeText(this,ui("Bitte den persönlichen An-/Abmelde-Link (what=abmeldung) verwenden."),Toast.LENGTH_LONG).show();})
+            .setNeutralButton(ui("Entfernen"),(d,w)->{prefs.edit().remove(PREF_INTERNAL_URL).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);})
+            .setNegativeButton(ui("Abbrechen"),null).show();
     }
 
     private String normalizeInternalUrl(String x){if(x==null)return "";return x.trim().replace("what=abmeldung_ics_feed","what=abmeldung");}
@@ -3249,8 +3304,8 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private void openInApp(String url,String title){headerSubtitle.setText(ui(title));content.removeAllViews();content.addView(webScreen(url,true));}
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
-    private String calendarStatus(){if(eventsUpdated<=0)return eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.";ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?"heute "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return "Lokal gespeichert · zuletzt aktualisiert "+d+" Uhr";}
-    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,"Kalender-Aktualisierung läuft bereits.",Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" kommende Termine aktualisiert",Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,m,Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,"Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern.",Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
+    private String calendarStatus(){if(eventsUpdated<=0)return ui(eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.");ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?ui("heute")+" "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return ui("Lokal gespeichert · zuletzt aktualisiert")+" "+d+" Uhr";}
+    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,ui("Kalender-Aktualisierung läuft bereits."),Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" "+ui("kommende Termine aktualisiert"),Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,ui(m),Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,ui("Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern."),Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
     private List<Event> parseIcs(String raw){
         List<String> lines=unfold(raw);
@@ -3465,8 +3520,18 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private GradientDrawable round(int color,float r){GradientDrawable d=new GradientDrawable();d.setColor(themeBg(color));d.setCornerRadius(dp(r));return d;}
     private LinearLayout.LayoutParams margin(int w,int h,int l,int t,int r,int b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(w,h);p.setMargins(dp(l),dp(t),dp(r),dp(b));return p;}
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
+    private String localizedDateWords(String value){
+        if(value==null||!UiLanguage.isSwissGerman(uiMode()))return value;
+        return value.replace("Montag","Mäntig")
+                .replace("Dienstag","Zischtig")
+                .replace("Mittwoch","Mittwuch")
+                .replace("Donnerstag","Dunschtig")
+                .replace("Freitag","Fritig")
+                .replace("Samstag","Samschtig")
+                .replace("Sonntag","Sunntig");
+    }
     private String cap(String s){return s==null||s.isEmpty()?s:s.substring(0,1).toUpperCase(Locale.GERMAN)+s.substring(1);}
-    private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,"Link konnte nicht geöffnet werden.",Toast.LENGTH_SHORT).show();}}
+    private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}}
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
     private void handleBack(){if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}

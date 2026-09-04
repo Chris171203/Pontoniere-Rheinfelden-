@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.11.2` (`versionCode 49`).
+Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 
 ## Entwicklung
 
@@ -16,8 +16,9 @@ Aktuelle Android-Testversion: `0.11.2` (`versionCode 49`).
 
 ## Sprache und Erstfreigabe
 
-- Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Externe/source-seitige Texte werden absichtlich nicht verändert.
+- Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Die Dialektfassung umfasst Landingpage, Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse und häufige App-Dialoge/Statusmeldungen. Externe/source-seitige Texte, Kalendereinträge, News und Personennamen werden absichtlich nicht verändert.
 - Beim ersten Start dieses App-Datenstands wird ein Freigabecode verlangt. Nach erfolgreicher Prüfung wird nur ein lokales Freigabe-Flag gespeichert; der Klartextcode ist nicht im Repository enthalten.
+- Der Erstfreigabe-Screen dient zugleich als öffentliche Landingpage: Sprachwahl, Schnuppertraining/Mitgliedschaft/Formulare sowie Instagram/Facebook sind ohne Freigabe erreichbar. Die eigentlichen App-Screens, Live-Daten und internen WebViews werden weiterhin erst nach erfolgreicher Freigabe aufgebaut.
 - Die Erstfreigabe ist eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung. Persönliche `intern.pfvr.ch`-Links bleiben weiterhin ausschließlich auf dem Endgerät.
 
 ## Rheinwerte
@@ -43,8 +44,11 @@ Aktuelle Android-Testversion: `0.11.2` (`versionCode 49`).
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
-## Gerätetest 0.11.2
+## Gerätetest 0.11.3
 
+- Frische Installation/App-Daten: Die Landingpage muss sichtbar sein, zwischen Deutsch und Schwiizerdütsch umschalten und Schnuppertraining, Instagram sowie Facebook ohne Freigabe öffnen. Home, Live-Daten und interner WebView dürfen vor Codeeingabe nicht initialisiert werden.
+- Schwiizerdütsch: Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein und Kasse auf verbliebene hochdeutsche App-Texte prüfen. Inhalte aus Kalender, News und Original-PFVR-Seite müssen unverändert bleiben.
+- Verein: neue Kacheln für Schnuppertraining/Mitgliedschaft, Instagram und Facebook prüfen; bestehende benutzerdefinierte Kachelreihenfolgen müssen die neuen IDs automatisch ergänzen.
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.
 - `Rhein aktuell`: Basel-Rheinhalle und Rheinfelden müssen beide den Wasserstand in `m ü.M.` zeigen. Nur Basel darf darunter zusätzlich einen cm-Pegel anzeigen. Die beiden Zeitstempel müssen am unteren Kartenrand auf derselben Höhe stehen.

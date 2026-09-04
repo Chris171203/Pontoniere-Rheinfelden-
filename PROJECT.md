@@ -12,10 +12,11 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
   - Der saisonale Trainingsplan dient als Fallback, wenn kein Kalendereintrag vorhanden ist.
 - Rhein: zwei Stationskacheln, davon die zweite optional. Aktuelle Abflüsse stehen kompakt nebeneinander; Rheinfelden zeigt oben zusätzlich die Wassertemperatur. Pro aktiver Station kombiniert ein `1h`/`24h`/`7d`-Diagramm Abfluss und Pegel mit zwei dynamischen Y-Achsen; vorhandene Temperaturdaten werden darunter separat dargestellt.
 - Termine aus dem öffentlichen PFVR-Google-Kalender mit persistentem Cache, Detailansicht, Teilen, Route und Übergabe an die persönliche Kalender-App.
-- Verein und Kontakt mit nativen News, Jahresprogramm, Vorstand, Geschichte und direkten Kontaktaktionen.
+- Verein und Kontakt mit nativen News, Jahresprogramm, Vorstand, Geschichte, Schnuppertraining-/Mitgliedschaftsinformationen, offiziellen Social-Media-Links und direkten Kontaktaktionen.
 - Interner Bereich über persönlichen `intern.pfvr.ch`-Link; Konfiguration nur in den Einstellungen und nur lokal gespeichert. App-Ansicht ist Standard, folgt dem nativen Hell-/Dunkelmodus und darf fehlerhafte Inline-Darstellung der externen Seite rein visuell korrigieren. Der Originalmodus bleibt verfügbar.
 - Vereinsbeiz: fixierter Warenkorb, anordenbare Kategorien Trinken/Essen/Feiern, freier Betrag, Swiss-QR-Zahlung, direkte Android-Übergabe an eine unter Einstellungen → Zahlung gewählte Banking-App und TWINT-Zahlungsweg.
 - Einstellungen: Bereiche Allgemein, Rhein und Zahlung sowie ein eigenes Menü `Ansicht & Kacheln` für Home, Kasse und Verein.
+- App-eigene Oberfläche wahlweise auf Deutsch oder in gut lesbarem `Schwiizerdütsch`; externe/source-seitige Inhalte bleiben in ihrer Originalsprache. Die Erstfreigabe darf öffentliche Vereinsinfos und Social-Links zeigen, initialisiert aber vor erfolgreichem Code keine internen oder Live-App-Bereiche.
 
 ## Datenquellen
 

@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.11.3
+- `Schwiizerdütsch` umfassend überarbeitet und auf die gesamte App-eigene Oberfläche ausgeweitet. Neben Navigation/Home sind nun auch Rhein, Kalender, News, Einstellungen, Kachelverwaltung, Verein, Kasse, häufige Dialoge/Statusmeldungen und app-generierte Wochentage abgedeckt. Externe Inhalte, Personennamen und die originale PFVR-Webseite bleiben unangetastet.
+- Erstfreigabe zu einer öffentlichen Landingpage erweitert: Sprachwahl sowie Links zu Schnuppertraining/Mitgliedschaft/Formularen, Instagram und Facebook sind bereits vor dem Freigabecode verfügbar; interne und Live-App-Bereiche werden weiterhin erst nach erfolgreicher Freigabe initialisiert.
+- Home-Hero erhält einen direkten Einstieg zu Schnuppertraining/Mitgliedschaft. Im Verein kommen anordenbare Kacheln für Einstieg/Formulare, Instagram und Facebook hinzu.
+- Versionsstand `0.11.3`, `versionCode 50`.
+
 ## 0.11.2
 - Regression der Erstfreigabe aus 0.11.1 behoben: Der Freigabe-Screen wird jetzt mit `setContentView` tatsächlich angezeigt statt nur eines leeren weißen/dunklen Fensters.
 - Freigabecode und Sprachumschaltung aus 0.11.1 bleiben unverändert.
