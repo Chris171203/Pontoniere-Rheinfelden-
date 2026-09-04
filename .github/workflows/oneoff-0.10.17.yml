@@ -1,0 +1,79 @@
+name: One-off Android 0.10.17 source update
+
+on:
+  push:
+    branches:
+      - dev-0.10.17
+    paths:
+      - '.github/workflows/oneoff-0.10.17.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-source-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.10.17
+
+      - name: Apply Rhein level presentation update
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          river = Path('Android/app/src/main/java/ch/pfvr/internapp/RiverDisplay.java')
+          river.write_text('''package ch.pfvr.internapp;\n\n/** Station-specific presentation rules for hydrological values. */\nfinal class RiverDisplay {\n    private static final double BASEL_RHEINHALLE_GAUGE_ZERO_M = 240.0d;\n    private static final double RHEINFELDEN_GAUGE_ZERO_M = 260.0d;\n\n    private RiverDisplay() {}\n\n    static double levelValue(HydroStation station,double rawMetresAboveSea){\n        return rawMetresAboveSea;\n    }\n\n    static String levelUnit(HydroStation station){\n        return "m ü.M.";\n    }\n\n    static int levelDecimals(HydroStation station){\n        return 2;\n    }\n\n    static double gaugeCentimetres(HydroStation station,double rawMetresAboveSea){\n        if(!Double.isFinite(rawMetresAboveSea))return rawMetresAboveSea;\n        double zero=station==HydroStation.BASEL_RHEINHALLE\n                ?BASEL_RHEINHALLE_GAUGE_ZERO_M\n                :RHEINFELDEN_GAUGE_ZERO_M;\n        return (rawMetresAboveSea-zero)*100.0d;\n    }\n}\n''', encoding='utf-8')
+
+          test = Path('Android/app/src/test/java/ch/pfvr/internapp/RiverDisplayTest.java')
+          test.write_text('''package ch.pfvr.internapp;\n\nimport org.junit.Test;\n\nimport static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertTrue;\n\npublic class RiverDisplayTest {\n    @Test public void keepsBothStationWaterLevelsAsAbsoluteMetresAboveSea(){\n        assertEquals(245.00, RiverDisplay.levelValue(HydroStation.BASEL_RHEINHALLE,245.00), 0.0001);\n        assertEquals(261.30, RiverDisplay.levelValue(HydroStation.RHEINFELDEN,261.30), 0.0001);\n        assertEquals("m ü.M.", RiverDisplay.levelUnit(HydroStation.BASEL_RHEINHALLE));\n        assertEquals("m ü.M.", RiverDisplay.levelUnit(HydroStation.RHEINFELDEN));\n        assertEquals(2, RiverDisplay.levelDecimals(HydroStation.BASEL_RHEINHALLE));\n        assertEquals(2, RiverDisplay.levelDecimals(HydroStation.RHEINFELDEN));\n    }\n\n    @Test public void derivesRelativeGaugeCentimetresForBothStations(){\n        assertEquals(720.0, RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,247.20), 0.0001);\n        assertEquals(500.0, RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,245.00), 0.0001);\n        assertEquals(130.0, RiverDisplay.gaugeCentimetres(HydroStation.RHEINFELDEN,261.30), 0.0001);\n        assertEquals(153.0, RiverDisplay.gaugeCentimetres(HydroStation.RHEINFELDEN,261.53), 0.0001);\n    }\n\n    @Test public void preservesMissingValues(){\n        assertTrue(Double.isNaN(RiverDisplay.levelValue(HydroStation.BASEL_RHEINHALLE,Double.NaN)));\n        assertTrue(Double.isNaN(RiverDisplay.gaugeCentimetres(HydroStation.RHEINFELDEN,Double.NaN)));\n    }\n}\n''', encoding='utf-8')
+
+          path = Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          text = path.read_text(encoding='utf-8')
+          old = '''        double flow=currentHydroValue(station,"Q");\n        double level=displayHydroValue(station,RiverMetric.LEVEL,currentHydroValue(station,"W"));\n        double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;'''
+          new = '''        double flow=currentHydroValue(station,"Q");\n        double rawLevel=currentHydroValue(station,"W");\n        double level=displayHydroValue(station,RiverMetric.LEVEL,rawLevel);\n        double gaugeCm=RiverDisplay.gaugeCentimetres(station,rawLevel);\n        double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;'''
+          if old not in text:
+              raise SystemExit('summary level block not found')
+          text = text.replace(old, new, 1)
+          old2 = '''        LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));\n        levelMetric.setPadding(0,dp(5),0,0);\n        c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));\n\n        if(Double.isFinite(temperature)){'''
+          new2 = '''        LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));\n        levelMetric.setPadding(0,dp(5),0,0);\n        c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));\n        if(Double.isFinite(gaugeCm)){\n            TextView gaugeView=txt(String.format(Locale.GERMAN,"%.0f cm",gaugeCm),10,MUTED,false);\n            gaugeView.setPadding(0,dp(1),0,0);\n            c.addView(gaugeView);\n        }\n\n        if(Double.isFinite(temperature)){'''
+          if old2 not in text:
+              raise SystemExit('summary metric block not found')
+          text = text.replace(old2, new2, 1)
+          path.write_text(text, encoding='utf-8')
+
+          gradle = Path('Android/app/build.gradle')
+          build = gradle.read_text(encoding='utf-8')
+          build = build.replace("versionCode 40", "versionCode 41", 1)
+          build = build.replace("versionName '0.10.16'", "versionName '0.10.17'", 1)
+          gradle.write_text(build, encoding='utf-8')
+
+          changelog = Path('Android/CHANGELOG.md')
+          current = changelog.read_text(encoding='utf-8')
+          entry = '''# Android Changelog\n\n## 0.10.17\n- Beide Rhein-Messpunkte zeigen den Pegel wieder primär als absoluten BAFU-Wasserstand in `m ü.M.` mit zwei Nachkommastellen.\n- Direkt darunter wird in der kompakten Rhein-Übersicht zusätzlich der relative Pegelstand in `cm` klein dargestellt. Basel verwendet den Pegelnullpunkt 240.00 m ü.M.; Rheinfelden den historischen BAFU-Pegelnullpunkt 260.00 m ü.M.\n- Die Zeitstempel bleiben durch die gleich hohen Karten und den flexiblen Restbereich am unteren Kartenrand auf gleicher Höhe.\n\n'''
+          if current.startswith('# Android Changelog\n\n'):
+              current = entry + current[len('# Android Changelog\n\n'):]
+          else:
+              current = entry + current
+          changelog.write_text(current, encoding='utf-8')
+
+          status = Path('STATUS.md')
+          st = status.read_text(encoding='utf-8')
+          st = st.replace('Stand: Testversion `0.10.15`', 'Stand: Testversion `0.10.17`', 1)
+          old_status = '- Der operative Pegel Basel-Rheinhalle wird in der App durchgängig in `cm` dargestellt. Der BAFU-Wert `W` ist die absolute Wasserhöhe in m ü.M.; für Basel wird er mit dem offiziellen Bezug `247.20 m ü.M. = 720 cm` auf den Schifffahrtspegel umgerechnet, also `Pegel [cm] = (W [m ü.M.] - 240.00 m) × 100`. Rheinfelden bleibt in m ü.M.\n'
+          new_status = '- Beide Rhein-Kurzkarten zeigen den BAFU-Wasserstand primär in `m ü.M.`. Direkt darunter steht zusätzlich der relative Pegel in `cm`: Basel bezogen auf 240.00 m ü.M., Rheinfelden bezogen auf den historischen BAFU-Pegelnullpunkt 260.00 m ü.M.\n'
+          st = st.replace(old_status, new_status)
+          status.write_text(st, encoding='utf-8')
+          PY
+
+      - name: Commit direct source changes
+        shell: bash
+        run: |
+          rm -f .github/workflows/oneoff-0.10.17.yml tmp-branch-init
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Show absolute and relative Rhein levels'
+          git push origin HEAD:dev-0.10.17
