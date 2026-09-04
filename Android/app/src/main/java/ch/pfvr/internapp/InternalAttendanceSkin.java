@@ -138,6 +138,10 @@ final class InternalAttendanceSkin {
                   .pfvr-managed-person-actions{display:flex!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;}
                   .pfvr-managed-person-actions button,.pfvr-managed-person-actions input[type=submit],.pfvr-managed-person-actions input[type=button],.pfvr-managed-person-actions a{min-height:34px!important;min-width:34px!important;padding:5px 7px!important;font-size:12px!important;border-radius:9px!important;}
                   .pfvr-managed-action-label{font-size:10px!important;color:${COLORS.muted}!important;}
+                  .pfvr-people-recovery{display:flex!important;flex-direction:column!important;gap:6px!important;margin-top:4px!important;padding:9px!important;border:1px solid ${COLORS.border}!important;border-radius:12px!important;background:${COLORS.soft}!important;}
+                  .pfvr-people-recovery-title{font-size:12px!important;font-weight:700!important;}
+                  .pfvr-people-recovery-note{font-size:11px!important;color:${COLORS.muted}!important;line-height:1.3!important;}
+                  .pfvr-people-recovery button{width:100%!important;min-height:42px!important;background:${COLORS.link}!important;color:#fff!important;font-size:12px!important;}
                   .pfvr-matrix-head-scroll{position:sticky!important;top:0!important;z-index:8!important;display:block!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;overflow-y:hidden!important;pointer-events:none!important;box-sizing:border-box!important;padding:0 0 6px!important;background:${COLORS.background}!important;scrollbar-width:none!important;}
                   .pfvr-matrix-head-scroll::-webkit-scrollbar{display:none!important;}
                   .pfvr-matrix-scroll{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:visible!important;box-sizing:border-box!important;padding:0 0 4px!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
@@ -500,6 +504,31 @@ final class InternalAttendanceSkin {
                   };
 
                   var closePersonManager=function(){var panel=document.querySelector('.pfvr-person-tools');if(panel)panel.classList.remove('open');var backdrop=document.querySelector('.pfvr-person-tools-backdrop');if(backdrop)backdrop.remove();};
+                  var clearLocalPeopleState=function(){
+                    try{localStorage.removeItem(PEOPLE_KEY);localStorage.removeItem(LEGACY_PEOPLE_KEY);}catch(ignore){}
+                    try{sessionStorage.removeItem(RESTORE_KEY);sessionStorage.removeItem(STORAGE_KEY);}catch(ignore){}
+                  };
+                  var resetPeopleViewFromBase=function(){
+                    var base=window.__pfvrBaseInternalUrl||'';if(!base)return false;
+                    clearLocalPeopleState();closePersonManager();
+                    try{window.location.replace(base);}catch(error){window.location.href=base;}
+                    return true;
+                  };
+                  var appendPeopleRecovery=function(body){
+                    if(!body)return;
+                    var recovery=element('div','pfvr-people-recovery');
+                    var title=element('div','pfvr-people-recovery-title');title.textContent='Ansicht bereinigen';recovery.appendChild(title);
+                    var note=element('div','pfvr-people-recovery-note');note.textContent='Falls die Personenansicht festhängt oder zu viele Personen geladen wurden, kann sie aus dem gespeicherten persönlichen Initiallink vollständig neu aufgebaut werden.';recovery.appendChild(note);
+                    var reset=element('button');reset.type='button';reset.textContent='Aus Initiallink neu aufbauen';
+                    reset.addEventListener('click',function(){
+                      if(reset.dataset.pfvrConfirm!=='1'){
+                        reset.dataset.pfvrConfirm='1';reset.textContent='Nochmal tippen: wirklich neu aufbauen';
+                        setTimeout(function(){if(reset&&reset.isConnected){reset.dataset.pfvrConfirm='0';reset.textContent='Aus Initiallink neu aufbauen';}},5000);return;
+                      }
+                      if(!resetPeopleViewFromBase()){reset.dataset.pfvrConfirm='0';reset.textContent='Initiallink nicht verfügbar';}
+                    });
+                    recovery.appendChild(reset);body.appendChild(recovery);
+                  };
                   var findPersonTools=function(toolInfo,state,currentNames){
                     var anchor=toolInfo&&toolInfo.anchor,scope=toolInfo&&toolInfo.scope,select=toolInfo&&toolInfo.select;
                     var panel=element('div','pfvr-person-tools');
@@ -525,12 +554,13 @@ final class InternalAttendanceSkin {
                         action.addEventListener('click',function(){control.click();scheduleParticipantSync(state);});body.appendChild(action);
                       });
                     }else{
-                      var unavailable=element('div');unavailable.textContent='Hinzufügen ist auf diesem Seitenstand nicht verfügbar. Vorhandene Zusatzpersonen können weiterhin entfernt werden.';unavailable.style.color=COLORS.muted;unavailable.style.fontSize='11px';body.appendChild(unavailable);
+                      var unavailable=element('div');unavailable.textContent='Hinzufügen ist auf diesem Seitenstand nicht verfügbar. Vorhandene Zusatzpersonen können weiterhin entfernt werden oder die Ansicht kann unten aus dem Initiallink neu aufgebaut werden.';unavailable.style.color=COLORS.muted;unavailable.style.fontSize='11px';body.appendChild(unavailable);
                     }
                     var note=element('div');note.textContent='Entfernen aktualisiert die Personenliste automatisch.';note.style.color=COLORS.muted;note.style.fontSize='11px';body.appendChild(note);
                     var list=element('div','pfvr-managed-people pfvr-managed-people-visible');
                     var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='Aktuelle Personen';list.appendChild(listTitle);
-                    (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);panel.appendChild(body);
+                    (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);
+                    appendPeopleRecovery(body);panel.appendChild(body);
                     if(anchor&&scope&&anchor!==scope)anchor.style.display='none';return panel;
                   };
 
@@ -620,8 +650,17 @@ final class InternalAttendanceSkin {
                     splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();
                     return true;
                   };
+                  var buildFallbackPeopleManager=function(){
+                    var state=readPeopleState();
+                    state=loadPeopleState([],state);
+                    var names=dedupePeople(([state.primary||'']).concat(state.rowNames||[]).concat(state.desired||[]));
+                    var panel=findPersonTools(null,state,names);document.body.appendChild(panel);return panel;
+                  };
                   window.pfvrOpenPeopleManager=function(){
-                    var panel=document.querySelector('.pfvr-person-tools');if(!panel){buildMobile();panel=document.querySelector('.pfvr-person-tools');}if(!panel)return false;
+                    var panel=document.querySelector('.pfvr-person-tools');
+                    if(!panel){buildMobile();panel=document.querySelector('.pfvr-person-tools');}
+                    if(!panel)panel=buildFallbackPeopleManager();
+                    if(!panel)return false;
                     closePersonManager();var backdrop=element('div','pfvr-person-tools-backdrop');backdrop.addEventListener('click',closePersonManager);document.body.appendChild(backdrop);panel.classList.add('open');panel.scrollTop=0;return true;
                   };
 
