@@ -1,0 +1,29 @@
+name: Export current 0.11.3 source audit
+
+on:
+  push:
+    branches:
+      - dev-0.11.3
+    paths:
+      - '.github/workflows/export-current-0.11.3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.11.3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-current-source-0.11.3-audit
+          path: |
+            AGENTS.md
+            PROJECT.md
+            STATUS.md
+            README.md
+            Android
+          if-no-files-found: error
