@@ -26,7 +26,7 @@ Aktuelle Android-Testversion: `0.10.6`.
 - Horizontal wird die komplette Personenmatrix gemeinsam gescrollt; die Terminspalte links bleibt dabei stehen. Mindestens zwei Personenspalten sollen gleichzeitig sichtbar sein.
 - Nach einer Statusauswahl muss sich die Farbe des echten Buttons/Selects passend aktualisieren: grün `Mit Essen`, gelb `Ohne Essen`, rot `Komme nicht`, grau `Nicht gewählt`.
 - Danach einmal `Neu laden` oder `Original` prüfen: bleibt der Status erhalten, ist die Auswahl serverseitig gespeichert.
-- Unter `+ / − Person` bleibt der originale Website-Select zum Hinzufügen erhalten. Die gewünschte Personenliste wird separat als lokale App-Ansichtspräferenz gespeichert; `Entfernen` nimmt Zusatzpersonen nur aus dieser Ansicht und verändert keine serverseitigen An-/Abmeldedaten.
+- Unter `+ / − Person` ist nur der App-Proxy sichtbar. Das originale Website-Select bleibt unverändert an seinem ursprünglichen Formular-/DOM-Ort und wird dort ausgelöst; `Entfernen` nimmt Zusatzpersonen nur aus der lokalen Ansicht und verändert keine serverseitigen An-/Abmeldedaten.
 - Prüfen, dass Köche/Termin-Metadaten nicht als Teilnehmer erscheinen und unterschiedliche zulässige Essens-/Anmeldeoptionen unverändert von der Website übernommen werden.
 - Nach serverseitiger Navigation sollen vertikale Position und gemeinsame horizontale Matrixposition wiederhergestellt werden. Die App selbst erzwingt keinen zusätzlichen Voll-Reload.
 - Kachelreihenfolge, Ein-/Ausblenden und Standard-Reset für Home, Kasse und Verein prüfen.
