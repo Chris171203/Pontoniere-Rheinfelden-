@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.19` (`versionCode 43`).
+Aktuelle Android-Testversion: `0.10.20` (`versionCode 44`).
 
 ## Entwicklung
 
@@ -21,6 +21,9 @@ Aktuelle Android-Testversion: `0.10.19` (`versionCode 43`).
 - Aktuell besitzt Basel-Rheinhalle einen solchen bestätigten cm-Bezug. Rheinfelden wird nicht auf Basis eines vermuteten oder historischen Pegelnullpunkts umgerechnet und bleibt daher in `m ü.M.`.
 - In `Rhein aktuell` erscheint der zusätzliche cm-Wert folglich nur bei Basel-Rheinhalle.
 - In `Rhein-Grafiken` wird der Umschalter `m ü.M.` / `cm` ebenfalls nur bei Stationen mit verifiziertem cm-Bezug angeboten. Bei nicht unterstützten Stationen erzwingt die Darstellungslogik `m ü.M.`, auch wenn aus einer älteren App-Version noch eine cm-Einstellung gespeichert sein sollte.
+- Die offizielle Schifffahrtslage richtet sich ausschließlich nach dem Pegel Basel-Rheinhalle: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs.
+- Der Abfluss bleibt ein eigener hydrologischer Messwert und steuert keine offizielle Sperrstufe.
+- Im Basel-Diagramm werden die drei Hochwassermarken auf der Pegelachse eingezeichnet. Pegel- und Abflusskurve folgen je Abschnitt der zeitgleichen Pegelstufe, verwenden innerhalb derselben Stufe aber unterschiedliche Farbtöne.
 
 ## Interne An-/Abmeldung
 
@@ -32,11 +35,13 @@ Aktuelle Android-Testversion: `0.10.19` (`versionCode 43`).
 - Website-Bulk-Aktionen wie `Alle anzeigen` sind im App-Modus blockiert; im unveränderten Originalmodus können sie bewusst verwendet werden.
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 
-## Gerätetest 0.10.19
+## Gerätetest 0.10.20
 
-- `Rhein aktuell`: Basel-Rheinhalle und Rheinfelden müssen beide den Wasserstand in `m ü.M.` zeigen. Nur Basel darf darunter zusätzlich einen cm-Pegel anzeigen.
+- `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
+- `Rhein aktuell`: Basel-Rheinhalle und Rheinfelden müssen beide den Wasserstand in `m ü.M.` zeigen. Nur Basel darf darunter zusätzlich einen cm-Pegel anzeigen. Die beiden Zeitstempel müssen am unteren Kartenrand auf derselben Höhe stehen.
 - `Rhein-Grafiken`: Basel muss zwischen `m ü.M.` und `cm` umschaltbar sein; Rheinfelden darf keinen cm-Umschalter erhalten. Aktueller Wert, rechte Achse, Kurve, Hinweis und Tooltip müssen jeweils dieselbe Einheit verwenden.
-- Die beiden Zeitstempel unter `Rhein aktuell` müssen am unteren Kartenrand auf derselben Höhe stehen.
+- Im Basel-Graphen müssen HWM I/IIb/IIa an 700/790/820 cm beziehungsweise 247.00/247.90/248.20 m ü.M. an der Pegelachse liegen. Historische Pegel- und Abflussabschnitte müssen dieselbe Stufe ausdrücken, aber als unterschiedliche Kurven erkennbar bleiben.
+- Bei einem ausgewählten Basel-Diagrammpunkt müssen die beiden Punkte zur dortigen historischen Stufe passen und der Tooltip zusätzlich die damalige Stufe nennen.
 - Kacheln verschieben/ein- oder ausblenden: Die Kachelverwaltung darf danach nicht mehr an den Seitenanfang springen.
 - `Original → Alle anzeigen → App-Ansicht`: alle Originalpersonen müssen mit echtem Namen, korrekter Reihenfolge und ihrem eigenen Status übernommen werden.
 - `Personen`: Hinzufügen, Entfernen und Neuaufbau aus Initiallink auch nach App-Neustart prüfen.
