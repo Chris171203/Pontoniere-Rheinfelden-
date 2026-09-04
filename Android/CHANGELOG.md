@@ -1,5 +1,9 @@
 # Android Changelog
 
+## 0.11.2
+- Regression der Erstfreigabe aus 0.11.1 behoben: Der Freigabe-Screen wird jetzt mit `setContentView` tatsächlich angezeigt statt nur eines leeren weißen/dunklen Fensters.
+- Freigabecode und Sprachumschaltung aus 0.11.1 bleiben unverändert.
+
 ## 0.11.1
 - Sprachumschaltung `Deutsch` / `Schwiizerdütsch` für App-eigene native UI-Texte. Externe Inhalte, Vereinsnews und die originale PFVR-Webseite werden nicht übersetzt.
 - Lokale Erstfreigabe beim ersten App-Start. Der gemeinsam verteilte Freigabecode wird nur gegen einen eingebetteten SHA-256-Prüfwert verglichen; der Klartextcode wird nicht eingecheckt.

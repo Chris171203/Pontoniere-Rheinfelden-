@@ -1,9 +1,10 @@
 # Status
 
-Stand: Testversion `0.11.1` · aktualisiert 2026-09-04.
+Stand: Testversion `0.11.2` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
+- Regression der Erstfreigabe behoben: Der Freigabe-Screen wird beim ersten Start jetzt tatsächlich als Activity-Inhalt gesetzt; 0.11.1 zeigte vor der Freigabe nur den leeren Window-Hintergrund.
 - Die native App-Oberfläche kann unter Einstellungen → Allgemein zwischen `Deutsch` und `Schwiizerdütsch` umgeschaltet werden. Die Umschaltung betrifft ausschließlich App-eigene Texte; externe Inhalte, Vereinsnews und die originale PFVR-Webseite bleiben unverändert.
 - Vor dem ersten Zugriff auf die App ist eine lokale Erstfreigabe per gemeinsamem Freigabecode erforderlich. Im Repository liegt nur der SHA-256-Prüfwert, nicht der Klartextcode. Vor erfolgreicher Freigabe werden keine App-Screens, Live-Daten oder internen WebViews aufgebaut.
 - Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.

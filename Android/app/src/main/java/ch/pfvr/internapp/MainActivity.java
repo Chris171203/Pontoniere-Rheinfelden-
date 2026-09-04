@@ -358,6 +358,7 @@ public class MainActivity extends Activity {
             prefs.edit().putBoolean(PREF_ACCESS_UNLOCKED,true).apply();
             startUnlockedApp();
         });
+        setContentView(root);
     }
 
     private void scheduleBackgroundRefresh(){
