@@ -4,20 +4,20 @@ Mobile Vereins-App für den Pontonierfahrverein Rheinfelden mit Terminen, Traini
 
 ## Aktueller Entwicklungsstand
 
-Android-Testversion `0.10.14` auf `main`.
+Android-Testversion `0.10.15` auf `main`.
 
 Schwerpunkte des aktuellen Stands:
 
 - nächstes Training aus dem öffentlichen Vereinskalender mit saisonalem Fallback;
 - Wetter passend zum tatsächlichen Trainingszeitraum;
-- BAFU-Rheindaten mit Abfluss, Pegel, Wassertemperatur und interaktiven Verläufen;
+- BAFU-Rheindaten mit Abfluss, stationsgerechtem Pegel, Wassertemperatur und interaktiven Verläufen; Basel-Rheinhalle wird als operativer Pegel in cm dargestellt;
 - native Termine und Vereinsnews mit lokalem Cache und sichtbarem Datenstand;
 - interne An-/Abmeldung als mobile Matrix mit mehreren Personen, dauerhaft sichtbarer synchronisierter Kopfzeile und größeren Bedienflächen;
 - vollständige Übernahme großer Original-Personenlisten inklusive Namen aus Bearbeiten-/Namens-Controls und zeilengerecht zugeordneten Statuswerten;
 - lange Koch-/Verantwortlichkeitsnamen werden innerhalb der Terminspalte automatisch passend verkleinert;
 - robuste Personenverwaltung mit blockierten Website-Bulk-Aktionen und Recovery aus dem lokal gespeicherten persönlichen Initiallink;
 - lokale Personenverwaltung für die interne Ansicht, während die bestehende PFVR-Seite Quelle der Wahrheit bleibt;
-- personalisierbare Kacheln für Home, Kasse und Verein;
+- personalisierbare Kacheln für Home, Kasse und Verein; die Kachelverwaltung behält beim Umordnen ihre Scrollposition;
 - Vereinsbeiz mit Warenkorb, freiem Betrag, Swiss QR, Banking-App-Handoff und TWINT;
 - Hell-/Dunkelmodus sowie für Android 16 / API 36 vorbereiteter Build;
 - CI-geprüftes Debug-Testpaket mit stabilem öffentlichen Testschlüssel; Produktionssignierung bleibt getrennt.
