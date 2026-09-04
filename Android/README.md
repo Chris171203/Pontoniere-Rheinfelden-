@@ -18,6 +18,7 @@ Aktuelle Android-Testversion: `0.10.7`.
 
 ## Gerätetest 0.10.7
 
+- Ausgangslage für die Regression: Ist die zweite Person in `Original` bereits sichtbar, muss sie nach Wechsel zu `App` dauerhaft als zweite feste Personenspalte stehen bleiben und darf nicht mehr kurz aufblitzen und wieder verschwinden.
 - Zusatzperson über den sichtbaren App-Select hinzufügen: jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit; nur ausdrücklich lokal entfernte Personen werden ausgeblendet.
 - Unterschiedliche Reihenfolge oder Schreibweise von Auswahltext und Tabellenname darf die Person nicht mehr herausfiltern. Für die Wiederherstellung wird zusätzlich der Optionswert gespeichert und der Name tokenbasiert verglichen.
 - Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.
