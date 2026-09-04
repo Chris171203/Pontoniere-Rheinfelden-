@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.19
+- Rheinfelden wird nicht mehr auf einen relativen cm-Pegel umgerechnet. Ohne belastbar bestätigten aktuellen Pegelnullpunkt bleibt dort ausschließlich der vom BAFU gelieferte Wasserstand in `m ü.M.` maßgeblich.
+- `Rhein aktuell` zeigt bei beiden Stationen den Wasserstand primär in `m ü.M.`; nur Basel-Rheinhalle erhält darunter zusätzlich den verifizierbaren relativen Pegel in `cm`.
+- Die Graphen-Umschaltung `m ü.M.` / `cm` ist stationsbezogen und wird nur angeboten, wenn ein belastbarer cm-Bezug hinterlegt ist. Aktuell ist das Basel-Rheinhalle; Rheinfelden bleibt im Graphen in `m ü.M.`.
+- Auch wenn eine ältere globale cm-Einstellung gespeichert ist, fällt eine Station ohne bestätigten cm-Bezug sicher auf `m ü.M.` zurück.
+
 ## 0.10.18
 - In `Rhein-Grafiken` kann die Pegelachse global zwischen `m ü.M.` und `cm` umgeschaltet werden. Die Auswahl wird lokal gespeichert und gilt für beide Messstationen; Standard bleibt `m ü.M.`.
 - Aktueller Pegelwert im Diagrammkopf, rechte Pegelachse, Kurve, Tooltip und Hinweistext verwenden gemeinsam die ausgewählte Einheit.
