@@ -1,6 +1,6 @@
 # Status
 
-Stand: Testversion `0.10.22` · aktualisiert 2026-09-04.
+Stand: Testversion `0.11.0` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 

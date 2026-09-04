@@ -1,5 +1,9 @@
 # Android Changelog
 
+## 0.11.0
+- Stabiler Meilenstein auf Basis des bewährten 0.10.22-Stands; keine zusätzliche Funktionsänderung gegenüber 0.10.22.
+- Versionssprung auf `versionCode 47`; der Stand bleibt weiterhin eine Testversion unter `1.0.0`.
+
 ## 0.10.22
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht keine bedienbaren Textfelder mehr. Die Originalfelder bleiben unsichtbar im DOM erhalten, während ein reiner Anzeigetext gerendert wird.
 - Lange Namen werden im verfügbaren Platz automatisch kleiner skaliert; ein Antippen öffnet keine Tastatur mehr.

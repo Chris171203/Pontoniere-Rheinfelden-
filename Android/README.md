@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.22` (`versionCode 46`).
+Aktuelle Android-Testversion: `0.11.0` (`versionCode 47`).
 
 ## Entwicklung
 
@@ -37,7 +37,7 @@ Aktuelle Android-Testversion: `0.10.22` (`versionCode 46`).
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
-## Gerätetest 0.10.22
+## Gerätetest 0.11.0
 
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.
