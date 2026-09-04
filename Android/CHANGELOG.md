@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.14
+- Die App liest Teilnehmernamen in der Originaltabelle jetzt auch direkt aus Bearbeiten-/Namens-Controls wie `✎ Kougionis Eleni` oder entsprechenden `input`-/Button-Beschriftungen. Dadurch entstehen nach `Alle anzeigen` nicht mehr massenhaft generische `Teilnehmer N`-Spalten, wenn die Originalzeile einen echten Namen enthält.
+- Alte lokal gespeicherte Zeilennamen werden nur noch indexbasiert verwendet, wenn die aktuelle Quelltabelle exakt gleich viele Personenzeilen besitzt. Eine stark veränderte Originaltabelle kann damit keine alten Namen auf falsche Statuszeilen verschieben.
+- Große beziehungsweise deutlich erweiterte Personenlisten aus der Originalansicht werden als neue Quelle der Wahrheit übernommen. Insbesondere nach `Alle anzeigen` werden lokale Ausblendungen verworfen und alle aktuell vorhandenen Originalzeilen in derselben Reihenfolge in die App-Matrix übertragen.
+- Statuswerte bleiben an der jeweiligen Original-Personenzeile gekoppelt; die mobile Transponierung ändert nur die Darstellung, nicht die Zuordnung von Person, Termin und Auswahl.
+
 ## 0.10.13
 - Tabellenkopf erhält einen Viewport-Fallback: Falls ein Website-Wrapper das CSS-Sticky-Verhalten verhindert, bleibt eine fixe Spiegel-Kopfzeile mit `Termin` und Teilnehmernamen beim vertikalen Scrollen sichtbar.
 - Der fixe Kopf übernimmt die horizontale Position ausschließlich vom Tabellenkörper; die Kopfzeile selbst bleibt nicht per Finger scrollbar.
