@@ -1,6 +1,6 @@
 # Status
 
-Stand: Testversion `0.10.20` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.21` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
@@ -26,6 +26,7 @@ Stand: Testversion `0.10.20` · aktualisiert 2026-09-04.
 - `Rhein aktuell` zeigt Basel-Rheinhalle und Rheinfelden primär als vom BAFU gelieferten Wasserstand in `m ü.M.` mit zwei Nachkommastellen. Nur Basel-Rheinhalle zeigt zusätzlich klein den relativen Pegel in `cm`, weil dafür ein belastbarer aktueller Bezug vorliegt. Für Rheinfelden wird ohne bestätigten aktuellen Pegelnullpunkt kein cm-Wert abgeleitet.
 - Schifffahrtswarnung und -sperrung werden ausschließlich aus dem offiziellen Pegel Basel-Rheinhalle abgeleitet: 700 cm = Hochwassermarke I / Voralarm, 790 cm = Hochwassermarke IIb / Sperrung der Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = Hochwassermarke IIa / Sperrung der Schifffahrt Rheinfelden–Kembs. Der Abfluss bleibt ein eigener hydrologischer Zusatzwert und steuert diese Lage nicht mehr.
 - Der Pegel ist in `Rhein aktuell` und im Diagrammkopf wieder die visuell priorisierte Größe. Basel-Pegelwert und -kurve folgen der offiziellen Hochwasserstufe; die Abflusskurve nutzt je Stufe eine unterscheidbare Schwesterfarbe. Rheinfelden erhält ohne eigenen offiziellen Sperrbezug keine erfundene Stufenfarbe.
+- Im Normalzustand verwendet der Abfluss eine neutrale Stahlblau-Farbe statt Orange, damit keine Warnwirkung entsteht. Gelb/Orange/Rot bleiben den tatsächlichen Hochwasserstufen vorbehalten; innerhalb einer Hochwasserstufe bleibt der Abfluss als dunklere Schwesterfarbe vom Pegel unterscheidbar.
 - Im Basel-Graphen werden die offiziellen Hochwassermarken auf der Pegelachse eingezeichnet. Historische Pegel- und Abflussabschnitte werden nach der zum jeweiligen Zeitpunkt geltenden Basel-Pegelstufe eingefärbt, bleiben aber durch unterschiedliche Farbtöne klar unterscheidbar.
 - Die beiden Rhein-Kurzkarten werden auf dieselbe Höhe gebracht; ein flexibler Restbereich drückt den BAFU-Stand/Zeitstempel jeweils an den unteren Kartenrand, sodass beide Zeitangaben auf derselben Linie liegen.
 - Die Pegel-Einheit der Rhein-Grafiken wird stationsbezogen nur dort zwischen `m ü.M.` und `cm` angeboten, wo ein verifizierter cm-Bezug vorliegt. Aktuell ist Basel-Rheinhalle umschaltbar; Rheinfelden bleibt im Graphen in `m ü.M.`. Eine alte globale cm-Einstellung kann Rheinfelden nicht mehr auf einen abgeleiteten cm-Wert umstellen.
