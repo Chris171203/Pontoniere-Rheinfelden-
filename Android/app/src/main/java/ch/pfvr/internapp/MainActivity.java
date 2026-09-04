@@ -865,7 +865,7 @@ private void rebuildHomePreservingScroll(){
         return PREF_RIVER_GRAPH_LEVEL_UNIT+"_"+station.id;
     }
 
-    private boolean riverGraphLevelCentimetres(H{$roStation station){
+    private boolean riverGraphLevelCentimetres(HydroStation station){
         if(!RiverDisplay.hasVerifiedGaugeCentimetres(station))return false;
         String key=riverGraphLevelUnitPreferenceKey(station);
         if(prefs.contains(key))return "cm".equals(prefs.getString(key,"m"));
@@ -892,7 +892,7 @@ private void rebuildHomePreservingScroll(){
         return outer;
     }
 
-    private double graphLevelValue(H{$roStation station,double rawValue){
+    private double graphLevelValue(HydroStation station,double rawValue){
         return RiverDisplay.graphLevelValue(station,rawValue,riverGraphLevelCentimetres(station));
     }
 
