@@ -1,5 +1,20 @@
 # Android Changelog
 
+## 0.10.12
+- Die Personenverwaltung öffnet auch dann eine Fallback-Ansicht, wenn die externe PFVR-Seite keine verwertbare Teilnehmermatrix oder kein Hinzufügen-Control liefert.
+- `Aus Initiallink neu aufbauen` löscht gezielt die lokal gespeicherten Personen- und Wiederherstellungszustände und lädt anschließend den gespeicherten persönlichen Basis-/Initiallink neu. Der Initiallink selbst bleibt erhalten.
+- Der Neuaufbau erfordert eine zweite Betätigung innerhalb von fünf Sekunden, damit die lokale Personenansicht nicht versehentlich zurückgesetzt wird.
+
+## 0.10.11
+- Website-Bulk-Aktionen wie `Alle Personen anzeigen`, `Alle anzeigen` und entsprechende Hinzufügen-/Einblenden-Varianten werden in der App-Ansicht global ausgeblendet und zusätzlich gegen Auslösung blockiert.
+- Die Tabellenkopfzeile mit `Termin` und Teilnehmernamen bleibt vertikal stehen, besitzt keine eigene Touch-Scrollfläche und wird horizontal ausschließlich vom scrollbaren Tabellenkörper nachgeführt.
+- Die Personenverwaltung bleibt bei fehlendem Website-Hinzufügen-Control für vorhandene Personen nutzbar.
+
+## 0.10.10
+- `Termin` und Teilnehmernamen wurden in eine feste Kopfzeile verschoben; redundante Teilnehmernamen über jedem Status-Control entfallen.
+- An-/Abmelde-Controls besitzen größere Touch-Flächen und größere Schrift.
+- Horizontale Kopf-/Tabellenposition und Scrollzustand werden gemeinsam wiederhergestellt.
+
 ## 0.10.9
 - `Entfernen` ist keine reine lokale Ausblendung mehr: Die App setzt die interne Seite automatisch auf den persönlichen Basislink zurück und stellt anschließend nur die verbleibenden Zusatzpersonen über die echten Website-Controls wieder her.
 - Dadurch wird die entfernte Person auch aus der Originalansicht genommen und der fehlerhafte Grid-Zwischenzustand nach lokalem Ausblenden vermieden; kein manueller Reload ist nötig.
