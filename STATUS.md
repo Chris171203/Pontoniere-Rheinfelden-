@@ -32,15 +32,17 @@ Stand: Testversion `0.10.7` · aktualisiert 2026-09-04.
 
 ## Verifiziert
 
+- Unit-Tests prüfen ausdrücklich, dass aktuell in der Originaltabelle vorhandene Personen nicht mehr durch eine exakte lokale Namens-Whitelist herausgefiltert werden.
 - Unit-Tests prüfen die mobile Tag/Teilnehmer-Projektion, dynamische Breiten, Wiederverwendung echter Website-Controls, globale Personenverwaltung und das Entfernen des erzwungenen Reloads.
 - Zusätzliche Unit-Tests prüfen Live-Restyling aus Button-/Select-Werten, verzögerte Neuberechnung und DOM-Mutationserkennung ohne Voll-Reload.
 - Unit-Tests prüfen weiterhin Statusaufteilung und die Kachel-Layoutmigration.
 - Android-Kompilierung, Unit-Tests, APK-Build, Paket/Version und fester Test-Zertifikatsfingerprint werden in CI geprüft.
-- Finale Testidentität: `0.10.6`, `versionCode 30`, Paket `ch.pfvr.app.test`.
+- Finale Testidentität: `0.10.7`, `versionCode 31`, Paket `ch.pfvr.app.test`.
 - APK/AAB-Dateien werden nicht im Git-Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Eine bereits in der Originalansicht vorhandene zweite Person muss beim Wechsel in die App-Ansicht dauerhaft sichtbar bleiben und darf nicht mehr nur kurz aufblitzen.
 - Zusatzperson über `+ / − Person` auswählen: die echte Website-Aktion muss ausgelöst werden und die neue Person danach ohne manuelles Neuladen in der mobilen Matrix erscheinen.
 - Danach App vollständig schließen und erneut öffnen: die hinzugefügte Person muss aus der gespeicherten Ansicht wiederhergestellt werden.
 - Nach Statusauswahl muss sich die Farbe sofort bzw. nach kurzer Server-/DOM-Aktualisierung anpassen. Anschließend durch `Neu laden` oder Originalansicht prüfen, ob der Status serverseitig erhalten bleibt.
