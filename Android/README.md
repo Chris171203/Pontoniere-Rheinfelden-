@@ -19,6 +19,7 @@ Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 - Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Die Dialektfassung umfasst Landingpage, Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse und häufige App-Dialoge/Statusmeldungen. Externe/source-seitige Texte, Kalendereinträge, News und Personennamen werden absichtlich nicht verändert.
 - Beim ersten Start dieses App-Datenstands wird ein Freigabecode verlangt. Nach erfolgreicher Prüfung wird nur ein lokales Freigabe-Flag gespeichert; der Klartextcode ist nicht im Repository enthalten.
 - Der Erstfreigabe-Screen dient zugleich als öffentliche Landingpage: Sprachwahl, Schnuppertraining/Mitgliedschaft/Formulare sowie Instagram/Facebook sind ohne Freigabe erreichbar. Die eigentlichen App-Screens, Live-Daten und internen WebViews werden weiterhin erst nach erfolgreicher Freigabe aufgebaut.
+- Schnuppertraining/Mitgliedschaft sowie Instagram und Facebook sind für bereits freigeschaltete Installationen zusätzlich über Home bzw. den Bereich Verein erreichbar.
 - Die Erstfreigabe ist eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung. Persönliche `intern.pfvr.ch`-Links bleiben weiterhin ausschließlich auf dem Endgerät.
 
 ## Rheinwerte
