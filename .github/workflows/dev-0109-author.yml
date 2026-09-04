@@ -1,0 +1,32 @@
+name: Author PFVR 0.10.9
+
+on:
+  push:
+    branches:
+      - dev-0.10.9
+    paths:
+      - 'tools/apply_0109.py'
+      - '.github/workflows/dev-0109-author.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed patch
+        run: python tools/apply_0109.py
+      - name: Publish clean target source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f tools/apply_0109.py .github/workflows/dev-0109-author.yml
+          git config user.name 'PFVR Build Author'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: make participant removal authoritative'
+          git push origin HEAD:refs/heads/dev-0.10.9
