@@ -1,6 +1,6 @@
 # Status
 
-Stand: Testversion `0.10.15` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.16` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
@@ -24,6 +24,8 @@ Stand: Testversion `0.10.15` · aktualisiert 2026-09-04.
 - Home, Kasse und Verein verwenden eine gemeinsame, lokal personalisierbare Kachelarchitektur. Reihenfolge und Sichtbarkeit können unter Einstellungen → Ansicht & Kacheln angepasst werden; der Warenkorb bleibt in der Kasse fixiert.
 - Beim Verschieben oder Ein-/Ausblenden einer Kachel bleibt die aktuelle Scrollposition der Kachelverwaltung erhalten. Die Ansicht springt nach einer Änderung nicht mehr an den Seitenanfang.
 - Der operative Pegel Basel-Rheinhalle wird in der App durchgängig in `cm` dargestellt. Der BAFU-Wert `W` ist die absolute Wasserhöhe in m ü.M.; für Basel wird er mit dem offiziellen Bezug `247.20 m ü.M. = 720 cm` auf den Schifffahrtspegel umgerechnet, also `Pegel [cm] = (W [m ü.M.] - 240.00 m) × 100`. Rheinfelden bleibt in m ü.M.
+- `Rhein aktuell` zeigt bei beiden Messpunkten Abfluss und Pegel als eigenständige, klar beschriftete Hauptwerte. Rheinfelden zeigt die Wassertemperatur weiterhin zusätzlich.
+- Die beiden Rhein-Kurzkarten werden auf dieselbe Höhe gebracht; ein flexibler Restbereich drückt den BAFU-Stand/Zeitstempel jeweils an den unteren Kartenrand, sodass beide Zeitangaben auf derselben Linie liegen.
 - Vereinsnews werden nativ über die öffentliche WordPress-REST-API geladen und lokal gecacht. Rhein-, Wetter- und Kalenderdaten zeigen ihren Datenstand und besitzen lokale Fallbacks.
 - Banking-Handoff bleibt Share-first. Gespeicherte Zahlungs-QRs verwenden wiederverwendbare Dateinamen wie `PFVR_12.50CHF.png`.
 - Debug-Testpaket: `ch.pfvr.app.test`, fester öffentlicher Testschlüssel, Android 16 / API 36.
@@ -37,6 +39,7 @@ Stand: Testversion `0.10.15` · aktualisiert 2026-09-04.
 
 ## Noch auf realen Geräten zu prüfen
 
+- Unter `Rhein aktuell` müssen Basel-Rheinhalle und Rheinfelden jeweils Abfluss und Pegel gut sichtbar zeigen; die beiden BAFU-Stand/Zeitstempel müssen am unteren Kartenrand auf derselben Höhe liegen.
 - Basel-Rheinhalle muss in Kurzkarte, Detailansicht und Verlauf mit einem plausiblen Wert um etwa 500 cm statt rund 245 m ü.M. erscheinen. Die Hochwassermarken 700/790/820 cm müssen damit direkt vergleichbar sein.
 - Beim Verschieben oder Ein-/Ausblenden von Kacheln muss die Kachelverwaltung ungefähr an derselben vertikalen Position bleiben und darf nicht mehr nach ganz oben springen.
 - In der Originalansicht `Alle anzeigen` auslösen, anschließend zurück auf `App-Ansicht` wechseln: alle sichtbaren Personen müssen mit ihren echten Namen und exakt den Statuswerten ihrer jeweiligen Originalzeile übernommen werden; `Teilnehmer 3`, `Teilnehmer 44` usw. dürfen nicht mehr als Ersatznamen erscheinen, sofern die Originalzeile einen Namen enthält.
