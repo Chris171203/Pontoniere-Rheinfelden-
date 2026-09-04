@@ -1,8 +1,8 @@
 # Release Notes – Google Play
 
-## 0.11.3 · interner Test
+## 0.11.4 · interner Test
 
-Erster für Google Play vorbereiteter Teststand der PFVR-Rheinfelden-App.
+Erster vollständig für Google Play vorbereiteter Teststand der PFVR-Rheinfelden-App.
 
 - Termine, Trainingswetter und Rhein-Livedaten mit Verläufen
 - Schifffahrtslage anhand des Pegels Basel-Rheinhalle
@@ -12,5 +12,6 @@ Erster für Google Play vorbereiteter Teststand der PFVR-Rheinfelden-App.
 - personalisierbare Kacheln
 - Deutsch und Schwiizerdütsch
 - öffentliche Erstfreigabe-/Landingpage mit Schnuppertraining und Vereinskanälen
+- zusätzliche Release-, Datenschutz- und Android-8-Kompatibilitätsprüfungen für die Play-Verteilung
 
-Hinweis für die Play Console: Für Release Notes normalerweise nur den eigentlichen Text ohne Überschrift/Markdown übernehmen.
+Hinweis für die Play Console: Für Release Notes nur den eigentlichen Text ohne Überschrift/Markdown übernehmen.
