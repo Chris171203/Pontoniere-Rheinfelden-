@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.21` (`versionCode 45`).
+Aktuelle Android-Testversion: `0.10.22` (`versionCode 46`).
 
 ## Entwicklung
 
@@ -36,7 +36,7 @@ Aktuelle Android-Testversion: `0.10.21` (`versionCode 45`).
 - Website-Bulk-Aktionen wie `Alle anzeigen` sind im App-Modus blockiert; im unveränderten Originalmodus können sie bewusst verwendet werden.
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 
-## Gerätetest 0.10.21
+## Gerätetest 0.10.22
 
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.
@@ -48,7 +48,7 @@ Aktuelle Android-Testversion: `0.10.21` (`versionCode 45`).
 - `Original → Alle anzeigen → App-Ansicht`: alle Originalpersonen müssen mit echtem Namen, korrekter Reihenfolge und ihrem eigenen Status übernommen werden.
 - `Personen`: Hinzufügen, Entfernen und Neuaufbau aus Initiallink auch nach App-Neustart prüfen.
 - Beim langen vertikalen Scrollen müssen `Termin` und die aktuell sichtbaren Teilnehmernamen stehen bleiben; horizontales Wischen muss Kopf und Personenspalten exakt synchron halten.
-- Lange Koch-/Verantwortlichkeitsnamen müssen sich in der Terminspalte verkleinern, ohne Datum oder übrigen Termintext mitzuskaliert.
+- Koch-/Verantwortlichkeitsnamen in der Terminspalte dürfen nicht fokussierbar oder editierbar sein und beim Antippen keine Tastatur öffnen. Lange Namen müssen sich verkleinern; das Datum soll fett bleiben, ohne Zähler oder Termintext mitzuskaliert.
 
 ## Lokale Daten
 

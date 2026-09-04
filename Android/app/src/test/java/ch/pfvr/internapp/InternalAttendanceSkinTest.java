@@ -144,9 +144,24 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("observer.observe(document.documentElement,{subtree:true,childList:true})"));
     }
 
+    @Test public void generatedScriptProjectsDayTextInputsAsLabelsAndBoldsDate(){
+        String script=script();
+        assertTrue(script.contains("decorateDayMeta"));
+        assertTrue(script.contains("input[type=text],input:not([type])"));
+        assertTrue(script.contains("pfvr-day-source-input"));
+        assertTrue(script.contains("pfvr-day-display-value"));
+        assertTrue(script.contains("input.readOnly=true"));
+        assertTrue(script.contains("input.setAttribute('tabindex','-1')"));
+        assertTrue(script.contains("input.insertAdjacentElement('afterend',visual)"));
+        assertTrue(script.contains(".pfvr-day-source-input{display:none!important;}"));
+        assertTrue(script.contains(".pfvr-day-date{display:block!important;font-weight:700!important"));
+        assertTrue(script.contains(".btn,.pfvr-day-display-value"));
+    }
+
     @Test public void generatedScriptShrinksLongCookNamesOnlyInDayMeta(){
         String script=script();
         assertTrue(script.contains("fitDayMetaTexts"));
+        assertTrue(script.contains("decorateDayMeta(meta)"));
         assertTrue(script.contains(".pfvr-day-fit-name"));
         assertTrue(script.contains("node.scrollWidth>available"));
         assertTrue(script.contains("var minSize=10"));

@@ -182,6 +182,9 @@ final class InternalAttendanceSkin {
                   .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
                   .pfvr-day-meta{position:sticky!important;left:0!important;z-index:3!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:12px!important;overflow-wrap:break-word!important;word-break:normal!important;box-shadow:3px 0 8px rgba(0,0,0,.04)!important;}
                   .pfvr-day-meta>*{max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
+                  .pfvr-day-source-input{display:none!important;}
+                  .pfvr-day-date{display:block!important;font-weight:700!important;line-height:1.2!important;margin-bottom:1px!important;}
+                  .pfvr-day-display-value{display:block!important;max-width:100%!important;font-size:18px!important;font-weight:400!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;line-height:1.1!important;margin:5px 0 3px!important;}
                   .pfvr-day-fit-name{display:block!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;line-height:1.1!important;}
                   .pfvr-person-cell{width:var(--pfvr-person-col)!important;padding:8px!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;}
                   .pfvr-name-small{font-size:10px!important;}
@@ -287,9 +290,43 @@ final class InternalAttendanceSkin {
                     });
                   };
 
+                  var decorateDayMeta=function(meta){
+                    if(!meta)return;
+                    Array.from(meta.querySelectorAll('input[type=text],input:not([type])')).forEach(function(input){
+                      if(input.classList.contains('pfvr-day-source-input'))return;
+                      var value=((input.value||input.getAttribute('value')||'')+'').replace(/\s+/g,' ').trim();
+                      if(!value)return;
+                      if(document.activeElement===input&&input.blur)input.blur();
+                      var visual=element('span','pfvr-day-display-value');
+                      visual.textContent=value;
+                      visual.setAttribute('aria-label',value);
+                      input.classList.add('pfvr-day-source-input');
+                      input.readOnly=true;
+                      input.setAttribute('tabindex','-1');
+                      input.setAttribute('aria-hidden','true');
+                      input.setAttribute('inputmode','none');
+                      input.insertAdjacentElement('afterend',visual);
+                    });
+                    var datePattern=/^(?:mo|di|mi|do|fr|sa|so)\.?[,]?\s*\d{1,2}\.\d{1,2}\.?$/i;
+                    Array.from(meta.childNodes).forEach(function(node){
+                      if(node.nodeType===3){
+                        var raw=(node.textContent||'').replace(/\s+/g,' ').trim();
+                        if(!datePattern.test(raw))return;
+                        var date=element('span','pfvr-day-date');
+                        date.textContent=raw;
+                        node.parentNode.replaceChild(date,node);
+                        return;
+                      }
+                      if(node.nodeType!==1||node.classList.contains('pfvr-day-date')||node.classList.contains('pfvr-day-display-value'))return;
+                      var raw=text(node).replace(/\s+/g,' ').trim();
+                      if(datePattern.test(raw)&&node.children.length===0)node.classList.add('pfvr-day-date');
+                    });
+                  };
+
                   var fitDayMetaTexts=function(root){
                     (root||document).querySelectorAll('.pfvr-day-meta').forEach(function(meta){
-                      var candidates=Array.from(meta.querySelectorAll('button,input[type=submit],input[type=button],a,.btn'));
+                      decorateDayMeta(meta);
+                      var candidates=Array.from(meta.querySelectorAll('button,input[type=submit],input[type=button],a,.btn,.pfvr-day-display-value'));
                       candidates.forEach(function(node){
                         var label=controlLabel(node);
                         if(!label||statusForValue(label)||bulkPeopleAction(label)||/^\\d+$/.test(label.trim()))return;

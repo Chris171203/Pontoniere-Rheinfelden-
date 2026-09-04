@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.22
+- Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht keine bedienbaren Textfelder mehr. Die Originalfelder bleiben unsichtbar im DOM erhalten, während ein reiner Anzeigetext gerendert wird.
+- Lange Namen werden im verfügbaren Platz automatisch kleiner skaliert; ein Antippen öffnet keine Tastatur mehr.
+- Datumsangaben in der Terminspalte werden fett hervorgehoben.
+
 ## 0.10.21
 - Normale Abflusswerte und die normale Abflusskurve verwenden nun ein neutrales Stahlblau statt Orange. Dadurch sieht ein unkritischer Abfluss nicht mehr wie eine Warnung aus.
 - Gelb/Orange/Rot werden nur noch verwendet, wenn der maßgebliche Basel-Pegel tatsächlich HWM I, HWM IIb oder HWM IIa erreicht; die Abflusskurve bleibt innerhalb jeder Stufe als dunklere Schwesterfarbe vom Pegel unterscheidbar.
