@@ -628,34 +628,53 @@ private void rebuildHomePreservingScroll(){
         stationName.setMaxLines(1);
         c.addView(stationName);
 
-        LinearLayout valueRow=new LinearLayout(this);
-        valueRow.setGravity(Gravity.CENTER_VERTICAL);
-        valueRow.setPadding(0,dp(5),0,dp(2));
-        TextView flowValue=txt(Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–",27,statusColor,true);
-        flowValue.setTextColor(statusColor);
-        valueRow.addView(flowValue);
-        TextView flowUnit=txt("m³/s",12,statusColor,true);
-        flowUnit.setTextColor(statusColor);
-        flowUnit.setPadding(dp(4),0,0,0);
-        valueRow.addView(flowUnit);
-        valueRow.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
-        valueRow.addView(riverStatusCompact(status));
-        c.addView(valueRow);
+        LinearLayout flowRow=new LinearLayout(this);
+        flowRow.setGravity(Gravity.CENTER_VERTICAL);
+        flowRow.setPadding(0,dp(6),0,0);
+        String flowText=Double.isFinite(flow)?formatMetric(station,RiverMetric.FLOW,flow):"–";
+        flowRow.addView(riverSummaryMetric("Abfluss",flowText,"m³/s",statusColor),new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout.LayoutParams statusParams=new LinearLayout.LayoutParams(-2,-2);
+        statusParams.setMargins(dp(6),dp(8),0,0);
+        flowRow.addView(riverStatusCompact(status),statusParams);
+        c.addView(flowRow);
 
-        StringBuilder details=new StringBuilder();
-        if(Double.isFinite(level))details.append("Pegel ").append(formatMetric(station,RiverMetric.LEVEL,level)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
+        String levelText=Double.isFinite(level)?formatMetric(station,RiverMetric.LEVEL,level):"–";
+        LinearLayout levelMetric=riverSummaryMetric("Pegel",levelText,metricUnit(station,RiverMetric.LEVEL),themeText(WATER));
+        levelMetric.setPadding(0,dp(5),0,0);
+        c.addView(levelMetric,new LinearLayout.LayoutParams(-1,-2));
+
         if(Double.isFinite(temperature)){
-            if(details.length()>0)details.append("\n");
-            details.append("Wasser ").append(formatMetric(station,RiverMetric.TEMPERATURE,temperature)).append(" °C");
+            TextView temperatureView=txt("Wasser "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);
+            temperatureView.setPadding(0,dp(5),0,0);
+            c.addView(temperatureView);
         }
-        TextView secondary=txt(details.length()==0?"Messwerte werden geladen …":details.toString(),11,MUTED,false);
-        secondary.setPadding(0,dp(3),0,0);
-        c.addView(secondary);
+
+        View timestampSpacer=new View(this);
+        c.addView(timestampSpacer,new LinearLayout.LayoutParams(1,0,1));
         String[] summary=hydroSummary(station);
         TextView stand=txt(summary[3],10,Color.rgb(126,140,150),false);
+        stand.setMaxLines(1);
         stand.setPadding(0,dp(7),0,0);
         c.addView(stand);
         return c;
+    }
+
+    private LinearLayout riverSummaryMetric(String label,String value,String unit,int color){
+        LinearLayout metric=new LinearLayout(this);
+        metric.setOrientation(LinearLayout.VERTICAL);
+        TextView labelView=txt(label,9,MUTED,true);
+        metric.addView(labelView);
+        LinearLayout valueLine=new LinearLayout(this);
+        valueLine.setGravity(Gravity.CENTER_VERTICAL);
+        TextView valueView=txt(value,20,color,true);
+        valueView.setTextColor(color);
+        valueLine.addView(valueView);
+        TextView unitView=txt(unit,10,color,true);
+        unitView.setTextColor(color);
+        unitView.setPadding(dp(4),dp(2),0,0);
+        valueLine.addView(unitView);
+        metric.addView(valueLine);
+        return metric;
     }
 
     private View riverStatusCompact(RiverStatus status){
