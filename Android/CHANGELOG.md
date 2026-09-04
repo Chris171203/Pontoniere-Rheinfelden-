@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.13
+- Tabellenkopf erhält einen Viewport-Fallback: Falls ein Website-Wrapper das CSS-Sticky-Verhalten verhindert, bleibt eine fixe Spiegel-Kopfzeile mit `Termin` und Teilnehmernamen beim vertikalen Scrollen sichtbar.
+- Der fixe Kopf übernimmt die horizontale Position ausschließlich vom Tabellenkörper; die Kopfzeile selbst bleibt nicht per Finger scrollbar.
+- Lange Koch-/Verantwortlichkeitsnamen in der linken Terminspalte werden auf die verfügbare Breite herunter skaliert, ohne Datum, Zähler oder Terminbeschreibung zu verkleinern.
+- Die Zweitbestätigung von `Aus Initiallink neu aufbauen` wird nach fünf Sekunden sowie beim Schließen, erneuten Öffnen oder einer anderen Aktion in der Personenverwaltung zuverlässig zurückgesetzt.
+
 ## 0.10.12
 - Die Personenverwaltung öffnet auch dann eine Fallback-Ansicht, wenn die externe PFVR-Seite keine verwertbare Teilnehmermatrix oder kein Hinzufügen-Control liefert.
 - `Aus Initiallink neu aufbauen` löscht gezielt die lokal gespeicherten Personen- und Wiederherstellungszustände und lädt anschließend den gespeicherten persönlichen Basis-/Initiallink neu. Der Initiallink selbst bleibt erhalten.
