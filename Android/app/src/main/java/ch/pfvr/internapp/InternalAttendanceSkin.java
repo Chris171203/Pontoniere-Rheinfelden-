@@ -307,11 +307,32 @@ final class InternalAttendanceSkin {
                       input.setAttribute('inputmode','none');
                       input.insertAdjacentElement('afterend',visual);
                     });
-                    var datePattern=/^(?:mo|di|mi|do|fr|sa|so)\.?[,]?\s*\d{1,2}\.\d{1,2}\.?$/i;
+                    var digitsOnly=function(value){
+                      if(!value)return false;
+                      for(var index=0;index<value.length;index++){
+                        var code=value.charCodeAt(index);
+                        if(code<48||code>57)return false;
+                      }
+                      return true;
+                    };
+                    var dayDateLabel=function(value){
+                      var compact=norm(value).replace(/[,]/g,' ').trim();
+                      var pieces=compact.split(' ').filter(function(part){return !!part;});
+                      if(pieces.length<2)return false;
+                      var weekday=pieces[0].replace(/[.]/g,'');
+                      if(['mo','di','mi','do','fr','sa','so'].indexOf(weekday)<0)return false;
+                      var date=pieces[1];
+                      while(date.endsWith('.'))date=date.slice(0,-1);
+                      var dateParts=date.split('.');
+                      return dateParts.length===2
+                        &&dateParts[0].length>=1&&dateParts[0].length<=2
+                        &&dateParts[1].length>=1&&dateParts[1].length<=2
+                        &&digitsOnly(dateParts[0])&&digitsOnly(dateParts[1]);
+                    };
                     Array.from(meta.childNodes).forEach(function(node){
                       if(node.nodeType===3){
                         var raw=(node.textContent||'').replace(/\s+/g,' ').trim();
-                        if(!datePattern.test(raw))return;
+                        if(!dayDateLabel(raw))return;
                         var date=element('span','pfvr-day-date');
                         date.textContent=raw;
                         node.parentNode.replaceChild(date,node);
@@ -319,7 +340,7 @@ final class InternalAttendanceSkin {
                       }
                       if(node.nodeType!==1||node.classList.contains('pfvr-day-date')||node.classList.contains('pfvr-day-display-value'))return;
                       var raw=text(node).replace(/\s+/g,' ').trim();
-                      if(datePattern.test(raw)&&node.children.length===0)node.classList.add('pfvr-day-date');
+                      if(dayDateLabel(raw)&&node.children.length===0)node.classList.add('pfvr-day-date');
                     });
                   };
 
