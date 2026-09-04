@@ -21,7 +21,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/patches/0.11.3.part{1,2,3,4,5} \
+          cat \
+            .github/patches/0.11.3.part1 \
+            .github/patches/0.11.3.part2 \
+            .github/patches/0.11.3.part3 \
+            .github/patches/0.11.3.part4a \
+            .github/patches/0.11.3.part4b \
+            .github/patches/0.11.3.part4c \
+            .github/patches/0.11.3.part4d \
+            .github/patches/0.11.3.part5 \
             | tr -d '[:space:]' \
             | base64 -d \
             | gzip -d > /tmp/change.patch
@@ -32,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.email '41898282+Chris171203@users.noreply.github.com'
           git add Android PROJECT.md README.md STATUS.md
           git commit -m 'Add Swiss German public landing and social links'
           git push origin HEAD:dev-0.11.3
