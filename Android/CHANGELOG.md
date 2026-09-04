@@ -1,5 +1,14 @@
 # Android Changelog
 
+## 0.11.4
+- Google-Play-Readiness als eigener Test-Meilenstein: `lintRelease`, Debug-APK und Release-AAB werden gemeinsam in CI gebaut; die tatsächlich gemergten APK-Berechtigungen werden zusätzlich gegen unerwartete sensible/hochwirksame Berechtigungen geprüft und als Artefakt dokumentiert.
+- Store-Release-Pipeline gehärtet: signierte AABs dürfen nur manuell von `main` mit separatem Upload-Key aus der geschützten GitHub-Environment `play-store` erzeugt werden. Test- und Produktionssignierung bleiben strikt getrennt.
+- Persönliche PFVR-Zugänge werden zusätzlich geschützt: Cloud-Backup und Device-to-Device-Transfer der App-Daten sind explizit ausgeschlossen; CI blockiert bekannte persönliche Zugangsmuster und rohe Produktions-/Upload-Key-Dateien im Repository.
+- Android-8/API-26-Kompatibilitätsfehler aus dem Lint-Audit behoben: `windowLightNavigationBar` liegt nur noch in `values-v27`. Redundantes `screenOrientation="unspecified"` wurde entfernt.
+- Rendering der Temperaturkurve reduziert Draw-Time-Allokationen durch wiederverwendete `Paint`-, `Path`- und `RectF`-Objekte.
+- Play-Store-Unterlagen aktualisiert und vervollständigt: Store-Listing, Privacy-Policy-Entwurf/Webvorlage, Data-Safety-Arbeitsblatt, Review-Zugang, Console-Checkliste, Store-Assets, Upload-Key-Anleitung und Release Notes.
+- Versionsstand `0.11.4`, `versionCode 51`.
+
 ## 0.11.3
 - `Schwiizerdütsch` vollständig über die App-eigene Oberfläche nachgezogen: Navigation, Landingpage, Home, Rhein, Kalender, News, Einstellungen, Kachelverwaltung, Verein, Kasse, Dialoge/Statusmeldungen sowie die von der App erzeugte interne Personenverwaltung und ihre An-/Abmeldestatus. Original-PFVR-Seite, Personennamen, Kalender- und News-Inhalte werden nicht übersetzt.
 - Externe beziehungsweise quellenseitige Inhalte werden strukturell über eine rohe Textausgabe an der Dialekt-Mapping-Schicht vorbeigeführt. App-eigene gemischte Anzeigen wie Trainingswetter und Datenstand werden vorab gezielt lokalisiert, ohne eingebettete Termin- oder Quelltexte zu verändern.
