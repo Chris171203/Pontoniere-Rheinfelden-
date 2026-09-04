@@ -91,6 +91,27 @@ final class InternalAttendanceSkin {
                   var text=function(el){return (el&&((el.innerText||el.textContent)||''))||'';};
                   var element=function(tag,className){var node=document.createElement(tag);if(className)node.className=className;return node;};
                   var isInteractive=function(el){return !!(el&&el.closest&&el.closest('button,input,select,textarea,a'))};
+                  var bulkPeopleAction=function(label){
+                    var value=norm(label);
+                    return value.indexOf('alle personen anzeigen')>=0||value.indexOf('alle personen hinzufügen')>=0||value.indexOf('alle personen hinzuf')>=0||value.indexOf('alle personen einblenden')>=0||value.indexOf('alle anzeigen')>=0||value.indexOf('alle hinzufügen')>=0||value.indexOf('alle hinzuf')>=0||value.indexOf('alle einblenden')>=0;
+                  };
+                  var controlLabel=function(control){return ((control&&((control.innerText||control.value)||control.textContent))||'').trim();};
+                  var suppressBulkPeopleActions=function(root){
+                    (root||document).querySelectorAll('button,input[type=submit],input[type=button],a,.btn').forEach(function(control){
+                      if(!bulkPeopleAction(controlLabel(control)))return;
+                      control.style.setProperty('display','none','important');control.setAttribute('aria-hidden','true');control.setAttribute('tabindex','-1');
+                    });
+                  };
+                  var bindBulkPeopleGuard=function(){
+                    if(window.__pfvrBulkPeopleGuardBound)return;window.__pfvrBulkPeopleGuardBound=true;
+                    document.addEventListener('click',function(event){
+                      var control=event.target&&event.target.closest&&event.target.closest('button,input[type=submit],input[type=button],a,.btn');
+                      if(!control||!bulkPeopleAction(controlLabel(control)))return;
+                      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();suppressBulkPeopleActions(document);
+                    },true);
+                    suppressBulkPeopleActions(document);
+                    if(window.MutationObserver){var observer=new MutationObserver(function(){suppressBulkPeopleActions(document);});observer.observe(document.documentElement,{subtree:true,childList:true});}
+                  };
 
                   var css=`
                   html{color-scheme:__SCHEME__!important;}
@@ -117,7 +138,7 @@ final class InternalAttendanceSkin {
                   .pfvr-managed-person-actions{display:flex!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;}
                   .pfvr-managed-person-actions button,.pfvr-managed-person-actions input[type=submit],.pfvr-managed-person-actions input[type=button],.pfvr-managed-person-actions a{min-height:34px!important;min-width:34px!important;padding:5px 7px!important;font-size:12px!important;border-radius:9px!important;}
                   .pfvr-managed-action-label{font-size:10px!important;color:${COLORS.muted}!important;}
-                  .pfvr-matrix-head-scroll{position:sticky!important;top:0!important;z-index:8!important;display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;padding:0 0 6px!important;background:${COLORS.background}!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;scrollbar-width:none!important;}
+                  .pfvr-matrix-head-scroll{position:sticky!important;top:0!important;z-index:8!important;display:block!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;overflow-y:hidden!important;pointer-events:none!important;box-sizing:border-box!important;padding:0 0 6px!important;background:${COLORS.background}!important;scrollbar-width:none!important;}
                   .pfvr-matrix-head-scroll::-webkit-scrollbar{display:none!important;}
                   .pfvr-matrix-scroll{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:visible!important;box-sizing:border-box!important;padding:0 0 4px!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
                   .pfvr-attendance-head,.pfvr-attendance-matrix{--pfvr-day-col:96px;--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px);display:grid!important;gap:6px!important;align-items:stretch!important;width:max-content!important;min-width:100%!important;box-sizing:border-box!important;}
@@ -480,42 +501,43 @@ final class InternalAttendanceSkin {
 
                   var closePersonManager=function(){var panel=document.querySelector('.pfvr-person-tools');if(panel)panel.classList.remove('open');var backdrop=document.querySelector('.pfvr-person-tools-backdrop');if(backdrop)backdrop.remove();};
                   var findPersonTools=function(toolInfo,state,currentNames){
-                    if(!toolInfo||!toolInfo.select)return null;
-                    var anchor=toolInfo.anchor,scope=toolInfo.scope,select=toolInfo.select;
+                    var anchor=toolInfo&&toolInfo.anchor,scope=toolInfo&&toolInfo.scope,select=toolInfo&&toolInfo.select;
                     var panel=element('div','pfvr-person-tools');
                     var head=element('div','pfvr-person-tools-head');
                     var title=element('div','pfvr-person-tools-title');title.textContent='Personen verwalten';
                     var toggle=element('button','pfvr-person-tools-toggle');toggle.type='button';toggle.textContent='Schliessen';toggle.addEventListener('click',closePersonManager);
                     head.appendChild(title);head.appendChild(toggle);panel.appendChild(head);
                     var body=element('div','pfvr-person-tools-body');
-                    var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
-                    var proxy=select.cloneNode(true);proxy.removeAttribute('id');proxy.removeAttribute('name');proxy.removeAttribute('form');proxy.removeAttribute('onchange');proxy.onchange=null;proxy.setAttribute('aria-label','Person hinzufügen');proxy.dataset.pfvrProxy='1';proxy.selectedIndex=select.selectedIndex;
-                    body.appendChild(proxy);select.style.setProperty('display','none','important');
-                    proxy.addEventListener('change',function(){
-                      var chosen=selectedOptionName(proxy);select.selectedIndex=proxy.selectedIndex;try{select.value=proxy.value;}catch(ignore){}
-                      rememberPendingPerson(state,sourceTableRef,select,chosen);
-                      select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));scheduleParticipantSync(state);
-                    },false);
-                    var bulkPeopleAction=function(label){var value=norm(label);return value.indexOf('alle anzeigen')>=0||value.indexOf('alle hinzufügen')>=0||value.indexOf('alle hinzuf')>=0;};
-                    var actionControls=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return control!==select&&norm(control.innerText||control.value).length>0;});
-                    actionControls.forEach(function(control){
-                      var label=(control.innerText||control.value||'').trim();control.style.setProperty('display','none','important');
-                      if(bulkPeopleAction(label))return;
-                      var action=element('button');action.type='button';action.textContent=label;action.setAttribute('aria-label',label);
-                      action.addEventListener('click',function(){control.click();scheduleParticipantSync(state);});body.appendChild(action);
-                    });
+                    if(select){
+                      var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
+                      var proxy=select.cloneNode(true);proxy.removeAttribute('id');proxy.removeAttribute('name');proxy.removeAttribute('form');proxy.removeAttribute('onchange');proxy.onchange=null;proxy.setAttribute('aria-label','Person hinzufügen');proxy.dataset.pfvrProxy='1';proxy.selectedIndex=select.selectedIndex;
+                      body.appendChild(proxy);select.style.setProperty('display','none','important');
+                      proxy.addEventListener('change',function(){
+                        var chosen=selectedOptionName(proxy);select.selectedIndex=proxy.selectedIndex;try{select.value=proxy.value;}catch(ignore){}
+                        rememberPendingPerson(state,sourceTableRef,select,chosen);
+                        select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));scheduleParticipantSync(state);
+                      },false);
+                      var actionControls=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return control!==select&&norm(control.innerText||control.value).length>0;});
+                      actionControls.forEach(function(control){
+                        var label=(control.innerText||control.value||'').trim();control.style.setProperty('display','none','important');
+                        if(bulkPeopleAction(label))return;
+                        var action=element('button');action.type='button';action.textContent=label;action.setAttribute('aria-label',label);
+                        action.addEventListener('click',function(){control.click();scheduleParticipantSync(state);});body.appendChild(action);
+                      });
+                    }else{
+                      var unavailable=element('div');unavailable.textContent='Hinzufügen ist auf diesem Seitenstand nicht verfügbar. Vorhandene Zusatzpersonen können weiterhin entfernt werden.';unavailable.style.color=COLORS.muted;unavailable.style.fontSize='11px';body.appendChild(unavailable);
+                    }
                     var note=element('div');note.textContent='Entfernen aktualisiert die Personenliste automatisch.';note.style.color=COLORS.muted;note.style.fontSize='11px';body.appendChild(note);
                     var list=element('div','pfvr-managed-people pfvr-managed-people-visible');
                     var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='Aktuelle Personen';list.appendChild(listTitle);
                     (currentNames||state.desired).forEach(function(personName){appendManagedPerson(list,state,personName);});body.appendChild(list);panel.appendChild(body);
-                    if(anchor&&anchor!==scope)anchor.style.display='none';return panel;
+                    if(anchor&&scope&&anchor!==scope)anchor.style.display='none';return panel;
                   };
 
                   var bindHorizontalHeaderSync=function(headScroll,matrixScroll){
-                    if(!headScroll||!matrixScroll)return;var syncing=false;
-                    var sync=function(source,target){if(syncing)return;syncing=true;target.scrollLeft=source.scrollLeft;requestAnimationFrame(function(){syncing=false;});};
-                    matrixScroll.addEventListener('scroll',function(){sync(matrixScroll,headScroll);},{passive:true});
-                    headScroll.addEventListener('scroll',function(){sync(headScroll,matrixScroll);},{passive:true});
+                    if(!headScroll||!matrixScroll)return;
+                    headScroll.scrollLeft=matrixScroll.scrollLeft;
+                    matrixScroll.addEventListener('scroll',function(){headScroll.scrollLeft=matrixScroll.scrollLeft;},{passive:true});
                   };
                   var saveViewState=function(){
                     try{
@@ -560,6 +582,7 @@ final class InternalAttendanceSkin {
                   };
 
                   var buildMobile=function(){
+                    suppressBulkPeopleActions(document);
                     if(document.querySelector('.pfvr-attendance-mobile'))return true;
                     var table=findTable();if(!table)return false;sourceTableRef=table;
                     var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells||rows[0].cells.length<2)return false;
@@ -602,6 +625,7 @@ final class InternalAttendanceSkin {
                     closePersonManager();var backdrop=element('div','pfvr-person-tools-backdrop');backdrop.addEventListener('click',closePersonManager);document.body.appendChild(backdrop);panel.classList.add('open');panel.scrollTop=0;return true;
                   };
 
+                  bindBulkPeopleGuard();
                   document.querySelectorAll('p,div,strong,label').forEach(function(el){var value=norm(text(el));if(value.indexOf('tipp: diese seite als favorit')===0&&value.length<350)el.style.display='none';});
                   buildMobile();setTimeout(buildMobile,250);setTimeout(buildMobile,900);
                 })();
