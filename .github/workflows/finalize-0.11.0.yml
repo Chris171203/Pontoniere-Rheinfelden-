@@ -1,0 +1,61 @@
+name: Finalize Android 0.11.0 metadata
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/finalize-0.11.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update release metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_required(path, old, new):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              if old not in s:
+                  raise SystemExit(f'{path}: expected text not found: {old!r}')
+              p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          replace_required('STATUS.md', 'Stand: Testversion `0.10.22`', 'Stand: Testversion `0.11.0`')
+          replace_required('Android/README.md', 'Aktuelle Android-Testversion: `0.10.22` (`versionCode 46`).', 'Aktuelle Android-Testversion: `0.11.0` (`versionCode 47`).')
+          replace_required('Android/README.md', '## Gerätetest 0.10.22', '## Gerätetest 0.11.0')
+          replace_required('README.md', 'Android-Testversion `0.10.22` auf `main`.', 'Android-Testversion `0.11.0` auf `main`.')
+
+          p = Path('Android/CHANGELOG.md')
+          s = p.read_text(encoding='utf-8')
+          marker = '# Android Changelog\n'
+          entry = ('# Android Changelog\n\n'
+                   '## 0.11.0\n'
+                   '- Stabiler Meilenstein auf Basis des bewährten 0.10.22-Stands; keine zusätzliche Funktionsänderung gegenüber 0.10.22.\n'
+                   '- Versionssprung auf `versionCode 47`; der Stand bleibt weiterhin eine Testversion unter `1.0.0`.\n')
+          if marker not in s:
+              raise SystemExit('Android/CHANGELOG.md: title not found')
+          p.write_text(s.replace(marker, entry, 1), encoding='utf-8')
+
+          plan = Path('.github/release-0.11.0-plan.md')
+          if plan.exists():
+              plan.unlink()
+          PY
+      - name: Commit metadata
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add STATUS.md Android/README.md Android/CHANGELOG.md README.md
+          git add -u .github/release-0.11.0-plan.md || true
+          git commit -m 'Mark Android 0.11.0 milestone'
+          git push origin HEAD:main
