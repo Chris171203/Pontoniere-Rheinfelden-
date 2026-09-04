@@ -31,7 +31,7 @@ Stand: Testversion `0.10.15` · aktualisiert 2026-09-04.
 ## Automatisch geprüft
 
 - Unit-Tests prüfen Namensformatierung inklusive Bearbeiten-Symbol, mobile Matrix, Erkennung von Namen aus Button-/Input-Controls, begrenzte indexbasierte Namens-Fallbacks, Übernahme stark erweiterter Original-Personenlisten, blockierte Bulk-Personenaktionen im App-Modus, Fallback-Personenverwaltung, Initiallink-Recovery, Viewport-Kopfzeile, horizontale Synchronisierung, automatische Verkleinerung langer Kochtexte und das Zurücksetzen der Recovery-Bestätigung.
-- Zusätzliche Tests prüfen die Basel-Rheinhalle-Umrechnung von absolutem BAFU-Wasserstand auf den operativen Pegel in Zentimetern einschließlich Einheit und Rundung.
+- Zusätzliche Tests prüfen absolute Wasserstände, relative cm-Pegel für Basel und Rheinfelden sowie beide Darstellungsmodi der Graphen.
 - Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 

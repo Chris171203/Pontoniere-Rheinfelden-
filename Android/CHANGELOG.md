@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.18
+- In `Rhein-Grafiken` kann die Pegelachse global zwischen `m ü.M.` und `cm` umgeschaltet werden. Die Auswahl wird lokal gespeichert und gilt für beide Messstationen.
+- Aktueller Pegelwert im Diagrammkopf, rechte Pegelachse, Kurve, Tooltip und Hinweistext verwenden gemeinsam die ausgewählte Einheit.
+- `Rhein aktuell` bleibt davon unabhängig: Beide Stationen zeigen dort primär den absoluten Wasserstand in `m ü.M.` und darunter klein den relativen Pegel in `cm`.
+
 ## 0.10.17
 - Beide Rhein-Messpunkte zeigen den Pegel wieder primär als absoluten BAFU-Wasserstand in `m ü.M.` mit zwei Nachkommastellen.
 - Direkt darunter wird in der kompakten Rhein-Übersicht zusätzlich der relative Pegelstand in `cm` klein dargestellt. Basel verwendet den Pegelnullpunkt 240.00 m ü.M.; Rheinfelden den historischen BAFU-Pegelnullpunkt 260.00 m ü.M.
