@@ -214,14 +214,14 @@ final class InternalAttendanceSkin {
                   var findTable=function(){var best=null,bestScore=-1;document.querySelectorAll('table').forEach(function(table){var score=scoreTable(table);if(score>bestScore){best=table;bestScore=score;}});return bestScore>=5?best:null;};
                   var cleanPersonName=function(value){
                     return (value||'')
-                      .replace(/[\u{1F300}-\u{1FAFF}]/gu,' ')
+                      .replace(/[\\u{1F300}-\\u{1FAFF}]/gu,' ')
                       .replace(/([a-zäöüß])([A-ZÄÖÜ])/g,'$1 $2')
                       .replace(/([A-ZÄÖÜ]{2,})([A-ZÄÖÜ][a-zäöüß])/g,'$1 $2')
-                      .replace(/\s*,\s*/g,', ')
-                      .replace(/\s+/g,' ')
+                      .replace(/\\s*,\\s*/g,', ')
+                      .replace(/\\s+/g,' ')
                       .trim();
                   };
-                  var isPlaceholderPersonName=function(value){return /^(?:person|teilnehmer)\s+\d+$/i.test(cleanPersonName(value));};
+                  var isPlaceholderPersonName=function(value){return /^(?:person|teilnehmer)\\s+\\d+$/i.test(cleanPersonName(value));};
                   var formatPersonName=function(value){
                     var clean=cleanPersonName(value);if(!clean||isPlaceholderPersonName(clean))return clean;
                     var comma=clean.indexOf(',');
@@ -263,7 +263,7 @@ final class InternalAttendanceSkin {
                   };
                   var personTokenKey=function(value){
                     var normalized=personKey(value);try{normalized=normalized.normalize('NFD');}catch(ignore){}
-                    return normalized.replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(function(token){return token.length>1;}).sort().join('|');
+                    return normalized.replace(/[^a-z0-9\\s]/g,' ').replace(/\\s+/g,' ').trim().split(' ').filter(function(token){return token.length>1;}).sort().join('|');
                   };
                   var samePersonName=function(left,right){
                     var leftKey=personKey(left),rightKey=personKey(right);if(!leftKey||!rightKey)return false;if(leftKey===rightKey)return true;
