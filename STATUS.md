@@ -1,21 +1,22 @@
 # Status
 
-Stand: Testversion `0.10.13` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.14` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
 - Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.
-- Die Kopfzeile mit `Termin` und den Teilnehmernamen hat neben dem normalen CSS-Sticky-Verhalten jetzt einen Viewport-Fallback: Sobald ein Website-Wrapper `position: sticky` wirkungslos macht, wird eine nicht bedienbare, fixe Spiegel-Kopfzeile direkt am oberen Rand der WebView eingeblendet. Sie übernimmt die horizontale Position ausschließlich vom Tabellenkörper und bleibt dadurch auch tief in langen Terminlisten sichtbar.
+- Die Kopfzeile mit `Termin` und den Teilnehmernamen hat neben dem normalen CSS-Sticky-Verhalten einen Viewport-Fallback: Sobald ein Website-Wrapper `position: sticky` wirkungslos macht, wird eine nicht bedienbare, fixe Spiegel-Kopfzeile direkt am oberen Rand der WebView eingeblendet. Sie übernimmt die horizontale Position ausschließlich vom Tabellenkörper und bleibt dadurch auch tief in langen Terminlisten sichtbar.
 - Die Kopfzeile besitzt weiterhin keine eigene Touch-/Scrollfläche. Horizontal gewischt wird nur bei Tagen und An-/Abmelde-Controls; Originalkopf und fixer Fallback werden programmgesteuert synchronisiert.
 - Teilnehmernamen werden nur noch in der Kopfzeile angezeigt; die frühere Wiederholung über jedem An-/Abmelde-Control bleibt entfernt.
 - Lange Koch-/Verantwortlichkeitsnamen in der linken Terminspalte werden nach dem Rendern anhand der tatsächlich verfügbaren Breite verkleinert. Datum, Zähler, Statusbadges und normaler Termintext werden davon nicht verändert.
 - Die An-/Abmelde-Controls in den Personenspalten besitzen größere Touch-Flächen und größere Schrift. Auf sehr schmalen Geräten wird die Größe moderat reduziert.
-- Teilnehmernamen werden aus tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Zusammengezogene Namen wie `NeugebauerChristoph` werden getrennt und als `Neugebauer, Christoph` angezeigt.
-- Die Originaltabelle ist die Quelle der Wahrheit. Jede dort vorhandene Person wird in der App-Ansicht angezeigt, sofern sie nicht ausdrücklich lokal ausgeblendet wurde.
+- Teilnehmernamen werden aus tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen, Bearbeiten-/Namens-Controls und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Insbesondere Namen, die die Originalseite ausschließlich als Button-/Input-Beschriftung wie `✎ Kougionis Eleni` ausliefert, werden jetzt als Name erkannt und als `Kougionis, Eleni` dargestellt.
+- Beim Wechsel von einer stark erweiterten Originaltabelle – insbesondere nach `Alle anzeigen` – übernimmt die App die aktuell vorhandene Personenliste als neue Quelle der Wahrheit. Alte lokale Ausblendungen werden in diesem Fall verworfen, damit wirklich alle gerade in der Originalansicht sichtbaren Personen übernommen werden.
+- Indexbasierte Namens-Fallbacks aus dem lokalen Zustand werden nur noch verwendet, wenn die Anzahl der aktuellen Quellzeilen exakt zum gespeicherten Zeilenstand passt. Dadurch können alte lokale Namen nach `Alle anzeigen` nicht mehr auf falsche Personenzeilen rutschen.
 - `Personen` öffnet die Verwaltung auch dann, wenn die externe Seite keine verwertbare Teilnehmermatrix oder kein Hinzufügen-Control mehr liefert. In diesem Fall erzeugt die App eine lokale Fallback-Verwaltung statt mit einem Toast abzubrechen.
 - Die Personenverwaltung enthält dauerhaft `Aus Initiallink neu aufbauen`. Die Aktion löscht ausschließlich lokale PFVR-Personen-, Restore- und Scrollzustände und lädt anschließend den in den App-Einstellungen gespeicherten persönlichen Initiallink neu. Der Initiallink selbst bleibt gespeichert.
-- Die Zweitbestätigung für `Aus Initiallink neu aufbauen` wird jetzt zuverlässig zurückgesetzt: nach fünf Sekunden, beim Schließen der Personenverwaltung, beim erneuten Öffnen sowie sobald der Benutzer stattdessen eine andere Aktion in der Verwaltung ausführt.
-- Website-Aktionen wie `Alle Personen anzeigen`, `Alle anzeigen`, `Alle hinzufügen` und entsprechende Einblend-/Hinzufügevarianten werden im App-Modus global ausgeblendet und zusätzlich per Capture-Handler blockiert. Ein MutationObserver unterdrückt auch dynamisch nachgeladene Varianten. Im Originalmodus bleibt die Website unverändert.
+- Die Zweitbestätigung für `Aus Initiallink neu aufbauen` wird zuverlässig zurückgesetzt: nach fünf Sekunden, beim Schließen der Personenverwaltung, beim erneuten Öffnen sowie sobald der Benutzer stattdessen eine andere Aktion in der Verwaltung ausführt.
+- Website-Aktionen wie `Alle Personen anzeigen`, `Alle anzeigen`, `Alle hinzufügen` und entsprechende Einblend-/Hinzufügevarianten werden im App-Modus global ausgeblendet und zusätzlich per Capture-Handler blockiert. Im Originalmodus bleibt die Website unverändert; dort kann `Alle anzeigen` bewusst genutzt werden, um anschließend die vollständige Original-Personenliste in die App-Ansicht zu übernehmen.
 - Das sichtbare Personen-Select ist ein Proxy; das originale Website-Control bleibt in seinem Formular- und DOM-Kontext. Änderungen werden am Original ausgelöst und neue Zeilen über verzögerte Synchronisierung sowie MutationObserver übernommen.
 - Entfernen baut die Website-Personenliste automatisch vom persönlichen Basislink neu auf und stellt nur die verbleibenden Zusatzpersonen wieder her.
 - Pro Tag und Person werden ausschließlich die echten Website-Controls verwendet. Die App erfindet keine Essensoptionen. Statusfarben folgen dem aktuell gewählten Original-Control; es gibt keinen zusätzlich von der App erzwungenen Voll-Reload.
@@ -27,12 +28,14 @@ Stand: Testversion `0.10.13` · aktualisiert 2026-09-04.
 
 ## Automatisch geprüft
 
-- Unit-Tests prüfen Namensformatierung, mobile Matrix, blockierte Bulk-Personenaktionen, Fallback-Personenverwaltung, Initiallink-Recovery, die neue Viewport-Kopfzeile, horizontale Synchronisierung, automatische Verkleinerung langer Kochtexte und das Zurücksetzen der Recovery-Bestätigung.
+- Unit-Tests prüfen Namensformatierung inklusive Bearbeiten-Symbol, mobile Matrix, Erkennung von Namen aus Button-/Input-Controls, begrenzte indexbasierte Namens-Fallbacks, Übernahme stark erweiterter Original-Personenlisten, blockierte Bulk-Personenaktionen im App-Modus, Fallback-Personenverwaltung, Initiallink-Recovery, Viewport-Kopfzeile, horizontale Synchronisierung, automatische Verkleinerung langer Kochtexte und das Zurücksetzen der Recovery-Bestätigung.
 - Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
 - APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
+- In der Originalansicht `Alle anzeigen` auslösen, anschließend zurück auf `App-Ansicht` wechseln: alle sichtbaren Personen müssen mit ihren echten Namen und exakt den Statuswerten ihrer jeweiligen Originalzeile übernommen werden; `Teilnehmer 3`, `Teilnehmer 44` usw. dürfen nicht mehr als Ersatznamen erscheinen, sofern die Originalzeile einen Namen enthält.
+- Die Personenverwaltung muss nach dieser Übernahme dieselben echten Namen in derselben Reihenfolge zeigen; Entfernen muss weiterhin die richtige Person betreffen.
 - Beim vertikalen Scrollen durch lange Terminlisten müssen `Termin` und die aktuell sichtbaren Teilnehmernamen dauerhaft direkt unter der nativen Werkzeugleiste sichtbar bleiben.
 - Beim horizontalen Wischen im Tabellenkörper müssen Originalkopf beziehungsweise fixer Kopf exakt dieselbe Personenspalte anzeigen. Die Kopfzeile selbst darf sich nicht per Finger verschieben lassen.
 - Lange Koch-/Verantwortlichkeitsnamen müssen sich innerhalb der linken Karte verkleinern, ohne Datum, Zähler oder Terminbeschreibung zu beeinflussen.
