@@ -1,5 +1,10 @@
 # Android Changelog
 
+## 0.10.15
+- Der Pegel Basel-Rheinhalle wird in der App konsequent als operativer Schifffahrtspegel in Zentimetern dargestellt. Der BAFU-Rohwert `W` in m ü.M. wird mit dem offiziellen Bezug `247.20 m ü.M. = 720 cm` auf den Pegel umgerechnet (`(W - 240.00 m) × 100`).
+- Die stationsabhängige Pegel-Darstellung ist zentralisiert: Basel nutzt `cm` ohne Nachkommastellen, Rheinfelden bleibt beim absoluten Wasserstand in `m ü.M.` mit zwei Nachkommastellen. Kurzkarte, Detailwerte, Verlauf und Tooltips verwenden dieselbe Logik.
+- Beim Verschieben, Ein-/Ausblenden oder Zurücksetzen von Kacheln wird die aktuelle vertikale Position der Kachelverwaltung nach dem Neuaufbau wiederhergestellt. Die Ansicht springt dadurch nicht mehr nach jeder Änderung an den Anfang.
+
 ## 0.10.14
 - Die App liest Teilnehmernamen in der Originaltabelle jetzt auch direkt aus Bearbeiten-/Namens-Controls wie `✎ Kougionis Eleni` oder entsprechenden `input`-/Button-Beschriftungen. Dadurch entstehen nach `Alle anzeigen` nicht mehr massenhaft generische `Teilnehmer N`-Spalten, wenn die Originalzeile einen echten Namen enthält.
 - Alte lokal gespeicherte Zeilennamen werden nur noch indexbasiert verwendet, wenn die aktuelle Quelltabelle exakt gleich viele Personenzeilen besitzt. Eine stark veränderte Originaltabelle kann damit keine alten Namen auf falsche Statuszeilen verschieben.
