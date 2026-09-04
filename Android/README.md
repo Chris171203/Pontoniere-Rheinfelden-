@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.11.0` (`versionCode 47`).
+Aktuelle Android-Testversion: `0.11.1` (`versionCode 48`).
 
 ## Entwicklung
 
@@ -13,6 +13,12 @@ Aktuelle Android-Testversion: `0.11.0` (`versionCode 47`).
 - Banking-Kompatibilität wird zentral in `BankingAppRegistry.java` gepflegt.
 - Kachelreihenfolge und Sichtbarkeit werden zentral in `TileLayoutStore.java` gepflegt. Stabile Tile-IDs erhalten bestehende Benutzerlayouts über App-Updates hinweg.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
+
+## Sprache und Erstfreigabe
+
+- Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Externe/source-seitige Texte werden absichtlich nicht verändert.
+- Beim ersten Start dieses App-Datenstands wird ein Freigabecode verlangt. Nach erfolgreicher Prüfung wird nur ein lokales Freigabe-Flag gespeichert; der Klartextcode ist nicht im Repository enthalten.
+- Die Erstfreigabe ist eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung. Persönliche `intern.pfvr.ch`-Links bleiben weiterhin ausschließlich auf dem Endgerät.
 
 ## Rheinwerte
 
@@ -37,7 +43,7 @@ Aktuelle Android-Testversion: `0.11.0` (`versionCode 47`).
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
-## Gerätetest 0.11.0
+## Gerätetest 0.11.1
 
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.

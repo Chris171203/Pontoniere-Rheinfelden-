@@ -1,9 +1,11 @@
 # Status
 
-Stand: Testversion `0.11.0` · aktualisiert 2026-09-04.
+Stand: Testversion `0.11.1` · aktualisiert 2026-09-04.
 
 ## Aktueller Teststand
 
+- Die native App-Oberfläche kann unter Einstellungen → Allgemein zwischen `Deutsch` und `Schwiizerdütsch` umgeschaltet werden. Die Umschaltung betrifft ausschließlich App-eigene Texte; externe Inhalte, Vereinsnews und die originale PFVR-Webseite bleiben unverändert.
+- Vor dem ersten Zugriff auf die App ist eine lokale Erstfreigabe per gemeinsamem Freigabecode erforderlich. Im Repository liegt nur der SHA-256-Prüfwert, nicht der Klartextcode. Vor erfolgreicher Freigabe werden keine App-Screens, Live-Daten oder internen WebViews aufgebaut.
 - Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.
 - Die Kopfzeile mit `Termin` und den Teilnehmernamen hat neben dem normalen CSS-Sticky-Verhalten einen Viewport-Fallback: Sobald ein Website-Wrapper `position: sticky` wirkungslos macht, wird eine nicht bedienbare, fixe Spiegel-Kopfzeile direkt am oberen Rand der WebView eingeblendet. Sie übernimmt die horizontale Position ausschließlich vom Tabellenkörper und bleibt dadurch auch tief in langen Terminlisten sichtbar.
 - Die Kopfzeile besitzt weiterhin keine eigene Touch-/Scrollfläche. Horizontal gewischt wird nur bei Tagen und An-/Abmelde-Controls; Originalkopf und fixer Fallback werden programmgesteuert synchronisiert.

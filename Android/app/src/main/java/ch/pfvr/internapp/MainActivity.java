@@ -108,6 +108,8 @@ public class MainActivity extends Activity {
     private static final String PREF_HYDRO_HISTORY_UPDATED = "hydro_history_updated";
     private static final String PREF_THEME = "theme_mode";
     private static final String PREF_INTERNAL_APP_VIEW = "internal_app_view";
+    private static final String PREF_LANGUAGE = "ui_language";
+    private static final String PREF_ACCESS_UNLOCKED = "access_unlocked_v1";
     private static final String PREF_BACKGROUND_REFRESH = "background_refresh";
     private static final String PREF_RIVER_LOW = "river_low";
     private static final String PREF_RIVER_WARN = "river_warn";
@@ -234,13 +236,21 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        darkMode = resolveDarkMode();
+        applyWindowTheme();
+        if(!prefs.getBoolean(PREF_ACCESS_UNLOCKED,false)){
+            showFirstUseGate();
+            return;
+        }
+        startUnlockedApp();
+    }
+
+    private void startUnlockedApp(){
         tileLayoutStore = new TileLayoutStore(prefs);
         dataRefreshHandler = new Handler(Looper.getMainLooper());
         scheduleBackgroundRefresh();
-        darkMode = resolveDarkMode();
         loadCachedEvents();
         loadCachedNews();
-        applyWindowTheme();
         setContentView(buildShell());
         navigate(Screen.HOME);
         refreshEvents(false, () -> {
@@ -253,6 +263,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume(){
         super.onResume();
+        if(prefs==null||!prefs.getBoolean(PREF_ACCESS_UNLOCKED,false))return;
         if(prefs!=null){
             loadCachedEvents();
             loadCachedNews();
@@ -268,6 +279,85 @@ public class MainActivity extends Activity {
     @Override protected void onPause(){
         if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);
         super.onPause();
+    }
+
+    private String uiMode(){
+        return UiLanguage.normalizeMode(prefs==null?UiLanguage.DE:prefs.getString(PREF_LANGUAGE,UiLanguage.DE));
+    }
+
+    private String ui(String value){
+        return UiLanguage.translate(value,uiMode());
+    }
+
+    private void setUiLanguage(String mode){
+        String normalized=UiLanguage.normalizeMode(mode);
+        if(normalized.equals(uiMode()))return;
+        prefs.edit().putString(PREF_LANGUAGE,normalized).apply();
+        recreate();
+    }
+
+    private void showFirstUseGate(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(24),dp(42),dp(24),dp(32));
+        root.setBackgroundColor(themeBg(SURFACE));
+
+        ImageView logo=new ImageView(this);
+        logo.setImageResource(R.drawable.pfvr_logo);
+        logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        logo.setBackground(round(Color.WHITE,14));
+        logo.setClipToOutline(true);
+        LinearLayout.LayoutParams logoParams=new LinearLayout.LayoutParams(dp(84),dp(84));
+        logoParams.setMargins(0,0,0,dp(18));
+        root.addView(logo,logoParams);
+
+        TextView title=txt("PFVR Rheinfelden",24,TEXT,true);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title);
+        TextView subtitle=txt("Erstfreigabe",16,WATER,true);
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setPadding(0,dp(5),0,dp(20));
+        root.addView(subtitle);
+
+        LinearLayout gate=card();
+        gate.setOrientation(LinearLayout.VERTICAL);
+        gate.setPadding(dp(18),dp(18),dp(18),dp(18));
+        root.addView(gate,new LinearLayout.LayoutParams(-1,-2));
+        gate.addView(txt("Diese App kann interne Vereinsinformationen anzeigen. Gib den Freigabecode ein.",14,TEXT,false));
+        TextView note=txt("Der Code wird nur zur lokalen Erstfreigabe geprüft. Persönliche PFVR-Links bleiben weiterhin ausschließlich auf diesem Gerät.",12,MUTED,false);
+        note.setPadding(0,dp(8),0,dp(14));
+        gate.addView(note);
+
+        EditText codeInput=new EditText(this);
+        codeInput.setSingleLine(true);
+        codeInput.setHint("XXXX-XXXX-XXXX-XXXX");
+        codeInput.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        codeInput.setTextColor(themeText(TEXT));
+        codeInput.setHintTextColor(themeText(MUTED));
+        codeInput.setBackground(round(Color.rgb(232,240,244),12));
+        codeInput.setPadding(dp(14),0,dp(14),0);
+        gate.addView(codeInput,new LinearLayout.LayoutParams(-1,dp(50)));
+
+        TextView error=txt("Code stimmt nicht.",12,STATUS_ALARM,true);
+        error.setVisibility(View.GONE);
+        error.setPadding(0,dp(7),0,0);
+        gate.addView(error);
+
+        Button unlock=btn("Freischalten",NAVY,Color.WHITE);
+        LinearLayout.LayoutParams unlockParams=new LinearLayout.LayoutParams(-1,dp(48));
+        unlockParams.setMargins(0,dp(12),0,0);
+        gate.addView(unlock,unlockParams);
+        unlock.setOnClickListener(v->{
+            if(!AccessGate.matches(codeInput.getText().toString())){
+                error.setVisibility(View.VISIBLE);
+                codeInput.selectAll();
+                codeInput.requestFocus();
+                return;
+            }
+            prefs.edit().putBoolean(PREF_ACCESS_UNLOCKED,true).apply();
+            startUnlockedApp();
+        });
     }
 
     private void scheduleBackgroundRefresh(){
@@ -292,7 +382,7 @@ public class MainActivity extends Activity {
 
         headerBack = txt("‹",38,Color.WHITE,false);
         headerBack.setGravity(Gravity.CENTER);
-        headerBack.setContentDescription("Zurück");
+        headerBack.setContentDescription(ui("Zurück"));
         headerBack.setVisibility(View.GONE);
         headerBack.setOnClickListener(v -> handleBack());
         header.addView(headerBack,new LinearLayout.LayoutParams(dp(38),dp(48)));
@@ -365,14 +455,14 @@ public class MainActivity extends Activity {
         }
         content.removeAllViews();
         switch(screen) {
-            case HOME: headerSubtitle.setText("Auf dem Rhein zuhause"); content.addView(home()); break;
-            case EVENTS: headerSubtitle.setText("Jahresprogramm"); content.addView(eventScreen()); break;
-            case CASH: headerSubtitle.setText("Vereinsbeiz bezahlen"); content.addView(cash()); break;
-            case CLUB: headerSubtitle.setText("Verein & Kontakt"); content.addView(club()); break;
-            case NEWS: headerSubtitle.setText("Vereinsnews"); content.addView(newsScreen()); break;
-            case SETTINGS: headerSubtitle.setText("Einstellungen"); content.addView(settings()); break;
-            case TILE_SETTINGS: headerSubtitle.setText("Kacheln anordnen"); content.addView(tileSettingsScreen()); break;
-            case INTERNAL: headerSubtitle.setText("Interner Bereich"); content.addView(internal()); break;
+            case HOME: headerSubtitle.setText(ui("Auf dem Rhein zuhause")); content.addView(home()); break;
+            case EVENTS: headerSubtitle.setText(ui("Jahresprogramm")); content.addView(eventScreen()); break;
+            case CASH: headerSubtitle.setText(ui("Vereinsbeiz bezahlen")); content.addView(cash()); break;
+            case CLUB: headerSubtitle.setText(ui("Verein & Kontakt")); content.addView(club()); break;
+            case NEWS: headerSubtitle.setText(ui("Vereinsnews")); content.addView(newsScreen()); break;
+            case SETTINGS: headerSubtitle.setText(ui("Einstellungen")); content.addView(settings()); break;
+            case TILE_SETTINGS: headerSubtitle.setText(ui("Kacheln anordnen")); content.addView(tileSettingsScreen()); break;
+            case INTERNAL: headerSubtitle.setText(ui("Interner Bereich")); content.addView(internal()); break;
         }
     }
 
@@ -1503,6 +1593,20 @@ private void rebuildHomePreservingScroll(){
         Button chooseTheme=btn("System / Hell / Dunkel",Color.rgb(232,240,244),NAVY);
         chooseTheme.setOnClickListener(v->chooseTheme());
         theme.addView(chooseTheme,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        section(body,"Sprache","App-Texte; externe und originale PFVR-Inhalte bleiben unverändert");
+        LinearLayout language=card();
+        language.setOrientation(LinearLayout.VERTICAL);
+        body.addView(language,margin(-1,-2,0,0,0,12));
+        LinearLayout languageOptions=segmentedBackground();
+        boolean swissGerman=UiLanguage.isSwissGerman(uiMode());
+        TextView german=segmentOption("Deutsch",!swissGerman);
+        TextView swiss=segmentOption("Schwiizerdütsch",swissGerman);
+        german.setOnClickListener(v->setUiLanguage(UiLanguage.DE));
+        swiss.setOnClickListener(v->setUiLanguage(UiLanguage.SWISS_GERMAN));
+        languageOptions.addView(german,segmentParams(languageOptions));
+        languageOptions.addView(swiss,segmentParams(languageOptions));
+        language.addView(languageOptions,new LinearLayout.LayoutParams(-1,dp(44)));
 
         section(body,"Persönlicher Zugang","Nur lokal auf diesem Gerät gespeichert");
         LinearLayout access=card();
@@ -3038,7 +3142,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         people.setOnClickListener(v->openInternalPeopleManager(web,0));
         tools.addView(people,new LinearLayout.LayoutParams(0,dp(40),1));
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");people.setVisibility(next?View.VISIBLE:View.GONE);web.clearCache(false);web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(ui(next?"Original":"App-Ansicht"));people.setVisibility(next?View.VISIBLE:View.GONE);web.clearCache(false);web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
@@ -3141,7 +3245,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         String css="html{color-scheme:light!important;}header,.site-header,.header-wrapper,nav,.main-navigation,footer,.site-footer,.scroll-top,.back-to-top{display:none!important;}html,body{background:#F4F7F9!important;}body{margin:0!important;padding:14px 14px 40px!important;font-family:Arial,sans-serif!important;color:#15232E!important;}main,.site-content,.content-area,.container,.wrapper{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;}article,.post,.entry,.entry-content{background:#FFFFFF!important;color:#15232E!important;border-radius:16px!important;padding:16px!important;margin:0 0 14px!important;box-shadow:0 2px 10px rgba(0,0,0,.10)!important;}article p,article li,article span,.entry-content p,.entry-content li,.entry-content span,.entry-content div{color:#15232E!important;}img{max-width:100%!important;height:auto!important;border-radius:12px!important;}iframe{background:#FFFFFF!important;}a{color:#247E99!important;}h1,h2,h3,h4,h5,h6{color:#0C2D48!important;}";
         String js="(function(){var s=document.getElementById('pfvr-app-style');if(!s){s=document.createElement('style');s.id='pfvr-app-style';document.head.appendChild(s);}s.innerHTML='"+css.replace("\\","\\\\").replace("'","\\'")+"';})();"; v.evaluateJavascript(js,null);
     }
-    private void openInApp(String url,String title){headerSubtitle.setText(title);content.removeAllViews();content.addView(webScreen(url,true));}
+    private void openInApp(String url,String title){headerSubtitle.setText(ui(title));content.removeAllViews();content.addView(webScreen(url,true));}
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
     private String calendarStatus(){if(eventsUpdated<=0)return eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.";ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?"heute "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return "Lokal gespeichert · zuletzt aktualisiert "+d+" Uhr";}
@@ -3355,8 +3459,8 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private View contact(String title,String detail,String action,View.OnClickListener l){LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);LinearLayout g=new LinearLayout(this);g.setOrientation(LinearLayout.VERTICAL);g.addView(txt(title,14,TEXT,true));g.addView(txt(detail,14,MUTED,false));c.addView(g,new LinearLayout.LayoutParams(0,-2,1));Button b=btn(action,Color.rgb(232,240,244),NAVY);b.setOnClickListener(l);c.addView(b,new LinearLayout.LayoutParams(-2,dp(40)));c.setLayoutParams(margin(-1,-2,0,0,0,9));return c;}
     private void section(LinearLayout p,String title,String sub){TextView h=txt(title,20,TEXT,true);h.setPadding(dp(2),dp(2),0,sub==null?dp(10):dp(2));p.addView(h);if(sub!=null){TextView s=txt(sub,12,MUTED,false);s.setPadding(dp(2),0,0,dp(10));p.addView(s);}}
     private TextView link(String s){TextView t=txt(s,14,WATER,true);t.setGravity(Gravity.END);t.setPadding(dp(4),dp(5),dp(4),dp(14));return t;}
-    private TextView txt(String s,float size,int color,boolean bold){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(themeText(color));t.setLineSpacing(0,1.08f);if(bold)t.setTypeface(Typeface.DEFAULT_BOLD);return t;}
-    private Button btn(String s,int bg,int fg){Button b=new Button(this);b.setText(s);b.setTextSize(13);b.setTextColor(themeText(fg));b.setAllCaps(false);b.setTypeface(Typeface.DEFAULT_BOLD);b.setPadding(dp(12),0,dp(12),0);b.setMinHeight(0);b.setMinWidth(0);b.setBackground(round(bg,12));return b;}
+    private TextView txt(String s,float size,int color,boolean bold){TextView t=new TextView(this);t.setText(ui(s));t.setTextSize(size);t.setTextColor(themeText(color));t.setLineSpacing(0,1.08f);if(bold)t.setTypeface(Typeface.DEFAULT_BOLD);return t;}
+    private Button btn(String s,int bg,int fg){Button b=new Button(this);b.setText(ui(s));b.setTextSize(13);b.setTextColor(themeText(fg));b.setAllCaps(false);b.setTypeface(Typeface.DEFAULT_BOLD);b.setPadding(dp(12),0,dp(12),0);b.setMinHeight(0);b.setMinWidth(0);b.setBackground(round(bg,12));return b;}
     private GradientDrawable round(int color,float r){GradientDrawable d=new GradientDrawable();d.setColor(themeBg(color));d.setCornerRadius(dp(r));return d;}
     private LinearLayout.LayoutParams margin(int w,int h,int l,int t,int r,int b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(w,h);p.setMargins(dp(l),dp(t),dp(r),dp(b));return p;}
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}

@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.11.1
+- Sprachumschaltung `Deutsch` / `Schwiizerdütsch` für App-eigene native UI-Texte. Externe Inhalte, Vereinsnews und die originale PFVR-Webseite werden nicht übersetzt.
+- Lokale Erstfreigabe beim ersten App-Start. Der gemeinsam verteilte Freigabecode wird nur gegen einen eingebetteten SHA-256-Prüfwert verglichen; der Klartextcode wird nicht eingecheckt.
+- Vor erfolgreicher Erstfreigabe werden weder die eigentliche App-Oberfläche noch Live-Daten oder interne WebViews initialisiert.
+- Versionsstand `0.11.1`, `versionCode 48`.
+
 ## 0.11.0
 - Stabiler Meilenstein auf Basis des bewährten 0.10.22-Stands; keine zusätzliche Funktionsänderung gegenüber 0.10.22.
 - Versionssprung auf `versionCode 47`; der Stand bleibt weiterhin eine Testversion unter `1.0.0`.
