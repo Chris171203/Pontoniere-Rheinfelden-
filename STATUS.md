@@ -2,65 +2,42 @@
 
 Stand: Testversion `0.10.8` · aktualisiert 2026-09-04.
 
-## Implementiert / im Test
+## Aktueller Teststand
 
-- Namen in der mobilen Teilnehmermatrix werden aus Textknoten und Personenattributen rekonstruiert, CamelCase wird getrennt und die Anzeige auf `Nachname, Vorname` normalisiert.
-- Der linke App-Werkzeugleistenbutton öffnet eine modale Personenverwaltung. `Alle anzeigen/hinzufügen` bleibt der Originalansicht vorbehalten; Entfernen ist als nicht-destruktives lokales Ausblenden mit Wieder-Einblenden umgesetzt.
+- Die interne An-/Abmeldung wird mobil als gemeinsam horizontal scrollende Matrix dargestellt: Termin- und Kochinformationen bleiben links, jede Person bildet über alle Tage eine feste Spalte. Auf üblichen Handybreiten bleiben mindestens zwei Personenspalten gleichzeitig sichtbar.
+- Teilnehmernamen werden aus den tatsächlichen Tabellenzeilen, DOM-Textteilen, Personenattributen und – soweit vorhanden – stabilen Select-Werten rekonstruiert. Zusammengezogene Namen wie `NeugebauerChristoph` werden getrennt und als `Neugebauer, Christoph` angezeigt.
+- Die Originaltabelle ist die Quelle der Wahrheit. Jede dort vorhandene Person wird in der App-Ansicht angezeigt, sofern sie nicht ausdrücklich lokal ausgeblendet wurde. Generische Namen wie `Person 1` sind nur noch letzter technischer Fallback.
+- In der App-Ansicht ersetzt der linke Werkzeugleistenbutton `Personen` den redundanten Zurück-Button. Er öffnet eine modale Verwaltung zum Hinzufügen, lokalen Ausblenden und Wieder-Einblenden. Der normale Zurückweg bleibt über den App-Header bzw. Android-Zurück erhalten.
+- `Alle anzeigen` beziehungsweise `Alle hinzufügen` wird im App-Modus nicht mehr gespiegelt. Diese Website-Funktion bleibt ausschließlich in der unveränderten Originalansicht verfügbar.
+- Das sichtbare Personen-Select ist ein Proxy; das originale Website-Control bleibt in seinem Formular- und DOM-Kontext. Änderungen werden am Original ausgelöst und neue Zeilen über verzögerte Synchronisierung sowie MutationObserver übernommen.
+- Lokales Entfernen blendet eine Personenspalte aus, ohne die echten An-/Abmelde-Controls aus dem DOM oder Daten auf dem Server zu löschen. Ausgeblendete Personen können in derselben Verwaltung wieder eingeblendet werden.
+- Pro Tag und Person werden ausschließlich die echten Website-Controls verwendet. Die App erfindet keine Essensoptionen. Statusfarben folgen dem aktuell gewählten Original-Control; es gibt keinen zusätzlich von der App erzwungenen Voll-Reload.
+- Vertikale Scrollposition und gemeinsame horizontale Matrixposition werden über technisch notwendige Seitennavigationen hinweg gespeichert und wiederhergestellt.
+- Home, Kasse und Verein verwenden eine gemeinsame, lokal personalisierbare Kachelarchitektur. Reihenfolge und Sichtbarkeit können unter Einstellungen → Ansicht & Kacheln angepasst werden; der Warenkorb bleibt in der Kasse fixiert.
+- Vereinsnews werden nativ über die öffentliche WordPress-REST-API geladen und lokal gecacht. Rhein-, Wetter- und Kalenderdaten zeigen ihren Datenstand und besitzen lokale Fallbacks.
+- Banking-Handoff bleibt Share-first. Gespeicherte Zahlungs-QRs verwenden wiederverwendbare Dateinamen wie `PFVR_12.50CHF.png`.
+- Debug-Testpaket: `ch.pfvr.app.test`, fester öffentlicher Testschlüssel, Android 16 / API 36.
 
-- Die aktuelle Originaltabelle ist für vorhandene Teilnehmer die Quelle der Wahrheit. Jede serverseitig vorhandene Zeile wird angezeigt, außer die Person wurde lokal ausdrücklich entfernt. Auswahltext und Tabellenname werden über Optionswert plus tokenbasierte Namensnormalisierung verbunden.
+## Automatisch geprüft
 
-- Personen-Hinzufügen lässt das originale Website-Select in seinem Formular/DOM-Kontext und verwendet in der App nur einen Proxy. Änderungen werden am echten Control ausgelöst; neue Personenzeilen werden zusätzlich über verzögerte Synchronisierung und MutationObserver in die mobile Matrix übernommen.
-- Die gewünschte Personenliste der internen App-Ansicht wird dauerhaft gespeichert. Fehlende Zusatzpersonen werden beim nächsten Laden über den originalen Website-Select wieder eingeblendet; zusätzliche Personen können lokal aus der Übersicht entfernt werden, ohne An-/Abmeldedaten auf dem Server zu löschen.
-- Teilnehmernamen stehen zusätzlich in jeder Statuszelle; lange Namen sind auf zwei Zeilen begrenzt und werden innerhalb der gedeckelten Personenspalte moderat verkleinert.
-- Die mobile interne Terminansicht verwendet eine gemeinsam horizontal scrollende Matrix: Termin-/Kochinfo bleibt links sticky, jede Person ist über alle Tage dieselbe feste Spalte und mindestens zwei Personenspalten sind gleichzeitig sichtbar. Unter `+ / − Person` werden vorhandene Website-Aktionen aus der Personen-Spalte wieder sichtbar, sodass zusätzliche Personen über die serverseitig vorhandene Funktion entfernt werden können.
-- Die Statusfarbe in der mobilen An-/Abmeldeansicht folgt dem aktuell ausgewählten Original-Control (Button oder Select) und wird nach Änderungen ohne zusätzlichen Seiten-Reload neu berechnet.
-- Formulierungen wie `Ich komme, mit Essen` / `Ich komme, ohne Essen` werden zusätzlich zur kurzen Form erkannt. Bei Selects wird die tatsächlich ausgewählte Option ausgewertet.
-- Die interne An-/Abmeldeansicht wird mobil aus der vorhandenen Terminmatrix projiziert: Termine stehen untereinander, die Termin-Metadaten links und die tatsächlich hinzugefügten Teilnehmer rechts in horizontal scrollbaren Personenkarten.
-- Namen in den Termin-Metadaten werden nicht als Teilnehmer interpretiert; Koch/Termininfo bleibt vollständig beim jeweiligen Tag. Teilnehmernamen stammen ausschließlich aus der linken Personen-Spalte der Originalmatrix.
-- Pro Tag/Person werden ausschließlich die echten Website-Controls verschoben. Die App erfindet keine Essensoptionen: wenn `Mit Essen` serverseitig nicht angeboten wird, erscheint diese Auswahl auch in der App-Ansicht nicht.
-- `Person zur Liste hinzufügen` wird als globale Teilnehmerverwaltung oberhalb der Termine zusammengefasst und über `+ Person` aufgeklappt. Der originale Select und vorhandene Aktionen wie `Alle anzeigen` bleiben funktional dieselben Website-Controls.
-- Der bisherige von der App erzwungene `window.location.reload()` nach einer Statusänderung wurde entfernt. Vor serverseitig notwendigen Navigationen werden vertikale Scrollposition und horizontale Teilnehmerpositionen gespeichert und danach wiederhergestellt.
-- Status wie `Mit Essen`, `Ohne Essen`, `Nicht gewählt` und `Komme nicht` bleiben als eigener farbiger Block vom folgenden Termintext getrennt. Die Originalansicht bleibt unverändert.
-- Home, Kasse und Verein verwenden eine gemeinsame konfigurierbare Kachelarchitektur.
-- Unter Einstellungen → Ansicht & Kacheln können die Kacheln je Bereich verschoben, ein- und ausgeblendet sowie auf den Standard zurückgesetzt werden.
-- Reihenfolge und Sichtbarkeit werden nur lokal auf dem Gerät gespeichert. Unbekannte alte Tile-IDs werden entfernt; neu hinzugekommene Kacheln werden automatisch ergänzt.
-- Der Warenkorb ist in der Kasse als zentrale Kachel immer sichtbar und an erster Stelle fixiert. Kategorien, freier Betrag, TWINT und Zahlungsdaten bleiben frei anordenbar und ausblendbar.
-- Verein ist auf eine breite Über-uns-Kachel und kompakte Aktionskacheln für News, Jahresprogramm, Vorstand, Geschichte, Depot/Route, Telefon, E-Mail und Kontakt umgestellt.
-- Home enthält separat anordenbare Kacheln für Trainingswetter, Rhein-Kurzwerte, Rhein-Grafiken, Termine und Vereinsnews. Hero und zentrale Schnellaktionen bleiben fest.
-- Native Vereinsnews werden über die öffentliche WordPress-REST-API geladen, lokal gecacht und auf Home sowie in einer nativen News-Liste angezeigt.
-- Banking-Handoff bleibt Share-first: jede gewählte Banking-App erhält zuerst dieselben QR-Bildversuche; die Registry steuert nur den Fallback.
-- Gespeicherte Zahlungs-QRs verwenden wiederverwendbare Dateinamen wie `PFVR_12.50CHF.png`.
-- `ch.pfvr.app.test` wird mit dem reproduzierbaren festen Testschlüssel signiert.
-- Android 16 / API 36 als Target.
-
-## Verifiziert
-
-- Unit-Tests prüfen ausdrücklich, dass aktuell in der Originaltabelle vorhandene Personen nicht mehr durch eine exakte lokale Namens-Whitelist herausgefiltert werden.
-- Unit-Tests prüfen die mobile Tag/Teilnehmer-Projektion, dynamische Breiten, Wiederverwendung echter Website-Controls, globale Personenverwaltung und das Entfernen des erzwungenen Reloads.
-- Zusätzliche Unit-Tests prüfen Live-Restyling aus Button-/Select-Werten, verzögerte Neuberechnung und DOM-Mutationserkennung ohne Voll-Reload.
-- Unit-Tests prüfen weiterhin Statusaufteilung und die Kachel-Layoutmigration.
-- Android-Kompilierung, Unit-Tests, APK-Build, Paket/Version und fester Test-Zertifikatsfingerprint werden in CI geprüft.
-- Finale Testidentität: `0.10.8`, `versionCode 32`, Paket `ch.pfvr.app.test`.
-- APK/AAB-Dateien werden nicht im Git-Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
+- Unit-Tests prüfen Namensformatierung, CamelCase-Trennung, mobile Matrix, zwei sichtbare Personenspalten, Original-Control-Kontext, Personen-Synchronisierung, lokale Ausblendung, unterdrückte Bulk-Aktion, Statusfarben und das Fehlen eines erzwungenen Reloads.
+- Die Android-CI kompiliert mit Java 17 / Gradle 8.13, führt die Unit-Tests aus, baut das APK und prüft Paketname, Versionsdaten sowie den festen Test-Zertifikatsfingerprint.
+- APK- und AAB-Dateien werden nicht im Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen
 
-- Eine bereits in der Originalansicht vorhandene zweite Person muss beim Wechsel in die App-Ansicht dauerhaft sichtbar bleiben und darf nicht mehr nur kurz aufblitzen.
-- Zusatzperson über `+ / − Person` auswählen: die echte Website-Aktion muss ausgelöst werden und die neue Person danach ohne manuelles Neuladen in der mobilen Matrix erscheinen.
-- Danach App vollständig schließen und erneut öffnen: die hinzugefügte Person muss aus der gespeicherten Ansicht wiederhergestellt werden.
-- Nach Statusauswahl muss sich die Farbe sofort bzw. nach kurzer Server-/DOM-Aktualisierung anpassen. Anschließend durch `Neu laden` oder Originalansicht prüfen, ob der Status serverseitig erhalten bleibt.
-- Ob die reale interne Matrix exakt mit `erste Zeile = Termine` und `erste Spalte = Teilnehmer` strukturiert ist; der Screenshot spricht dafür, aber die Seite ist nicht öffentlich prüfbar.
-- Termine mit unterschiedlichen zulässigen Essens-/Anmeldeoptionen: die mobilen Karten müssen exakt die serverseitig vorhandenen Controls zeigen.
-- `Alle anzeigen` muss über das originale Website-Control funktionieren und neu auftauchende Personen direkt in die Matrix übernehmen.
-- Scrollposition nach Statusänderung bzw. serverseitigem Aktualisieren; ein technisch notwendiger Seitenwechsel darf den Benutzer nicht mehr an den Seitenanfang zurückwerfen.
-- Kachelmenü auf kleiner Displaybreite, Hell-/Dunkelmodus und längere deutsche Bezeichnungen.
+- Namen müssen als `Nachname, Vorname` erscheinen; insbesondere `NeugebauerChristoph` und `WiekertStephan` dürfen weder zusammengezogen noch als `Person 1/2` angezeigt werden.
+- Der obere Button `Personen` muss die Verwaltung zuverlässig öffnen. Hinzufügen, lokales Entfernen und Wieder-Einblenden müssen ohne Missbrauch des Zurück-Buttons möglich sein.
+- Eine bereits in der Originalansicht vorhandene zweite Person muss beim Wechsel in die App-Ansicht dauerhaft bestehen bleiben.
+- `Alle anzeigen/hinzufügen` darf im App-Modus nicht erscheinen, muss in der Originalansicht aber unverändert verfügbar bleiben.
+- Nach einem vollständigen App-Neustart müssen die gewünschte Personenansicht, ausgeblendete Personen und Statusauswahlen konsistent bleiben.
+- Nach Statusänderungen müssen Farbe, serverseitige Speicherung und Scrollposition stimmen.
 - Direkte Zahlungsübernahme weiterer Banking-Apps; Yuh ist bestätigt, Neon und Revolut übernahmen das Bild im bisherigen Test nicht.
 
 ## Nächste strukturelle Schritte
 
-- Wenn die reale Seite einen stabilen Hintergrund-Endpunkt für An-/Abmeldungen bereitstellt, kann eine echte partielle Datenaktualisierung ohne Seitennavigation ergänzt werden. Bis dahin bleibt die vorhandene Website-Logik maßgeblich und die App erhält den View-State über Navigationen hinweg.
-- Weitere Aufteilung der noch großen `MainActivity` in Screen-/Repository-Komponenten.
+- Die noch große `MainActivity` weiter in Screen-, Repository- und WebView-Adapter-Komponenten aufteilen.
+- Für die private An-/Abmeldeseite langfristig einen klaren Adapter beziehungsweise dokumentierten Backend-Endpunkt verwenden, sobald Zugriff darauf besteht. Weitere DOM-Sonderfälle nicht unkontrolliert in die Hauptlogik einbauen.
 - Remote-Katalog mit Server-JSON, lokalem Cache und eingebautem Fallback vorbereiten, sobald ein pflegbarer Website-Endpunkt verfügbar ist.
 - Optionaler Upload-Portal-Zugang für Vereinsbilder und Videos.
-- Optionale Trainingsbenachrichtigungen und Homescreen-Widget.
-- iOS-Implementierung.
+- Optionale Trainingsbenachrichtigungen, Homescreen-Widget und spätere iOS-Implementierung.
