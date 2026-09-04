@@ -1,0 +1,32 @@
+name: Author PFVR 0.10.7
+
+on:
+  push:
+    branches:
+      - dev-0.10.7-author
+    paths:
+      - 'tools/apply_0107.py'
+      - '.github/workflows/dev-0107-author.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed patch
+        run: python tools/apply_0107.py
+      - name: Publish clean target branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f tools/apply_0107.py .github/workflows/dev-0107-author.yml
+          git config user.name 'PFVR Build Author'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: trust current website participant rows'
+          git push --force origin HEAD:refs/heads/dev-0.10.7
