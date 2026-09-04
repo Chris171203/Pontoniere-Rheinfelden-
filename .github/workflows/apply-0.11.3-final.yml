@@ -23,6 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Validate every staged chunk before the source tree is touched.
           echo 'bd80cb03b6a9a54639a436547837ec1386d231c476a15d1c9997e23540a9593c  .github/tmp/0.11.3/chunk-00' | sha256sum -c -
           echo '0e16c13f73ed84e4ee4705c0eaea3159daefef8f6535471b2a3b90e8bfe76d37  .github/tmp/0.11.3/chunk-01' | sha256sum -c -
           echo '3de36e299bf91a09760fa9265c16301efaf5d349e0d37ab819ade1658c5dd7d1  .github/tmp/0.11.3/chunk-02' | sha256sum -c -
