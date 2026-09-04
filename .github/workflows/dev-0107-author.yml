@@ -19,7 +19,19 @@ jobs:
         with:
           fetch-depth: 0
       - name: Apply reviewed patch
-        run: python tools/apply_0107.py
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tools/apply_0107.py')
+          text = path.read_text(encoding='utf-8')
+          old = "updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)"
+          new = "updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=re.S)"
+          if old not in text:
+              raise SystemExit('temporary patch runner line not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          python tools/apply_0107.py
       - name: Publish clean target branch
         shell: bash
         run: |
