@@ -1,6 +1,6 @@
 # Datenschutzerklärung PFVR Rheinfelden – ENTWURF FÜR GOOGLE PLAY
 
-> **Vor Veröffentlichung zwingend ersetzen:** Herausgeber/Rechtssubjekt, vollständige ladungsfähige bzw. veröffentlichungspflichtige Kontaktangaben, Datenschutzkontakt und öffentliche URL. Die Angaben müssen mit dem tatsächlichen Google-Play-Entwicklerkonto übereinstimmen. Diese Datei ist kein Ersatz für die öffentlich veröffentlichte Datenschutzerklärung.
+> **Vor Veröffentlichung zwingend ersetzen:** Herausgeber/Rechtssubjekt, vollständige veröffentlichungspflichtige Kontaktangaben, Datenschutzkontakt und öffentliche URL. Die Angaben müssen mit dem tatsächlichen Google-Play-Entwicklerkonto übereinstimmen. Diese Datei ist kein Ersatz für die öffentlich veröffentlichte Datenschutzerklärung.
 
 ## 1. Verantwortlicher
 
@@ -19,9 +19,11 @@ Die App verbindet sich für ihre Funktionen direkt mit bestehenden öffentlichen
 
 ## 3. Android-Berechtigungen und Geräteschnittstellen
 
-Die App fordert ausschließlich die Android-Berechtigung für Internetzugriff an. Sie fordert insbesondere keine Berechtigung für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS, Anrufliste, persönlichen Kalender oder allgemeinen Speicherzugriff an.
+Das eigene App-Manifest fordert Internetzugriff an. Eingebundene Android-Systembibliotheken können zusätzlich gewöhnliche technische Berechtigungen für Hintergrundarbeit in das finale Manifest einbringen. Die tatsächlich zusammengeführte Berechtigungsliste wird deshalb im Release-Build automatisiert geprüft und dokumentiert.
 
-Für die Auswahl einer Banking-App prüft die App lokal, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird ausschließlich auf dem Gerät verarbeitet und nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.
+Die App fordert nach aktuellem Stand insbesondere **keine sensiblen Laufzeitberechtigungen** für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS/Telefon, persönlichen Kalender oder allgemeinen Medien-/Speicherzugriff an. Sie verwendet außerdem nicht `QUERY_ALL_PACKAGES`.
+
+Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird ausschließlich auf dem Gerät verarbeitet und nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.
 
 ## 4. Lokal auf dem Gerät gespeicherte Daten
 
@@ -99,9 +101,11 @@ Die App enthält nach aktuellem Stand:
 
 Falls sich dies künftig ändert, müssen App, Play-Console-Angaben und diese Datenschutzerklärung vor Veröffentlichung der Änderung angepasst werden.
 
-## 10. Datensicherheit
+## 10. Datensicherheit und Android-Backup
 
 Netzwerkzugriffe der App erfolgen über HTTPS; unverschlüsselter Cleartext-Verkehr ist in der Android-Konfiguration deaktiviert. Persönliche Intern-Links und App-Einstellungen werden im privaten App-Speicher des jeweiligen Android-Geräts gehalten.
+
+Cloud-Backup ist deaktiviert. Zusätzlich schließen die App-Regeln Dateien, Datenbanken, Shared Preferences und externe App-Dateien ausdrücklich von Android-Backup und Device-to-Device-Transfer aus. Damit sollen insbesondere der persönliche PFVR-Link, Freigabezustände und interne Teilnehmerzustände nicht automatisch auf ein anderes Gerät übertragen werden.
 
 Die Sicherheit und Aufbewahrung serverseitiger Daten des bestehenden PFVR-Systems sowie externer Dienste liegt zusätzlich in deren jeweiligem Verantwortungsbereich.
 
@@ -127,7 +131,8 @@ Diese Datenschutzerklärung wird angepasst, wenn sich Funktionen, Datenflüsse, 
 
 - `[ ]` Herausgebername entspricht dem Play-Developer-Profil.
 - `[ ]` Anschrift und Datenschutzkontakt sind eingesetzt und erreichbar.
-- `[ ]` Öffentliche HTTPS-URL funktioniert ohne Login, Geoblocking oder PDF-Download.
-- `[ ]` Gleiche Privacy-Policy ist in der App zugänglich.
+- `[ ]` Öffentliche HTTPS-URL funktioniert ohne Login oder Geoblocking.
+- `[ ]` Gleiche Privacy-Policy bzw. Link ist in der App zugänglich.
 - `[ ]` `data-safety-draft.md` wurde gegen die finale App und das reale PFVR-Backend geprüft.
+- `[ ]` Finale CI-Berechtigungsliste wurde geprüft.
 - `[ ]` Änderungen an Banking, WebView, Analytics, Werbung oder externen SDKs wurden nachgezogen.
