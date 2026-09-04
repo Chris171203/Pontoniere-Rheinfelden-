@@ -4,13 +4,13 @@ Mobile Vereins-App für den Pontonierfahrverein Rheinfelden mit Terminen, Traini
 
 ## Aktueller Entwicklungsstand
 
-Android-Testversion `0.10.18` auf `main`.
+Android-Testversion `0.10.19` auf `main`.
 
 Schwerpunkte des aktuellen Stands:
 
 - nächstes Training aus dem öffentlichen Vereinskalender mit saisonalem Fallback;
 - Wetter passend zum tatsächlichen Trainingszeitraum;
-- BAFU-Rheindaten mit Abfluss, Wasserstand, Wassertemperatur und interaktiven Verläufen; beide Kurzwerte zeigen m ü.M. plus cm, die Graphen lassen die Pegel-Einheit umschalten;
+- BAFU-Rheindaten mit Abfluss, Wasserstand, Wassertemperatur und interaktiven Verläufen; beide Stationen zeigen den Wasserstand in m ü.M., eine zusätzliche cm-Darstellung wird nur bei Messpunkten mit verifiziertem Bezug angeboten;
 - native Termine und Vereinsnews mit lokalem Cache und sichtbarem Datenstand;
 - interne An-/Abmeldung als mobile Matrix mit mehreren Personen, dauerhaft sichtbarer synchronisierter Kopfzeile und größeren Bedienflächen;
 - vollständige Übernahme großer Original-Personenlisten inklusive Namen aus Bearbeiten-/Namens-Controls und zeilengerecht zugeordneten Statuswerten;
