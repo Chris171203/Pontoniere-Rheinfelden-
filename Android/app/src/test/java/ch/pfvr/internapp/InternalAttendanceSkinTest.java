@@ -44,9 +44,10 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("pfvr-person-header"));
         assertTrue(script.contains("pfvr-person-cell"));
         assertTrue(script.contains(".pfvr-matrix-head-scroll{position:sticky!important;top:0!important"));
+        assertTrue(script.contains("overflow-x:hidden!important;overflow-y:hidden!important;pointer-events:none!important"));
         assertTrue(script.contains("bindHorizontalHeaderSync"));
         assertTrue(script.contains("matrixScroll.addEventListener('scroll'"));
-        assertTrue(script.contains("headScroll.addEventListener('scroll'"));
+        assertFalse(script.contains("headScroll.addEventListener('scroll'"));
         assertTrue(script.contains("overflow-x:auto"));
         assertTrue(script.contains("moveChildren(header.cells[column],meta)"));
         assertTrue(script.contains("moveChildren(row.cells[column],control)"));
@@ -71,6 +72,8 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("pfvr-person-tools-backdrop"));
         assertFalse(script.contains("body.appendChild(select)"));
         assertTrue(script.contains("Keine Auswahl für diesen Termin"));
+        assertTrue(script.contains("Hinzufügen ist auf diesem Seitenstand nicht verfügbar"));
+        assertFalse(script.contains("if(!toolInfo||!toolInfo.select)return null"));
         assertFalse(script.contains("option.value='Mit Essen'"));
         assertFalse(script.contains("option.value='Ohne Essen'"));
     }
@@ -171,11 +174,16 @@ public class InternalAttendanceSkinTest {
         assertFalse(script.contains("if(chosen)addDesiredPerson(state,chosen)"));
     }
 
-    @Test public void generatedScriptHidesBulkActionAndExposesManagerFromNativeToolbar(){
+    @Test public void generatedScriptBlocksBulkPersonActionsAndExposesManagerFromNativeToolbar(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("bulkPeopleAction"));
+        assertTrue(script.contains("value.indexOf('alle personen anzeigen')"));
         assertTrue(script.contains("value.indexOf('alle anzeigen')"));
         assertTrue(script.contains("value.indexOf('alle hinzufügen')"));
+        assertTrue(script.contains("suppressBulkPeopleActions"));
+        assertTrue(script.contains("bindBulkPeopleGuard"));
+        assertTrue(script.contains("stopImmediatePropagation"));
+        assertTrue(script.contains("observer.observe(document.documentElement,{subtree:true,childList:true})"));
         assertTrue(script.contains("if(bulkPeopleAction(label))return"));
         assertTrue(script.contains("Schliessen"));
         assertTrue(script.contains("Entfernen aktualisiert die Personenliste automatisch."));
