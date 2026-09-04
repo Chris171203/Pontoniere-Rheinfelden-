@@ -1,8 +1,10 @@
 # Status
 
-Stand: Testversion `0.10.6` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.7` · aktualisiert 2026-09-04.
 
 ## Implementiert / im Test
+
+- Die aktuelle Originaltabelle ist für vorhandene Teilnehmer die Quelle der Wahrheit. Jede serverseitig vorhandene Zeile wird angezeigt, außer die Person wurde lokal ausdrücklich entfernt. Auswahltext und Tabellenname werden über Optionswert plus tokenbasierte Namensnormalisierung verbunden.
 
 - Personen-Hinzufügen lässt das originale Website-Select in seinem Formular/DOM-Kontext und verwendet in der App nur einen Proxy. Änderungen werden am echten Control ausgelöst; neue Personenzeilen werden zusätzlich über verzögerte Synchronisierung und MutationObserver in die mobile Matrix übernommen.
 - Die gewünschte Personenliste der internen App-Ansicht wird dauerhaft gespeichert. Fehlende Zusatzpersonen werden beim nächsten Laden über den originalen Website-Select wieder eingeblendet; zusätzliche Personen können lokal aus der Übersicht entfernt werden, ohne An-/Abmeldedaten auf dem Server zu löschen.

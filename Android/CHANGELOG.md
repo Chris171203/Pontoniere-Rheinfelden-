@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.10.7
+- Aktuell in der Originaltabelle vorhandene Personenzeilen sind die Quelle der Wahrheit und werden nicht mehr durch eine exakte lokale Namens-Whitelist entfernt.
+- Auswahltext und Tabellenname werden über gespeicherten Optionswert sowie tokenbasierte Namensnormalisierung zusammengeführt; Vorname/Nachname-Reihenfolge darf abweichen.
+- Lokales Entfernen wird separat als Ausblenden gespeichert, damit nur bewusst entfernte Personen unterdrückt werden.
+- Regression behoben: Eine hinzugefügte Person blitzte kurz auf, blieb in der Originalansicht vorhanden und verschwand dennoch wieder aus der mobilen Matrix.
+
 ## 0.10.6
 - Personen-Hinzufügen verschiebt den originalen Website-Select nicht mehr aus seinem Formular. Ein App-Proxy steuert das echte Control am ursprünglichen DOM-Ort.
 - Server-/DOM-seitig neu auftauchende Teilnehmerzeilen werden ohne erzwungenen Voll-Reload in die vorhandene mobile Matrix synchronisiert; auch `Alle anzeigen` wird über das originale Website-Control ausgelöst.
