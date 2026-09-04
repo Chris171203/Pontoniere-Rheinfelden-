@@ -35,7 +35,7 @@ Aktuelle Android-Testversion: `0.10.22` (`versionCode 46`).
 - `Aus Initiallink neu aufbauen` löscht nur lokale Personen-/Restore-Zustände und lädt den gespeicherten persönlichen Initiallink erneut.
 - Website-Bulk-Aktionen wie `Alle anzeigen` sind im App-Modus blockiert; im unveränderten Originalmodus können sie bewusst verwendet werden.
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
-- Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Lange Namen werden automatisch kleiner skaliert; Datumsangaben werden fett hervorgehoben.
+- Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
 ## Gerätetest 0.10.22
 
