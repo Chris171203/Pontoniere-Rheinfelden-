@@ -20,8 +20,9 @@ public class InternalAttendanceUiRegressionTest {
     @Test public void scalesLongCookLabelsInsteadOfGrowingTheDayColumn(){
         String script=script();
         assertTrue(script.contains("fitDayMetaTexts"));
-        assertTrue(script.contains("pfvrBaseFont"));
         assertTrue(script.contains("pfvr-day-fit-name"));
+        assertTrue(script.contains("node.scrollWidth>available"));
+        assertTrue(script.contains("var minSize=10"));
     }
 
     @Test public void recoveryConfirmationAlwaysReturnsToItsNeutralState(){
