@@ -36,14 +36,17 @@ public class InternalAttendanceSkinTest {
 
     @Test public void generatedScriptBuildsSharedPersonColumnsAcrossAllDays(){
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("pfvr-matrix-head-scroll"));
         assertTrue(script.contains("pfvr-matrix-scroll"));
+        assertTrue(script.contains("pfvr-attendance-head"));
         assertTrue(script.contains("pfvr-attendance-matrix"));
-        assertTrue(script.contains("gridTemplateColumns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))'"));
+        assertTrue(script.contains("var columns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))'"));
         assertTrue(script.contains("pfvr-person-header"));
         assertTrue(script.contains("pfvr-person-cell"));
-        assertTrue(script.contains("position:sticky"));
-        assertTrue(script.contains(".pfvr-matrix-corner{position:sticky!important;top:0!important;left:0!important"));
-        assertTrue(script.contains(".pfvr-person-header{position:sticky!important;top:0!important"));
+        assertTrue(script.contains(".pfvr-matrix-head-scroll{position:sticky!important;top:0!important"));
+        assertTrue(script.contains("bindHorizontalHeaderSync"));
+        assertTrue(script.contains("matrixScroll.addEventListener('scroll'"));
+        assertTrue(script.contains("headScroll.addEventListener('scroll'"));
         assertTrue(script.contains("overflow-x:auto"));
         assertTrue(script.contains("moveChildren(header.cells[column],meta)"));
         assertTrue(script.contains("moveChildren(row.cells[column],control)"));
@@ -92,6 +95,7 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("beforeunload"));
         assertTrue(script.contains("window.scrollTo"));
         assertTrue(script.contains("matrixScroll.scrollLeft=state.x||0"));
+        assertTrue(script.contains("matrixHeadScroll.scrollLeft=state.x||0"));
         assertTrue(script.contains("x:matrixScroll?(matrixScroll.scrollLeft||0):0"));
         assertFalse(script.contains("strips:strips"));
         assertFalse(script.contains("window.location.reload"));
@@ -125,6 +129,8 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("syncAddedParticipants"));
         assertTrue(script.contains("bindSourcePeopleObserver"));
         assertTrue(script.contains("appendPersonColumn"));
+        assertTrue(script.contains("matrixHead.appendChild(personHeader)"));
+        assertTrue(script.contains("matrixHead.style.gridTemplateColumns=columns"));
         assertFalse(script.contains("body.appendChild(select)"));
     }
 
