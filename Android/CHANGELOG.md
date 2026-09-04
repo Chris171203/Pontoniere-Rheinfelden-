@@ -1,5 +1,9 @@
 # Android Changelog
 
+## 0.10.6
+- Personen-Hinzufügen verschiebt den originalen Website-Select nicht mehr aus seinem Formular. Ein App-Proxy steuert das echte Control am ursprünglichen DOM-Ort.
+- Server-/DOM-seitig neu auftauchende Teilnehmerzeilen werden ohne erzwungenen Voll-Reload in die vorhandene mobile Matrix synchronisiert; auch `Alle anzeigen` wird über das originale Website-Control ausgelöst.
+
 ## 0.10.5
 - Gewünschte Personenliste der internen App-Ansicht wird dauerhaft im WebView-Origin gespeichert und nach App-Neustart über den echten Website-Select schrittweise wiederhergestellt.
 - Zusätzliche Personen können lokal aus der eigenen Übersicht entfernt werden; die Standard-/eigene Person bleibt geschützt. Das verändert keine serverseitigen An-/Abmeldedaten.

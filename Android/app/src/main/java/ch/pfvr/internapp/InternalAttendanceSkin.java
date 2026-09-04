@@ -59,6 +59,8 @@ final class InternalAttendanceSkin {
                   var STORAGE_KEY='pfvr-attendance-view-state-v2';
                   var PEOPLE_KEY='pfvr-attendance-people-v1';
                   var RESTORE_KEY='pfvr-attendance-restore-v1';
+                  var sourceTableRef=null;
+                  var sourcePeopleObserver=null;
                   var norm=function(value){return (value||'').replace(/\\s+/g,' ').trim().toLowerCase();};
                   var text=function(el){return (el&&((el.innerText||el.textContent)||''))||'';};
                   var element=function(tag,className){var node=document.createElement(tag);if(className)node.className=className;return node;};
@@ -257,6 +259,65 @@ final class InternalAttendanceSkin {
                     var count=matrix.querySelectorAll('.pfvr-person-header').length;
                     matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
                   };
+                  var appendManagedPerson=function(list,state,personName){
+                    if(!list)return;var key=personKey(personName);if(!key)return;
+                    var exists=Array.from(list.querySelectorAll('.pfvr-managed-person')).some(function(line){return line.getAttribute('data-pfvr-managed-person')===key;});if(exists)return;
+                    var line=element('div','pfvr-managed-person');line.setAttribute('data-pfvr-managed-person',key);
+                    var name=element('div','pfvr-managed-person-name');fitPersonName(name,personName);line.appendChild(name);
+                    if(key===personKey(state.primary)){
+                      var primary=element('span','pfvr-primary-label');primary.textContent='Standard';line.appendChild(primary);
+                    }else{
+                      var remove=element('button','pfvr-local-remove');remove.type='button';remove.textContent='Entfernen';remove.setAttribute('aria-label','Person aus Ansicht entfernen: '+personName);
+                      remove.addEventListener('click',function(){if(!removeDesiredPerson(state,personName))return;removePersonFromMatrix(personName);line.remove();});
+                      line.appendChild(remove);
+                    }
+                    list.appendChild(line);
+                  };
+                  var matrixHasPerson=function(matrix,name){
+                    var key=personKey(name);if(!matrix||!key)return false;
+                    return Array.from(matrix.querySelectorAll('.pfvr-person-header')).some(function(el){return el.getAttribute('data-pfvr-person')===key;});
+                  };
+                  var appendPersonColumn=function(table,row,personName,state){
+                    var matrix=document.querySelector('.pfvr-attendance-matrix');if(!table||!row||!matrix||matrixHasPerson(matrix,personName))return false;
+                    var rows=Array.from(table.rows||[]),header=rows[0];if(!header||!header.cells||header.cells.length<2)return false;
+                    var metas=Array.from(matrix.querySelectorAll('.pfvr-day-meta'));if(metas.length!==header.cells.length-1)return false;
+                    var key=personKey(personName),personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',key);
+                    matrix.insertBefore(personHeader,metas[0]||null);
+                    for(var column=1;column<header.cells.length;column++){
+                      var cell=element('div','pfvr-person-cell');cell.setAttribute('data-pfvr-person',key);
+                      var personLabel=element('div','pfvr-person-name-label');fitPersonName(personLabel,personName);cell.appendChild(personLabel);
+                      var control=element('div','pfvr-person-control');if(row.cells[column])moveChildren(row.cells[column],control);
+                      if(!control.textContent.trim()&&!control.querySelector('button,input,select,a')){var empty=element('span','pfvr-empty-status');empty.textContent='Keine Auswahl für diesen Termin';control.appendChild(empty);}
+                      cell.appendChild(control);matrix.insertBefore(cell,metas[column]||null);
+                    }
+                    var count=matrix.querySelectorAll('.pfvr-person-header').length;matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
+                    appendManagedPerson(document.querySelector('.pfvr-managed-people'),state,personName);
+                    splitStatusText(matrix);refreshInteractiveSoon(matrix);return true;
+                  };
+                  var syncAddedParticipants=function(state){
+                    var table=sourceTableRef;
+                    if(!table||!table.isConnected){
+                      var fresh=findTable();if(!fresh)return false;
+                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();
+                      sourceTableRef=null;buildMobile();return true;
+                    }
+                    var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells)return false;
+                    var headerFresh=Array.from(rows[0].cells||[]).slice(1).some(function(cell){return !!(text(cell).trim()||cell.children.length);});
+                    if(headerFresh&&document.querySelector('.pfvr-attendance-mobile')){
+                      var mobile=document.querySelector('.pfvr-attendance-mobile');if(mobile)mobile.remove();table.classList.remove('pfvr-attendance-source');sourceTableRef=null;buildMobile();return true;
+                    }
+                    var participantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
+                    var names=participantRows.map(function(row,index){var value=cleanPersonName(text(row.cells[0]));return value||('Person '+(index+1));});
+                    if(state.adoptNext){names.forEach(function(name){addDesiredPerson(state,name);});state.adoptNext=false;savePeopleState(state);}
+                    var desiredKeys={};state.desired.forEach(function(name){desiredKeys[personKey(name)]=true;});
+                    var added=false;participantRows.forEach(function(row,index){var name=names[index];if(desiredKeys[personKey(name)]&&appendPersonColumn(table,row,name,state))added=true;});return added;
+                  };
+                  var scheduleParticipantSync=function(state){[180,550,1200,2500].forEach(function(delay){setTimeout(function(){syncAddedParticipants(state);},delay);});};
+                  var bindSourcePeopleObserver=function(table,state){
+                    if(!table||!window.MutationObserver)return;if(sourcePeopleObserver)sourcePeopleObserver.disconnect();
+                    var scheduled=false;sourcePeopleObserver=new MutationObserver(function(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;syncAddedParticipants(state);},90);});
+                    sourcePeopleObserver.observe(table,{subtree:true,childList:true});
+                  };
 
                   var findPersonTools=function(toolInfo,state){
                     if(!toolInfo||!toolInfo.select)return null;
@@ -268,24 +329,22 @@ final class InternalAttendanceSkin {
                     head.appendChild(title);head.appendChild(toggle);panel.appendChild(head);
                     var body=element('div','pfvr-person-tools-body');
                     var hint=element('div');hint.textContent='Person hinzufügen:';hint.style.color=COLORS.muted;hint.style.fontSize='12px';body.appendChild(hint);
-                    body.appendChild(select);
-                    select.addEventListener('change',function(){var chosen=selectedOptionName(select);if(chosen)addDesiredPerson(state,chosen);},true);
-                    var buttons=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return norm(control.innerText||control.value).indexOf('alle anzeigen')>=0;});
-                    buttons.forEach(function(control){control.addEventListener('click',function(){state.adoptNext=true;savePeopleState(state);},true);body.appendChild(control);});
+                    var proxy=select.cloneNode(true);proxy.removeAttribute('id');proxy.removeAttribute('name');proxy.removeAttribute('form');proxy.removeAttribute('onchange');proxy.onchange=null;proxy.setAttribute('aria-label','Person hinzufügen');proxy.dataset.pfvrProxy='1';proxy.selectedIndex=select.selectedIndex;
+                    body.appendChild(proxy);select.style.setProperty('display','none','important');
+                    proxy.addEventListener('change',function(){
+                      var chosen=selectedOptionName(proxy);if(chosen)addDesiredPerson(state,chosen);
+                      select.selectedIndex=proxy.selectedIndex;try{select.value=proxy.value;}catch(ignore){}
+                      select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));scheduleParticipantSync(state);
+                    },false);
+                    var actionControls=Array.from(scope.querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn')).filter(function(control){return control!==select&&norm(control.innerText||control.value).length>0;});
+                    actionControls.forEach(function(control){
+                      var label=(control.innerText||control.value||'').trim(),action=element('button');action.type='button';action.textContent=label;action.setAttribute('aria-label',label);
+                      action.addEventListener('click',function(){if(norm(label).indexOf('alle anzeigen')>=0){state.adoptNext=true;savePeopleState(state);}control.click();scheduleParticipantSync(state);});
+                      body.appendChild(action);control.style.setProperty('display','none','important');
+                    });
                     var list=element('div','pfvr-managed-people');
                     var listTitle=element('div','pfvr-managed-people-title');listTitle.textContent='In deiner Ansicht';list.appendChild(listTitle);
-                    state.desired.forEach(function(personName){
-                      var line=element('div','pfvr-managed-person');
-                      var name=element('div','pfvr-managed-person-name');fitPersonName(name,personName);line.appendChild(name);
-                      if(personKey(personName)===personKey(state.primary)){
-                        var primary=element('span','pfvr-primary-label');primary.textContent='Standard';line.appendChild(primary);
-                      }else{
-                        var remove=element('button','pfvr-local-remove');remove.type='button';remove.textContent='Entfernen';remove.setAttribute('aria-label','Person aus Ansicht entfernen: '+personName);
-                        remove.addEventListener('click',function(){if(!removeDesiredPerson(state,personName))return;removePersonFromMatrix(personName);line.remove();});
-                        line.appendChild(remove);
-                      }
-                      list.appendChild(line);
-                    });
+                    state.desired.forEach(function(personName){appendManagedPerson(list,state,personName);});
                     body.appendChild(list);panel.appendChild(body);
                     toggle.addEventListener('click',function(){panel.classList.toggle('open');});
                     anchor.style.display='none';return panel;
@@ -334,7 +393,7 @@ final class InternalAttendanceSkin {
 
                   var buildMobile=function(){
                     if(document.querySelector('.pfvr-attendance-mobile'))return true;
-                    var table=findTable();if(!table)return false;
+                    var table=findTable();if(!table)return false;sourceTableRef=table;
                     var rows=Array.from(table.rows||[]);if(rows.length<2||!rows[0].cells||rows[0].cells.length<2)return false;
                     var header=rows[0];
                     var allParticipantRows=rows.slice(1).filter(function(row){return row.cells&&row.cells.length>=2;});
@@ -365,7 +424,7 @@ final class InternalAttendanceSkin {
                     }
                     matrixScroll.appendChild(matrix);mobile.appendChild(matrixScroll);
                     table.classList.add('pfvr-attendance-source');
-                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);restoreViewState();
+                    splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();
                     return true;
                   };
 

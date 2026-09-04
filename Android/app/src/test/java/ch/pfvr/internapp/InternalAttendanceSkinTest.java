@@ -46,7 +46,7 @@ public class InternalAttendanceSkinTest {
         String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
         assertTrue(script.contains("person zur liste hinzuzufügen"));
         assertTrue(script.contains("+ / − Person"));
-        assertTrue(script.contains("body.appendChild(select)"));
+        assertFalse(script.contains("body.appendChild(select)"));
         assertTrue(script.contains("Keine Auswahl für diesen Termin"));
         assertFalse(script.contains("option.value='Mit Essen'"));
         assertFalse(script.contains("option.value='Ohne Essen'"));
@@ -89,6 +89,20 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("state.primary"));
         assertFalse(script.contains("personManagementControls"));
         assertFalse(script.contains("looksLikeRemoveAction"));
+    }
+
+    @Test public void generatedScriptKeepsOriginalPersonControlInWebsiteContextAndSyncsNewRows(){
+        String script=InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        assertTrue(script.contains("select.cloneNode(true)"));
+        assertTrue(script.contains("proxy.removeAttribute('name')"));
+        assertTrue(script.contains("proxy.removeAttribute('onchange')"));
+        assertTrue(script.contains("select.dispatchEvent(new Event('change'"));
+        assertTrue(script.contains("control.click()"));
+        assertTrue(script.contains("scheduleParticipantSync"));
+        assertTrue(script.contains("syncAddedParticipants"));
+        assertTrue(script.contains("bindSourcePeopleObserver"));
+        assertTrue(script.contains("appendPersonColumn"));
+        assertFalse(script.contains("body.appendChild(select)"));
     }
 
     @Test public void generatedScriptPersistsRestoresRemovesAndLabelsParticipants(){

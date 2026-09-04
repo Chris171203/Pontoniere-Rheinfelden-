@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.5`.
+Aktuelle Android-Testversion: `0.10.6`.
 
 ## Entwicklung
 
@@ -16,8 +16,9 @@ Aktuelle Android-Testversion: `0.10.5`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.5
+## Gerätetest 0.10.6
 
+- Zusatzperson über den sichtbaren App-Select hinzufügen: die Auswahl wird am unveränderten originalen Website-Control ausgelöst; die neue Personenzeile muss bei Navigation oder DOM-Aktualisierung direkt in der Matrix erscheinen.
 - Zwei oder mehr Zusatzpersonen einblenden, App komplett schließen und neu öffnen: die App-Ansicht soll die gespeicherte Personenliste über den Website-Select wiederherstellen.
 - Unter `+ / − Person` eine Zusatzperson lokal entfernen: sie muss sofort aus der Matrix verschwinden und nach Neustart entfernt bleiben; die Standardperson darf nicht entfernbar sein.
 - Auch weit unten in der Terminliste muss in jeder Personenzelle der Name sichtbar sein; lange Namen dürfen höchstens zwei Zeilen belegen und die Personenspalte nicht verbreitern.
@@ -36,7 +37,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.5 verwendet `versionCode 29` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.6 verwendet `versionCode 30` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
