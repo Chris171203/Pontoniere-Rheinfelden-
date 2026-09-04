@@ -16,10 +16,11 @@ Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 
 ## Sprache und Erstfreigabe
 
-- Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Die Dialektfassung umfasst Landingpage, Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse und häufige App-Dialoge/Statusmeldungen. Externe/source-seitige Texte, Kalendereinträge, News und Personennamen werden absichtlich nicht verändert.
+- Die native Oberfläche unterstützt `Deutsch` und `Schwiizerdütsch`. Die Dialektfassung umfasst Landingpage, Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse, häufige App-Dialoge/Statusmeldungen sowie die von der App erzeugte interne Personenverwaltung und ihre Statusbeschriftungen.
+- Externe beziehungsweise quellenseitige Texte, Kalendereinträge, News, Termin-/Personennamen und die originale PFVR-Seite werden absichtlich nicht verändert. Sie werden technisch über eine rohe Textausgabe an der Dialekt-Mapping-Schicht vorbeigeführt; gemischte Anzeigen lokalisieren nur ihre App-Beschriftungen.
 - Die Schwiizerdütsch-Fassung ist bewusst gut lesbar und sprachlich konsistent gehalten, statt eine maximal enge Ortsmundart zu erzwingen.
 - Beim ersten Start dieses App-Datenstands wird ein Freigabecode verlangt. Nach erfolgreicher Prüfung wird nur ein lokales Freigabe-Flag gespeichert; der Klartextcode ist nicht im Repository enthalten.
-- Der Erstfreigabe-Screen dient zugleich als öffentliche Landingpage: Sprachwahl, Schnuppertraining/Mitgliedschaft/Formulare sowie Instagram/Facebook sind ohne Freigabe erreichbar. Die eigentlichen App-Screens, Live-Daten und internen WebViews werden weiterhin erst nach erfolgreicher Freigabe aufgebaut.
+- Der Erstfreigabe-Screen dient zugleich als öffentliche Landingpage: Sprachwahl, der Hinweis auf Schnuppertraining bereits vor der Mitgliedschaft, die offizielle Einstiegs-/Formularseite sowie Instagram/Facebook sind ohne Freigabe erreichbar. Die eigentlichen App-Screens, Live-Daten und internen WebViews werden weiterhin erst nach erfolgreicher Freigabe aufgebaut.
 - Schnuppertraining/Mitgliedschaft sowie Instagram und Facebook sind für bereits freigeschaltete Installationen zusätzlich über Home bzw. den Bereich Verein erreichbar.
 - Die Erstfreigabe ist eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung. Persönliche `intern.pfvr.ch`-Links bleiben weiterhin ausschließlich auf dem Endgerät.
 
@@ -48,8 +49,8 @@ Aktuelle Android-Testversion: `0.11.3` (`versionCode 50`).
 
 ## Gerätetest 0.11.3
 
-- Frische Installation/App-Daten: Die Landingpage muss sichtbar sein, zwischen Deutsch und Schwiizerdütsch umschalten und Schnuppertraining, Instagram sowie Facebook ohne Freigabe öffnen. Home, Live-Daten und interner WebView dürfen vor Codeeingabe nicht initialisiert werden.
-- Schwiizerdütsch: Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein und Kasse auf verbliebene hochdeutsche App-Texte prüfen. Inhalte aus Kalender, News und Original-PFVR-Seite müssen unverändert bleiben.
+- Frische Installation/App-Daten: Die Landingpage muss sichtbar sein, zwischen Deutsch und Schwiizerdütsch umschalten und die hinterlegten PFVR-Ziele für Schnuppertraining/Formulare, Instagram sowie Facebook ohne Freigabe öffnen. Home, Live-Daten und interner WebView dürfen vor Codeeingabe nicht initialisiert werden.
+- Schwiizerdütsch: Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse sowie die app-erzeugte Personenverwaltung/Anmeldestatus auf verbliebene hochdeutsche App-Texte prüfen. Inhalte aus Kalender, News, Personennamen und Original-PFVR-Seite müssen unverändert bleiben.
 - Verein: neue Kacheln für Schnuppertraining/Mitgliedschaft, Instagram und Facebook prüfen; bestehende benutzerdefinierte Kachelreihenfolgen müssen die neuen IDs automatisch ergänzen.
 - `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.

@@ -128,9 +128,6 @@ public class MainActivity extends Activity {
     private static final String HISTORY = "https://www.pfvr.ch/verein/geschichte/";
     private static final String PROGRAM = "https://www.pfvr.ch/verein/jahresprogramm/";
     private static final String CONTACT = "https://www.pfvr.ch/kontakt/";
-    private static final String JOIN_INFO = "https://www.pfvr.ch/schnuppertraining-mitglied-werden-formulare/";
-    private static final String FACEBOOK = "https://www.facebook.com/PontoniereRheinfelden";
-    private static final String INSTAGRAM = "https://www.instagram.com/pontoniererheinfelden";
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
     private static final String CALENDAR_WEB = "https://calendar.google.com/calendar/embed?src=a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com&ctz=Europe%2FZurich";
 
@@ -322,7 +319,7 @@ public class MainActivity extends Activity {
         TextView title=txt("PFVR Rheinfelden",24,TEXT,true);
         title.setGravity(Gravity.CENTER);
         page.addView(title);
-        TextView subtitle=txt("Erstfreigabe",16,WATER,true);
+        TextView subtitle=txt("Willkommen",16,WATER,true);
         subtitle.setGravity(Gravity.CENTER);
         subtitle.setPadding(0,dp(5),0,dp(12));
         page.addView(subtitle);
@@ -344,21 +341,21 @@ public class MainActivity extends Activity {
         publicInfo.setPadding(dp(18),dp(17),dp(18),dp(17));
         page.addView(publicInfo,margin(-1,-2,0,0,0,12));
         publicInfo.addView(txt("Neu beim PFVR?",19,TEXT,true));
-        TextView publicText=txt("Schnuppertraining, Mitgliedschaft und Formulare findest du auf pfvr.ch.",13,MUTED,false);
+        TextView publicText=txt("Schnuppertraining ist auch vor der Mitgliedschaft möglich. Infos zu Einstieg, Mitgliedschaft und Formularen findest du auf pfvr.ch.",13,MUTED,false);
         publicText.setPadding(0,dp(5),0,dp(11));
         publicInfo.addView(publicText);
         Button join=btn("Schnuppertraining & Mitglied werden",NAVY,Color.WHITE);
-        join.setOnClickListener(v->external(JOIN_INFO));
+        join.setOnClickListener(v->external(PublicLinks.JOIN));
         publicInfo.addView(join,new LinearLayout.LayoutParams(-1,dp(46)));
         TextView follow=txt("Folge uns",11,MUTED,true);
         follow.setPadding(0,dp(13),0,dp(6));
         publicInfo.addView(follow);
         LinearLayout socials=new LinearLayout(this);
         Button instagram=btn("Instagram",Color.rgb(232,240,244),NAVY);
-        instagram.setOnClickListener(v->external(INSTAGRAM));
+        instagram.setOnClickListener(v->external(PublicLinks.INSTAGRAM));
         socials.addView(instagram,new LinearLayout.LayoutParams(0,dp(42),1));
         Button facebook=btn("Facebook",Color.rgb(232,240,244),NAVY);
-        facebook.setOnClickListener(v->external(FACEBOOK));
+        facebook.setOnClickListener(v->external(PublicLinks.FACEBOOK));
         LinearLayout.LayoutParams facebookParams=new LinearLayout.LayoutParams(0,dp(42),1);
         facebookParams.setMargins(dp(8),0,0,0);
         socials.addView(facebook,facebookParams);
@@ -550,7 +547,7 @@ private View home() {
     TextView joinInfo=txt("Schnuppertraining & Mitglied werden  →",12,Color.WHITE,true);
     joinInfo.setGravity(Gravity.END);
     joinInfo.setPadding(dp(4),dp(12),dp(2),0);
-    joinInfo.setOnClickListener(v->external(JOIN_INFO));
+    joinInfo.setOnClickListener(v->external(PublicLinks.JOIN));
     hero.addView(joinInfo);
     homeLiveStack=new LinearLayout(this);
     homeLiveStack.setOrientation(LinearLayout.VERTICAL);
@@ -715,12 +712,12 @@ private void rebuildHomePreservingScroll(){
         String[] x=weatherSummary();
         c.addView(txt(x[0],11,WATER,true));
         LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(5),0,dp(5)); c.addView(row);
-        TextView icon=txt(x[5],38,themeText(TEXT),false); icon.setGravity(Gravity.CENTER); row.addView(icon,new LinearLayout.LayoutParams(dp(58),dp(58)));
+        TextView icon=txtRaw(x[5],38,themeText(TEXT),false); icon.setGravity(Gravity.CENTER); row.addView(icon,new LinearLayout.LayoutParams(dp(58),dp(58)));
         LinearLayout info=new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL); info.setPadding(dp(7),0,0,0); row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
-        info.addView(txt(x[1],15,MUTED,true));
-        TextView main=txt(x[2],21,TEXT,true); main.setPadding(0,dp(2),0,0); info.addView(main);
-        TextView details=txt(x[3],13,MUTED,false); details.setPadding(0,dp(5),0,0); c.addView(details);
-        TextView src=txt(x[4],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(8),0,0); c.addView(src);
+        info.addView(txtRaw(x[1],15,MUTED,true));
+        TextView main=txtRaw(x[2],21,TEXT,true); main.setPadding(0,dp(2),0,0); info.addView(main);
+        TextView details=txtRaw(x[3],13,MUTED,false); details.setPadding(0,dp(5),0,0); c.addView(details);
+        TextView src=txtRaw(x[4],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(8),0,0); c.addView(src);
         return c;
     }
 
@@ -801,7 +798,7 @@ private void rebuildHomePreservingScroll(){
         c.addView(flowMetric,new LinearLayout.LayoutParams(-1,-2));
 
         if(Double.isFinite(temperature)){
-            TextView temperatureView=txt("Wasser "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);
+            TextView temperatureView=txtRaw(ui("Wasser")+" "+formatMetric(station,RiverMetric.TEMPERATURE,temperature)+" °C",11,MUTED,false);
             temperatureView.setPadding(0,dp(5),0,0);
             c.addView(temperatureView);
         }
@@ -809,7 +806,7 @@ private void rebuildHomePreservingScroll(){
         View timestampSpacer=new View(this);
         c.addView(timestampSpacer,new LinearLayout.LayoutParams(1,0,1));
         String[] summary=hydroSummary(station);
-        TextView stand=txt(summary[3],10,Color.rgb(126,140,150),false);
+        TextView stand=txtRaw(summary[3],10,Color.rgb(126,140,150),false);
         stand.setMaxLines(1);
         stand.setPadding(0,dp(7),0,0);
         c.addView(stand);
@@ -868,7 +865,7 @@ private void rebuildHomePreservingScroll(){
 
         LinearLayout header=new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(txt("Wassertemperatur · "+station.label,12,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        header.addView(txtRaw(ui("Wassertemperatur")+" · "+station.label,12,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
         TextView source=txt("BAFU "+station.id+"  ↗",11,WATER,true);
         source.setOnClickListener(v->external(station.stationUrl()));
         source.setPadding(dp(8),dp(4),0,dp(4));
@@ -1005,7 +1002,7 @@ private void rebuildHomePreservingScroll(){
             card.addView(missing,margin(-1,-2,0,7,0,0));
         }
 
-        TextView src=txt(summary[3]+" · "+range.sourceLabel,10,Color.rgb(126,140,150),false);
+        TextView src=txtRaw(summary[3]+" · "+ui(range.sourceLabel),10,Color.rgb(126,140,150),false);
         src.setPadding(0,dp(8),0,0);
         card.addView(src);
         return card;
@@ -1321,7 +1318,7 @@ private void rebuildHomePreservingScroll(){
         long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
         String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
         String provenance=ui(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
-        if(raw.trim().isEmpty())return new String[]{"NÄCHSTES TRAINING",date,"Wetter wird geladen …","Prognose wird im Hintergrund aktualisiert.",provenance,"◌"};
+        if(raw.trim().isEmpty())return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Wetter wird geladen …"),ui("Prognose wird im Hintergrund aktualisiert."),provenance,"◌"};
         try{
             JSONObject hourly=new JSONObject(raw).getJSONObject("hourly");
             JSONArray times=hourly.getJSONArray("time"),temperatures=hourly.getJSONArray("temperature_2m"),probabilities=hourly.getJSONArray("precipitation_probability"),precipitation=hourly.getJSONArray("precipitation"),codes=hourly.getJSONArray("weather_code"),wind=hourly.getJSONArray("wind_speed_10m"),gusts=hourly.getJSONArray("wind_gusts_10m");
@@ -1340,15 +1337,15 @@ private void rebuildHomePreservingScroll(){
                 if(uv!=null){double value=uv.optDouble(i,Double.NaN);if(Double.isFinite(value)&&(Double.isNaN(uvMax)||value>uvMax))uvMax=value;}
                 count++;
             }
-            if(count==0)return new String[]{"NÄCHSTES TRAINING",date,"Noch keine Prognose","Für diesen Trainingszeitraum liegen noch keine Stundenwerte vor.",provenance,"◌"};
+            if(count==0)return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Noch keine Prognose"),ui("Für diesen Trainingszeitraum liegen noch keine Stundenwerte vor."),provenance,"◌"};
             String temperatureText=Double.isNaN(firstTemperature)?"":String.format(Locale.GERMAN,"%.0f °C",firstTemperature);
             if(Double.isFinite(lastTemperature)&&Double.isFinite(firstTemperature)&&Math.abs(lastTemperature-firstTemperature)>=1.0)temperatureText+=String.format(Locale.GERMAN," → %.0f °C",lastTemperature);
             String main=temperatureText+(temperatureText.isEmpty()?"":" · ")+weatherCode(codeValue);
             String details=ui("Regen")+" "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\n"+ui("Wind")+" "+Math.round(windMax)+" km/h · "+ui("Böen")+" "+Math.round(gustMax)+" km/h";
             if(Double.isFinite(uvMax))details+="\nUV "+String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax);
-            return new String[]{"NÄCHSTES TRAINING",date,main,details,provenance,weatherIcon(codeValue)};
+            return new String[]{ui("NÄCHSTES TRAINING"),date,main,details,provenance,weatherIcon(codeValue)};
         }catch(Exception e){
-            return new String[]{"NÄCHSTES TRAINING",date,"Gespeicherte Wetterdaten nicht lesbar","Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen.",provenance,"◌"};
+            return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Gespeicherte Wetterdaten nicht lesbar"),ui("Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen."),provenance,"◌"};
         }
     }
 
@@ -1424,7 +1421,7 @@ private void rebuildHomePreservingScroll(){
             if(Double.isFinite(w))sub.append(ui("Pegel")).append(' ').append(formatMetric(station,RiverMetric.LEVEL,w)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
             if(station.supportsTemperature&&!Double.isNaN(wt)){if(sub.length()>0)sub.append("\n");sub.append(ui("Wasser")).append(' ').append(String.format(Locale.GERMAN,"%.1f °C",wt));}
             String stand="BAFU "+station.id;
-            try{if(!latest.isBlank())stand+=" · Stand "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}
+            try{if(!latest.isBlank())stand+=" · "+ui("Stand")+" "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}
             if(cache>0&&(System.currentTimeMillis()-cache)>45*60000L)stand+=" · Cache";
             return new String[]{title,main,sub.length()==0?ui("Messwerte derzeit unvollständig"):sub.toString(),stand};
         }catch(Exception ignored){return new String[]{title,ui("Gespeicherter Stand"),ui("Messdaten nicht lesbar"),"BAFU · Cache"};}
@@ -1711,12 +1708,12 @@ private void rebuildHomePreservingScroll(){
         data.addView(clear,clearParams);
 
         boolean backgroundOn=prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
-        Button background=btn("Hintergrundaktualisierung: "+(backgroundOn?"Ein":"Aus"),Color.rgb(232,240,244),NAVY);
+        Button background=btn(ui("Hintergrundaktualisierung")+": "+ui(backgroundOn?"Ein":"Aus"),Color.rgb(232,240,244),NAVY);
         background.setOnClickListener(v->{
             boolean next=!prefs.getBoolean(PREF_BACKGROUND_REFRESH,true);
             prefs.edit().putBoolean(PREF_BACKGROUND_REFRESH,next).apply();
             scheduleBackgroundRefresh();
-            background.setText(ui("Hintergrundaktualisierung: "+(next?"Ein":"Aus")));
+            background.setText(ui("Hintergrundaktualisierung")+": "+ui(next?"Ein":"Aus"));
         });
         LinearLayout.LayoutParams backgroundParams=new LinearLayout.LayoutParams(-1,dp(44));
         backgroundParams.setMargins(0,dp(8),0,0);
@@ -1884,7 +1881,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         LinearLayout copy=new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(8),0,0,0);
-        TextView title=txt(level+" · "+labelText,12,color,true);
+        TextView title=txtRaw(level+" · "+ui(labelText),12,color,true);
         title.setTextColor(color);
         copy.addView(title);
         copy.addView(txt(detail,10,MUTED,false));
@@ -1900,7 +1897,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
 
         LinearLayout titleRow=new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        titleRow.addView(txt("Rhein-Kachel "+slot,15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        titleRow.addView(txtRaw(ui("Rhein-Kachel")+" "+slot,15,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
         int stateColor=enabled?STATUS_GOOD:MUTED;
         TextView state=txt(enabled?"Aktiv":"Aus",11,stateColor,true);
         state.setTextColor(enabled?statusTextColor(STATUS_GOOD):themeText(MUTED));
@@ -1911,7 +1908,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         card.addView(titleRow);
 
         String metrics=station.supportsTemperature?"Abfluss · Pegel · Wassertemperatur":"Abfluss · Pegel";
-        TextView current=txt(station.label+" · BAFU "+station.id+"\n"+metrics,13,MUTED,false);
+        TextView current=txtRaw(station.label+" · BAFU "+station.id+"\n"+ui(metrics),13,MUTED,false);
         current.setPadding(0,dp(5),0,dp(10));
         card.addView(current);
 
@@ -1933,12 +1930,12 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     private void configureRiverSlot(int slot){
         final HydroStation[] stations={HydroStation.BASEL_RHEINHALLE,HydroStation.RHEINFELDEN};
         String[] labels={
-                "Basel, Rheinhalle · Abfluss & Pegel",
-                "Rheinfelden · Abfluss, Pegel & Wassertemperatur"
+                ui("Basel, Rheinhalle · Abfluss & Pegel"),
+                ui("Rheinfelden · Abfluss, Pegel & Wassertemperatur")
         };
         HydroStation currentStation=riverStation(slot);
         int selected=currentStation==HydroStation.RHEINFELDEN?1:0;
-        new AlertDialog.Builder(this,dialogTheme()).setTitle("Rhein-Kachel "+slot)
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(ui("Rhein-Kachel")+" "+slot)
                 .setSingleChoiceItems(labels,selected,(dialog,which)->{
                     String stationKey=slot==1?PREF_RIVER_SLOT1_STATION:PREF_RIVER_SLOT2_STATION;
                     prefs.edit().putString(stationKey,stations[which].id).apply();
@@ -2048,7 +2045,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         box.addView(txt("Niedrig",12,MUTED,true));box.addView(low,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView w1=txt("Warnung",12,MUTED,true);w1.setPadding(0,dp(10),0,0);box.addView(w1);box.addView(warn,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView a1=txt("Alarm",12,MUTED,true);a1.setPadding(0,dp(10),0,0);box.addView(a1);box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(48)));
-        new AlertDialog.Builder(this,dialogTheme()).setTitle(station.label+" · Grenzwerte").setView(box).setPositiveButton(ui("Speichern"),(d,w)->{
+        new AlertDialog.Builder(this,dialogTheme()).setTitle(station.label+" · "+ui("Grenzwerte")).setView(box).setPositiveButton(ui("Speichern"),(d,w)->{
             try{
                 float l=Float.parseFloat(low.getText().toString().replace(',','.')),wa=Float.parseFloat(warn.getText().toString().replace(',','.')),al=Float.parseFloat(alarm.getText().toString().replace(',','.'));
                 if(l<0||!(l<wa&&wa<al))throw new Exception();
@@ -2057,7 +2054,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
             }catch(Exception e){Toast.makeText(this,ui("Grenzwerte müssen aufsteigend sein: Niedrig < Warnung < Alarm."),Toast.LENGTH_LONG).show();}
         }).setNegativeButton(ui("Abbrechen"),null).show();
     }
-    private EditText thresholdInput(String hint,float value){EditText e=new EditText(this);e.setHint(hint);e.setText(String.format(Locale.US,"%.0f",value));e.setSingleLine(true);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setTextColor(themeText(TEXT));e.setHintTextColor(themeText(MUTED));e.setBackground(round(Color.rgb(238,243,246),12));e.setPadding(dp(12),0,dp(12),0);return e;}
+    private EditText thresholdInput(String hint,float value){EditText e=new EditText(this);e.setHint(ui(hint));e.setText(String.format(Locale.US,"%.0f",value));e.setSingleLine(true);e.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);e.setTextColor(themeText(TEXT));e.setHintTextColor(themeText(MUTED));e.setBackground(round(Color.rgb(238,243,246),12));e.setPadding(dp(12),0,dp(12),0);return e;}
 
     private void loadCachedNews(){
         newsUpdated=prefs.getLong(NewsRepository.PREF_UPDATED,0L);
@@ -2080,9 +2077,9 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     private View newsCard(NewsRepository.Article article,boolean compact){
         LinearLayout c=card();c.setOrientation(LinearLayout.VERTICAL);c.setLayoutParams(margin(-1,-2,0,0,0,9));
         c.addView(txt(newsDate(article),11,WATER,true));
-        TextView title=txt(article.title,compact?15:17,TEXT,true);title.setPadding(0,dp(4),0,dp(4));c.addView(title);
+        TextView title=txtRaw(article.title,compact?15:17,TEXT,true);title.setPadding(0,dp(4),0,dp(4));c.addView(title);
         if(article.excerpt!=null&&!article.excerpt.isBlank()){
-            TextView excerpt=txt(article.excerpt,compact?12:13,MUTED,false);excerpt.setMaxLines(compact?3:6);c.addView(excerpt);
+            TextView excerpt=txtRaw(article.excerpt,compact?12:13,MUTED,false);excerpt.setMaxLines(compact?3:6);c.addView(excerpt);
         }
         TextView open=txt("Artikel öffnen  →",12,WATER,true);open.setGravity(Gravity.END);open.setPadding(0,dp(8),0,0);c.addView(open);
         c.setOnClickListener(v->openNewsArticle(article));
@@ -2202,7 +2199,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
 
         LinearLayout titleRow=new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title=txt(event.title,compact?15:16,TEXT,true);
+        TextView title=txtRaw(event.title,compact?15:16,TEXT,true);
         if(cancelled)title.setPaintFlags(title.getPaintFlags()|Paint.STRIKE_THRU_TEXT_FLAG);
         titleRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
         if(cancelled){
@@ -2216,9 +2213,9 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
             titleRow.addView(badge,badgeParams);
         }
         details.addView(titleRow);
-        details.addView(txt(eventWhenCompact(event),13,MUTED,false));
+        details.addView(txtRaw(eventWhenCompact(event),13,MUTED,false));
         if(!compact&&event.location!=null&&!event.location.isBlank()){
-            TextView location=txt(event.location.replace("\n"," · "),12,WATER,false);
+            TextView location=txtRaw(event.location.replace("\n"," · "),12,WATER,false);
             location.setMaxLines(2);
             details.addView(location);
         }
@@ -2262,13 +2259,13 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
             cancelled.setPadding(0,0,0,dp(9));
             box.addView(cancelled);
         }
-        box.addView(txt(event.title,22,TEXT,true));
-        TextView when=txt(eventWhen(event),14,MUTED,false);
+        box.addView(txtRaw(event.title,22,TEXT,true));
+        TextView when=txtRaw(eventWhen(event),14,MUTED,false);
         when.setPadding(0,dp(7),0,0);
         box.addView(when);
 
         if(event.location!=null&&!event.location.isBlank()){
-            TextView location=txt(ui("Ort")+"\n"+event.location,13,WATER,false);
+            TextView location=txtRaw(ui("Ort")+"\n"+event.location,13,WATER,false);
             location.setPadding(0,dp(14),0,0);
             box.addView(location);
             Button route=btn("Route öffnen",Color.rgb(232,240,244),NAVY);
@@ -2282,7 +2279,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
             TextView descriptionLabel=txt("Details",12,MUTED,true);
             descriptionLabel.setPadding(0,dp(15),0,dp(4));
             box.addView(descriptionLabel);
-            TextView description=txt(event.description.trim(),14,TEXT,false);
+            TextView description=txtRaw(event.description.trim(),14,TEXT,false);
             description.setTextIsSelectable(true);
             description.setPadding(0,0,0,dp(4));
             box.addView(description);
@@ -2514,12 +2511,12 @@ private View cashPaymentDetailsTile(){
     LinearLayout details=card();
     details.setOrientation(LinearLayout.VERTICAL);
     group.addView(details,new LinearLayout.LayoutParams(-1,-2));
-    details.addView(txt(CLUB_PAYEE,16,TEXT,true));
-    details.addView(txt("Rheinweg · 4310 Rheinfelden",13,MUTED,false));
-    TextView iban=txt(CLUB_IBAN,19,NAVY,true);
+    details.addView(txtRaw(CLUB_PAYEE,16,TEXT,true));
+    details.addView(txtRaw("Rheinweg · 4310 Rheinfelden",13,MUTED,false));
+    TextView iban=txtRaw(CLUB_IBAN,19,NAVY,true);
     iban.setPadding(0,dp(12),0,dp(4));
     details.addView(iban);
-    details.addView(txt(CLUB_PAYMENT_NOTE,13,MUTED,false));
+    details.addView(txtRaw(CLUB_PAYMENT_NOTE,13,MUTED,false));
     LinearLayout copies=new LinearLayout(this);
     copies.setPadding(0,dp(12),0,0);
     details.addView(copies);
@@ -2549,7 +2546,7 @@ private View cashPaymentDetailsTile(){
 
         LinearLayout titleRow=new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        titleRow.addView(txt(selected?label:"Keine Banking-App gewählt",16,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
+        titleRow.addView(selected?txtRaw(label,16,TEXT,true):txt("Keine Banking-App gewählt",16,TEXT,true),new LinearLayout.LayoutParams(0,-2,1));
 
         int stateColor=selected?STATUS_GOOD:STATUS_WARN;
         TextView state=txt(selected?"Bereit":"Einrichten",10,stateColor,true);
@@ -2582,11 +2579,11 @@ private View cashPaymentDetailsTile(){
 
         boolean selected=hasPreferredBank();
         String label=selectedBankLabel();
-        card.addView(txt(selected?label:"Noch keine Banking-App festgelegt",16,TEXT,true));
+        card.addView(selected?txtRaw(label,16,TEXT,true):txt("Noch keine Banking-App festgelegt",16,TEXT,true));
 
         if(selected){
             BankingAppRegistry.Profile profile=selectedBankProfile();
-            TextView capability=txt(profile.capability.label+(profile.documented?" · dokumentiert":" · Geräteprüfung"),12,WATER,true);
+            TextView capability=txtRaw(ui(profile.capability.label)+(profile.documented?" · "+ui("dokumentiert"):" · "+ui("Geräteprüfung")),12,WATER,true);
             capability.setPadding(0,dp(4),0,dp(4));
             card.addView(capability);
         }
@@ -2651,25 +2648,47 @@ private View cashPaymentDetailsTile(){
     }
 
     private String selectedBankPaymentHint(){
-        if(!hasPreferredBank())return "Für Direktzahlungen zuerst eine Banking-App festlegen.";
+        if(!hasPreferredBank())return ui("Für Direktzahlungen zuerst eine Banking-App festlegen.");
         String bank=selectedBankLabel();
         BankingAppRegistry.Profile profile=selectedBankProfile();
         switch(profile.capability){
             case DIRECT_SHARE:
-                return "PFVR versucht immer zuerst die direkte Swiss-QR-Bildübergabe an "+bank+". Falls die App den QR nicht übernimmt, folgen sichere Fallbacks.";
+                return formatBankHint(
+                        "PFVR versucht immer zuerst die direkte Swiss-QR-Bildübergabe an %s. Falls die App den QR nicht übernimmt, folgen sichere Fallbacks.",
+                        "PFVR probiert immer zerscht d direkt Swiss-QR-Bildübergab a %s. Wenn d App de QR nöd übernimmt, folged sicheri Fallbacks.",
+                        bank
+                );
             case FILE_IMPORT:
-                return "PFVR versucht zuerst die direkte QR-Bildübergabe an "+bank+". Falls Android sie nicht anbietet, kann die QR-Datei gespeichert und in der Banking-App importiert werden.";
+                return formatBankHint(
+                        "PFVR versucht zuerst die direkte QR-Bildübergabe an %s. Falls Android sie nicht anbietet, kann die QR-Datei gespeichert und in der Banking-App importiert werden.",
+                        "PFVR probiert zerscht d direkt QR-Bildübergab a %s. Wenn Android sie nöd aabietet, cha d QR-Datei gspeicheret und i d Banking-App importiert werde.",
+                        bank
+                );
             case SCAN_ONLY:
-                return "PFVR versucht auch bei "+bank+" zuerst die direkte QR-Bildübergabe. Erst wenn die App kein Bild annimmt, wird sie geöffnet und die Zahlungsdaten werden kopiert.";
+                return formatBankHint(
+                        "PFVR versucht auch bei %s zuerst die direkte QR-Bildübergabe. Erst wenn die App kein Bild annimmt, wird sie geöffnet und die Zahlungsdaten werden kopiert.",
+                        "PFVR probiert au bi %s zerscht d direkt QR-Bildübergab. Erscht wenn d App kei Bild annimmt, wird sie göffnet und d Zahligsdate wärded kopiert.",
+                        bank
+                );
             default:
-                return "PFVR versucht bei "+bank+" immer zuerst die QR-Bildübergabe und prüft danach weitere Datei- und Textwege. Erst zuletzt wird die App mit kopierten Zahlungsdaten geöffnet.";
+                return formatBankHint(
+                        "PFVR versucht bei %s immer zuerst die QR-Bildübergabe und prüft danach weitere Datei- und Textwege. Erst zuletzt wird die App mit kopierten Zahlungsdaten geöffnet.",
+                        "PFVR probiert bi %s immer zerscht d QR-Bildübergab und prüeft nachher witeri Datei- und Textwäg. Erscht zletscht wird d App mit kopierte Zahligsdate göffnet.",
+                        bank
+                );
         }
     }
 
     private String preferredBankPaymentLabel(){
         String label=selectedBankLabel();
-        return hasPreferredBank()?"Mit "+label+" bezahlen":"Banking-App festlegen";
+        return hasPreferredBank()?ui("Mit")+" "+label+" "+ui("bezahlen"):ui("Banking-App festlegen");
     }
+
+    private String formatBankHint(String german,String swissGerman,String bank){
+        String pattern=UiLanguage.isSwissGerman(uiMode())?swissGerman:german;
+        return String.format(Locale.GERMAN,pattern,bank);
+    }
+
 
     private void payWithPreferredBank(EditText amountInput){
         if(!hasPreferredBank()){
@@ -2689,8 +2708,8 @@ private View cashPaymentDetailsTile(){
     private View cashItemRow(CashCatalog.Item item){
         LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(9),0,dp(9));
         LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);copy.setPadding(0,0,dp(8),0);row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
-        copy.addView(txt(item.name,14,TEXT,true));
-        String detail=(item.variant==null||item.variant.isBlank()?"":item.variant+" · ")+formatCashPrice(item.price)+(item.deposit?" · Depot":"");copy.addView(txt(detail,12,item.deposit?WATER:MUTED,false));
+        copy.addView(txtRaw(item.name,14,TEXT,true));
+        String detail=(item.variant==null||item.variant.isBlank()?"":item.variant+" · ")+formatCashPrice(item.price)+(item.deposit?" · Depot":"");copy.addView(txtRaw(detail,12,item.deposit?WATER:MUTED,false));
         Button minus=btn("−",Color.rgb(232,240,244),NAVY);row.addView(minus,new LinearLayout.LayoutParams(dp(40),dp(40)));
         TextView quantity=txt(String.valueOf(cashCart.getOrDefault(item.id,0)),16,TEXT,true);quantity.setGravity(Gravity.CENTER);row.addView(quantity,new LinearLayout.LayoutParams(dp(38),dp(40)));
         cashQuantityViews.put(item.id,quantity);
@@ -2713,8 +2732,8 @@ private View cashPaymentDetailsTile(){
         LinearLayout copy=new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(0,0,dp(8),0);
-        copy.addView(txt(quantity+"× "+item.displayName(),13,TEXT,true));
-        copy.addView(txt(formatCashPrice(item.price*quantity),12,item.deposit?WATER:MUTED,false));
+        copy.addView(txtRaw(quantity+"× "+item.displayName(),13,TEXT,true));
+        copy.addView(txtRaw(formatCashPrice(item.price*quantity),12,item.deposit?WATER:MUTED,false));
         row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
         Button remove=btn("Entfernen",Color.rgb(232,240,244),NAVY);
         remove.setOnClickListener(v->{setCashQuantity(item.id,0);updateCashSummary();});
@@ -2749,7 +2768,7 @@ private View cashPaymentDetailsTile(){
     private void openTwintDirect(EditText amountInput){
         String a=amount(amountInput==null?null:amountInput.getText().toString());
         if(a==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben oder das Feld leer lassen."),Toast.LENGTH_LONG).show();return;}
-        if(!a.isBlank())copy("PFVR TWINT-Betrag",a,"CHF "+a+" kopiert – auf der PFVR-Seite eintragen.");
+        if(!a.isBlank())copy("PFVR TWINT-Betrag",a,"CHF "+a+" "+(UiLanguage.isSwissGerman(uiMode())?"kopiert – uf de PFVR-Site iitrage.":"kopiert – auf der PFVR-Seite eintragen."));
         external(TWINT_DIRECT_URL);
     }
 
@@ -2878,7 +2897,7 @@ private View cashPaymentDetailsTile(){
         image.setAdjustViewBounds(true);
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         box.addView(image,new LinearLayout.LayoutParams(-1,dp(270)));
-        TextView info=txt("Die direkte QR-Bildübergabe an "+selectedBankLabel()+" wurde versucht, aber von der installierten App-Version nicht angeboten. QR speichern und anschließend in der Banking-App hochladen.",13,MUTED,false);
+        TextView info=txtRaw(formatBankHint("Die direkte QR-Bildübergabe an %s wurde versucht, aber von der installierten App-Version nicht angeboten. QR speichern und anschließend in der Banking-App hochladen.","D direkt QR-Bildübergab a %s isch probiert worde, aber vo de installierte App-Version nöd aabote worde. De QR speichere und nachher i de Banking-App ufelade.",selectedBankLabel()),13,MUTED,false);
         info.setPadding(0,dp(8),0,0);
         box.addView(info);
         new AlertDialog.Builder(this,dialogTheme())
@@ -2906,7 +2925,7 @@ private View cashPaymentDetailsTile(){
             LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(16),dp(8),dp(16),0);
             ImageView image=new ImageView(this); image.setImageBitmap(qr); image.setAdjustViewBounds(true); image.setScaleType(ImageView.ScaleType.FIT_CENTER); box.addView(image,new LinearLayout.LayoutParams(-1,dp(330)));
             String amountLine=a.isBlank()?"Betrag offen · in Banking-App eingeben":"CHF "+a;
-            TextView details=txt(amountLine+"\n"+CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE,14,TEXT,false); details.setGravity(Gravity.CENTER); details.setPadding(0,dp(8),0,dp(4)); box.addView(details);
+            TextView details=txtRaw(amountLine+"\n"+CLUB_PAYEE+"\n"+CLUB_IBAN+"\n"+CLUB_PAYMENT_NOTE,14,TEXT,false); details.setGravity(Gravity.CENTER); details.setPadding(0,dp(8),0,dp(4)); box.addView(details);
             TextView note=txt("Direkte Übergabe versucht den QR als temporäres Bild an eine kompatible Banking-App zu senden. Falls die Bank das nicht unterstützt, bleibt Speichern/Öffnen als Fallback.",12,MUTED,false); note.setGravity(Gravity.CENTER); box.addView(note);
             new AlertDialog.Builder(this,dialogTheme())
                     .setTitle(ui("Bankzahlung · Swiss QR"))
@@ -3033,7 +3052,7 @@ private View cashPaymentDetailsTile(){
         String[] labels=new String[found.size()];
         for(int index=0;index<found.size();index++){
             AppChoice app=found.get(index);
-            labels[index]=app.label+" · "+app.capability.label;
+            labels[index]=app.label+" · "+ui(app.capability.label);
             if(app.pkg.equals(currentPackage))selected=index;
         }
 
@@ -3082,7 +3101,7 @@ private View cashPaymentDetailsTile(){
         int selected=-1;
         for(int index=0;index<apps.size();index++){
             AppChoice app=apps.get(index);
-            labels[index]=app.label+" · "+app.capability.label;
+            labels[index]=app.label+" · "+ui(app.capability.label);
             if(app.pkg.equals(currentPackage))selected=index;
         }
         new AlertDialog.Builder(this,dialogTheme())
@@ -3136,7 +3155,7 @@ private View cashPaymentDetailsTile(){
 private View clubTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
         case "club_about":return clubAboutTile();
-        case "club_join":return clubActionTile("Schnuppertraining & Mitglied werden","Infos, Einstieg und Formulare",v->external(JOIN_INFO));
+        case "club_join":return clubActionTile("Schnuppertraining & Mitglied werden","Schnuppertraining auch vor der Mitgliedschaft · Infos und Formulare",v->external(PublicLinks.JOIN));
         case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
         case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
@@ -3145,8 +3164,8 @@ private View clubTileView(TileLayoutStore.Spec spec){
         case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
         case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
         case "club_contact":return clubActionTile("Kontaktseite","Weitere Ansprechwege",v->openInApp(CONTACT,"Kontakt"));
-        case "club_instagram":return clubActionTile("Instagram","@pontoniererheinfelden",v->external(INSTAGRAM));
-        case "club_facebook":return clubActionTile("Facebook","Pontoniere Rheinfelden",v->external(FACEBOOK));
+        case "club_instagram":return clubActionTile("Instagram","@pontoniererheinfelden",v->external(PublicLinks.INSTAGRAM));
+        case "club_facebook":return clubActionTile("Facebook","Pontoniere Rheinfelden",v->external(PublicLinks.FACEBOOK));
         default:return null;
     }
 }
@@ -3237,7 +3256,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     String border=darkMode?"#344550":"#DCE5EA";
     String link=darkMode?"#5BBED5":"#247E99";
     String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
-    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link),null);
+    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode()),null);
 }
 
     private View internalMissing() {
@@ -3515,7 +3534,8 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private View contact(String title,String detail,String action,View.OnClickListener l){LinearLayout c=card();c.setGravity(Gravity.CENTER_VERTICAL);LinearLayout g=new LinearLayout(this);g.setOrientation(LinearLayout.VERTICAL);g.addView(txt(title,14,TEXT,true));g.addView(txt(detail,14,MUTED,false));c.addView(g,new LinearLayout.LayoutParams(0,-2,1));Button b=btn(action,Color.rgb(232,240,244),NAVY);b.setOnClickListener(l);c.addView(b,new LinearLayout.LayoutParams(-2,dp(40)));c.setLayoutParams(margin(-1,-2,0,0,0,9));return c;}
     private void section(LinearLayout p,String title,String sub){TextView h=txt(title,20,TEXT,true);h.setPadding(dp(2),dp(2),0,sub==null?dp(10):dp(2));p.addView(h);if(sub!=null){TextView s=txt(sub,12,MUTED,false);s.setPadding(dp(2),0,0,dp(10));p.addView(s);}}
     private TextView link(String s){TextView t=txt(s,14,WATER,true);t.setGravity(Gravity.END);t.setPadding(dp(4),dp(5),dp(4),dp(14));return t;}
-    private TextView txt(String s,float size,int color,boolean bold){TextView t=new TextView(this);t.setText(ui(s));t.setTextSize(size);t.setTextColor(themeText(color));t.setLineSpacing(0,1.08f);if(bold)t.setTypeface(Typeface.DEFAULT_BOLD);return t;}
+    private TextView txtRaw(String s,float size,int color,boolean bold){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(themeText(color));t.setLineSpacing(0,1.08f);if(bold)t.setTypeface(Typeface.DEFAULT_BOLD);return t;}
+    private TextView txt(String s,float size,int color,boolean bold){return txtRaw(ui(s),size,color,bold);}
     private Button btn(String s,int bg,int fg){Button b=new Button(this);b.setText(ui(s));b.setTextSize(13);b.setTextColor(themeText(fg));b.setAllCaps(false);b.setTypeface(Typeface.DEFAULT_BOLD);b.setPadding(dp(12),0,dp(12),0);b.setMinHeight(0);b.setMinWidth(0);b.setBackground(round(bg,12));return b;}
     private GradientDrawable round(int color,float r){GradientDrawable d=new GradientDrawable();d.setColor(themeBg(color));d.setCornerRadius(dp(r));return d;}
     private LinearLayout.LayoutParams margin(int w,int h,int l,int t,int r,int b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(w,h);p.setMargins(dp(l),dp(t),dp(r),dp(b));return p;}

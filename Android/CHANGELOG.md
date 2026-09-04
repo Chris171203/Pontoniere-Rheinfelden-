@@ -1,9 +1,10 @@
 # Android Changelog
 
 ## 0.11.3
-- `Schwiizerdütsch` umfassend überarbeitet und auf die gesamte App-eigene Oberfläche ausgeweitet. Neben Navigation/Home sind nun auch Rhein, Kalender, News, Einstellungen, Kachelverwaltung, Verein, Kasse, häufige Dialoge/Statusmeldungen und app-generierte Wochentage abgedeckt. Externe Inhalte, Personennamen und die originale PFVR-Webseite bleiben unangetastet.
-- Erstfreigabe zu einer öffentlichen Landingpage erweitert: Sprachwahl sowie Links zu Schnuppertraining/Mitgliedschaft/Formularen, Instagram und Facebook sind bereits vor dem Freigabecode verfügbar; interne und Live-App-Bereiche werden weiterhin erst nach erfolgreicher Freigabe initialisiert.
-- Home-Hero erhält einen direkten Einstieg zu Schnuppertraining/Mitgliedschaft. Im Verein kommen anordenbare Kacheln für Einstieg/Formulare, Instagram und Facebook hinzu.
+- `Schwiizerdütsch` vollständig über die App-eigene Oberfläche nachgezogen: Navigation, Landingpage, Home, Rhein, Kalender, News, Einstellungen, Kachelverwaltung, Verein, Kasse, Dialoge/Statusmeldungen sowie die von der App erzeugte interne Personenverwaltung und ihre An-/Abmeldestatus. Original-PFVR-Seite, Personennamen, Kalender- und News-Inhalte werden nicht übersetzt.
+- Externe beziehungsweise quellenseitige Inhalte werden strukturell über eine rohe Textausgabe an der Dialekt-Mapping-Schicht vorbeigeführt. App-eigene gemischte Anzeigen wie Trainingswetter und Datenstand werden vorab gezielt lokalisiert, ohne eingebettete Termin- oder Quelltexte zu verändern.
+- Erstfreigabe zu einer öffentlichen Landingpage erweitert: Sprachwahl, der Hinweis auf Schnuppertraining bereits vor der Mitgliedschaft sowie die verifizierten PFVR-Links zu Einstieg/Formularen, Instagram und Facebook sind vor dem Freigabecode verfügbar; interne und Live-App-Bereiche werden weiterhin erst nach erfolgreicher Freigabe initialisiert.
+- Home-Hero erhält einen direkten Einstieg zu Schnuppertraining/Mitgliedschaft. Im Verein kommen anordenbare Kacheln für Einstieg/Formulare, Instagram und Facebook hinzu. Die öffentlichen Zieladressen sind zentral hinterlegt und durch Tests abgesichert.
 - Versionsstand `0.11.3`, `versionCode 50`.
 
 ## 0.11.2

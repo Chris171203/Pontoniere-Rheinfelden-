@@ -75,7 +75,8 @@ final class InternalAttendanceSkin {
             String text,
             String muted,
             String border,
-            String link
+            String link,
+            String language
     ) {
         String template = """
                 (function(){
@@ -83,6 +84,30 @@ final class InternalAttendanceSkin {
                   window.__pfvrAttendanceMobileV2=true;
 
                   var COLORS={background:'__BG__',card:'__CARD__',soft:'__SOFT__',text:'__TEXT__',muted:'__MUTED__',border:'__BORDER__',link:'__LINK__'};
+                  var I18N={
+                    withFood:'__I_WITH_FOOD__',
+                    withoutFood:'__I_WITHOUT_FOOD__',
+                    notSelected:'__I_NOT_SELECTED__',
+                    notComing:'__I_NOT_COMING__',
+                    standard:'__I_STANDARD__',
+                    remove:'__I_REMOVE__',
+                    noSelection:'__I_NO_SELECTION__',
+                    rebuild:'__I_REBUILD__',
+                    cleanupTitle:'__I_CLEANUP_TITLE__',
+                    cleanupNote:'__I_CLEANUP_NOTE__',
+                    rebuildConfirm:'__I_REBUILD_CONFIRM__',
+                    initialUnavailable:'__I_INITIAL_UNAVAILABLE__',
+                    managePeople:'__I_MANAGE_PEOPLE__',
+                    close:'__I_CLOSE__',
+                    addPerson:'__I_ADD_PERSON__',
+                    addUnavailable:'__I_ADD_UNAVAILABLE__',
+                    removeNote:'__I_REMOVE_NOTE__',
+                    currentPeople:'__I_CURRENT_PEOPLE__',
+                    appointment:'__I_APPOINTMENT__',
+                    removeFromView:'__I_REMOVE_FROM_VIEW__',
+                    addPersonAria:'__I_ADD_PERSON_ARIA__',
+                    participant:'__I_PARTICIPANT__'
+                  };
                   var STORAGE_KEY='pfvr-attendance-view-state-v2';
                   var PEOPLE_KEY='pfvr-attendance-people-v4';
                   var LEGACY_PEOPLE_KEY='pfvr-attendance-people-v3';
@@ -217,10 +242,10 @@ final class InternalAttendanceSkin {
                   viewport.content='width=device-width,initial-scale=1,maximum-scale=3,user-scalable=yes';
 
                   var statusDefs=[
-                    {pattern:/^\\s*mit\\s+essen/i,label:'Mit Essen',background:'#16863A',foreground:'#FFFFFF'},
-                    {pattern:/^\\s*ohne\\s+essen/i,label:'Ohne Essen',background:'#F2C94C',foreground:'#17222B'},
-                    {pattern:/^\\s*nicht\\s+(?:gewählt|gewaehlt)/i,label:'Nicht gewählt',background:'#6D7880',foreground:'#FFFFFF'},
-                    {pattern:/^\\s*komme\\s+nicht/i,label:'Komme nicht',background:'#C83737',foreground:'#FFFFFF'}
+                    {pattern:/^\\s*mit\\s+essen/i,label:I18N.withFood,background:'#16863A',foreground:'#FFFFFF'},
+                    {pattern:/^\\s*ohne\\s+essen/i,label:I18N.withoutFood,background:'#F2C94C',foreground:'#17222B'},
+                    {pattern:/^\\s*nicht\\s+(?:gewählt|gewaehlt)/i,label:I18N.notSelected,background:'#6D7880',foreground:'#FFFFFF'},
+                    {pattern:/^\\s*komme\\s+nicht/i,label:I18N.notComing,background:'#C83737',foreground:'#FFFFFF'}
                   ];
                   var paint=function(el,bg,fg){
                     if(!el)return;
@@ -564,7 +589,7 @@ final class InternalAttendanceSkin {
                       var value=personCellText(row.cells&&row.cells[0]);
                       if(!value)value=optionNameForRow(row,select);
                       if(!value&&allowStoredByIndex&&storedRows[index]&&!isPlaceholderPersonName(storedRows[index]))value=storedRows[index];
-                      return value||('Teilnehmer '+(index+1));
+                      return value||(I18N.participant+' '+(index+1));
                     });
                   };
                   var currentSourceNames=function(table,select,state){
@@ -790,13 +815,13 @@ final class InternalAttendanceSkin {
                     line.appendChild(name);
                     if(samePersonName(personName,state.primary)){
                       var primary=element('span','pfvr-primary-label');
-                      primary.textContent='Standard';
+                      primary.textContent=I18N.standard;
                       line.appendChild(primary);
                     }else{
                       var remove=element('button','pfvr-local-remove');
                       remove.type='button';
-                      remove.textContent='Entfernen';
-                      remove.setAttribute('aria-label','Person aus Ansicht entfernen: '+formatPersonName(personName));
+                      remove.textContent=I18N.remove;
+                      remove.setAttribute('aria-label',I18N.removeFromView+formatPersonName(personName));
                       remove.addEventListener('click',function(){
                         if(!removeDesiredPerson(state,personName))return;
                         saveViewState();
@@ -837,7 +862,7 @@ final class InternalAttendanceSkin {
                       if(row.cells[column])moveChildren(row.cells[column],control);
                       if(!control.textContent.trim()&&!control.querySelector('button,input,select,a')){
                         var empty=element('span','pfvr-empty-status');
-                        empty.textContent='Keine Auswahl für diesen Termin';
+                        empty.textContent=I18N.noSelection;
                         control.appendChild(empty);
                       }
                       cell.appendChild(control);
@@ -962,7 +987,7 @@ final class InternalAttendanceSkin {
                     (scope||document).querySelectorAll('[data-pfvr-recovery-reset="1"]').forEach(function(reset){
                       if(reset.pfvrConfirmTimer){clearTimeout(reset.pfvrConfirmTimer);reset.pfvrConfirmTimer=null;}
                       reset.dataset.pfvrConfirm='0';
-                      reset.textContent='Aus Initiallink neu aufbauen';
+                      reset.textContent=I18N.rebuild;
                     });
                   };
                   var closePersonManager=function(){
@@ -994,27 +1019,27 @@ final class InternalAttendanceSkin {
                     if(!body)return;
                     var recovery=element('div','pfvr-people-recovery');
                     var title=element('div','pfvr-people-recovery-title');
-                    title.textContent='Ansicht bereinigen';
+                    title.textContent=I18N.cleanupTitle;
                     recovery.appendChild(title);
                     var note=element('div','pfvr-people-recovery-note');
-                    note.textContent='Falls die Personenansicht festhängt oder zu viele Personen geladen wurden, kann sie aus dem gespeicherten persönlichen Initiallink vollständig neu aufgebaut werden.';
+                    note.textContent=I18N.cleanupNote;
                     recovery.appendChild(note);
                     var reset=element('button');
                     reset.type='button';
                     reset.dataset.pfvrRecoveryReset='1';
-                    reset.textContent='Aus Initiallink neu aufbauen';
+                    reset.textContent=I18N.rebuild;
                     reset.addEventListener('click',function(){
                       if(reset.dataset.pfvrConfirm!=='1'){
                         resetRecoveryConfirm(recovery);
                         reset.dataset.pfvrConfirm='1';
-                        reset.textContent='Nochmal tippen: wirklich neu aufbauen';
+                        reset.textContent=I18N.rebuildConfirm;
                         reset.pfvrConfirmTimer=setTimeout(function(){resetRecoveryConfirm(recovery);},5000);
                         return;
                       }
                       if(reset.pfvrConfirmTimer){clearTimeout(reset.pfvrConfirmTimer);reset.pfvrConfirmTimer=null;}
                       if(!resetPeopleViewFromBase()){
                         reset.dataset.pfvrConfirm='0';
-                        reset.textContent='Initiallink nicht verfügbar';
+                        reset.textContent=I18N.initialUnavailable;
                         reset.pfvrConfirmTimer=setTimeout(function(){resetRecoveryConfirm(recovery);},2500);
                       }
                     });
@@ -1026,10 +1051,10 @@ final class InternalAttendanceSkin {
                     var panel=element('div','pfvr-person-tools');
                     var head=element('div','pfvr-person-tools-head');
                     var title=element('div','pfvr-person-tools-title');
-                    title.textContent='Personen verwalten';
+                    title.textContent=I18N.managePeople;
                     var toggle=element('button','pfvr-person-tools-toggle');
                     toggle.type='button';
-                    toggle.textContent='Schliessen';
+                    toggle.textContent=I18N.close;
                     toggle.addEventListener('click',closePersonManager);
                     head.appendChild(title);
                     head.appendChild(toggle);
@@ -1038,7 +1063,7 @@ final class InternalAttendanceSkin {
 
                     if(select){
                       var hint=element('div');
-                      hint.textContent='Person hinzufügen:';
+                      hint.textContent=I18N.addPerson;
                       hint.style.color=COLORS.muted;
                       hint.style.fontSize='12px';
                       body.appendChild(hint);
@@ -1048,7 +1073,7 @@ final class InternalAttendanceSkin {
                       proxy.removeAttribute('form');
                       proxy.removeAttribute('onchange');
                       proxy.onchange=null;
-                      proxy.setAttribute('aria-label','Person hinzufügen');
+                      proxy.setAttribute('aria-label',I18N.addPersonAria);
                       proxy.dataset.pfvrProxy='1';
                       proxy.selectedIndex=select.selectedIndex;
                       body.appendChild(proxy);
@@ -1082,21 +1107,21 @@ final class InternalAttendanceSkin {
                       });
                     }else{
                       var unavailable=element('div');
-                      unavailable.textContent='Hinzufügen ist auf diesem Seitenstand nicht verfügbar. Vorhandene Zusatzpersonen können weiterhin entfernt werden oder die Ansicht kann unten aus dem Initiallink neu aufgebaut werden.';
+                      unavailable.textContent=I18N.addUnavailable;
                       unavailable.style.color=COLORS.muted;
                       unavailable.style.fontSize='11px';
                       body.appendChild(unavailable);
                     }
 
                     var note=element('div');
-                    note.textContent='Entfernen aktualisiert die Personenliste automatisch.';
+                    note.textContent=I18N.removeNote;
                     note.style.color=COLORS.muted;
                     note.style.fontSize='11px';
                     body.appendChild(note);
 
                     var list=element('div','pfvr-managed-people pfvr-managed-people-visible');
                     var listTitle=element('div','pfvr-managed-people-title');
-                    listTitle.textContent='Aktuelle Personen';
+                    listTitle.textContent=I18N.currentPeople;
                     list.appendChild(listTitle);
                     (currentNames||state.desired).forEach(function(personName){
                       appendManagedPerson(list,state,personName);
@@ -1208,7 +1233,7 @@ final class InternalAttendanceSkin {
                     var matrixHead=element('div','pfvr-attendance-head');
                     matrixHead.style.gridTemplateColumns=columns;
                     var corner=element('div','pfvr-matrix-corner');
-                    corner.textContent='Termin';
+                    corner.textContent=I18N.appointment;
                     matrixHead.appendChild(corner);
                     names.forEach(function(personName){
                       var personHeader=element('div','pfvr-person-header');
@@ -1233,7 +1258,7 @@ final class InternalAttendanceSkin {
                         if(row.cells[column])moveChildren(row.cells[column],control);
                         if(!control.textContent.trim()&&!control.querySelector('button,input,select,a')){
                           var empty=element('span','pfvr-empty-status');
-                          empty.textContent='Keine Auswahl für diesen Termin';
+                          empty.textContent=I18N.noSelection;
                           control.appendChild(empty);
                         }
                         cell.appendChild(control);
@@ -1305,6 +1330,28 @@ final class InternalAttendanceSkin {
                 .replace("__MUTED__", escapeJs(muted))
                 .replace("__BORDER__", escapeJs(border))
                 .replace("__LINK__", escapeJs(link))
+                .replace("__I_WITH_FOOD__", escapeJs(UiLanguage.translate("Mit Essen", language)))
+                .replace("__I_WITHOUT_FOOD__", escapeJs(UiLanguage.translate("Ohne Essen", language)))
+                .replace("__I_NOT_SELECTED__", escapeJs(UiLanguage.translate("Nicht gewählt", language)))
+                .replace("__I_NOT_COMING__", escapeJs(UiLanguage.translate("Komme nicht", language)))
+                .replace("__I_STANDARD__", escapeJs(UiLanguage.translate("Standard", language)))
+                .replace("__I_REMOVE__", escapeJs(UiLanguage.translate("Entfernen", language)))
+                .replace("__I_NO_SELECTION__", escapeJs(UiLanguage.translate("Keine Auswahl für diesen Termin", language)))
+                .replace("__I_REBUILD__", escapeJs(UiLanguage.translate("Aus Initiallink neu aufbauen", language)))
+                .replace("__I_CLEANUP_TITLE__", escapeJs(UiLanguage.translate("Ansicht bereinigen", language)))
+                .replace("__I_CLEANUP_NOTE__", escapeJs(UiLanguage.translate("Falls die Personenansicht festhängt oder zu viele Personen geladen wurden, kann sie aus dem gespeicherten persönlichen Initiallink vollständig neu aufgebaut werden.", language)))
+                .replace("__I_REBUILD_CONFIRM__", escapeJs(UiLanguage.translate("Nochmal tippen: wirklich neu aufbauen", language)))
+                .replace("__I_INITIAL_UNAVAILABLE__", escapeJs(UiLanguage.translate("Initiallink nicht verfügbar", language)))
+                .replace("__I_MANAGE_PEOPLE__", escapeJs(UiLanguage.translate("Personen verwalten", language)))
+                .replace("__I_CLOSE__", escapeJs(UiLanguage.translate("Schliessen", language)))
+                .replace("__I_ADD_PERSON__", escapeJs(UiLanguage.translate("Person hinzufügen:", language)))
+                .replace("__I_ADD_UNAVAILABLE__", escapeJs(UiLanguage.translate("Hinzufügen ist auf diesem Seitenstand nicht verfügbar. Vorhandene Zusatzpersonen können weiterhin entfernt werden oder die Ansicht kann unten aus dem Initiallink neu aufgebaut werden.", language)))
+                .replace("__I_REMOVE_NOTE__", escapeJs(UiLanguage.translate("Entfernen aktualisiert die Personenliste automatisch.", language)))
+                .replace("__I_CURRENT_PEOPLE__", escapeJs(UiLanguage.translate("Aktuelle Personen", language)))
+                .replace("__I_APPOINTMENT__", escapeJs(UiLanguage.translate("Termin", language)))
+                .replace("__I_REMOVE_FROM_VIEW__", escapeJs(UiLanguage.translate("Person aus Ansicht entfernen: ", language)))
+                .replace("__I_ADD_PERSON_ARIA__", escapeJs(UiLanguage.translate("Person hinzufügen", language)))
+                .replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))
                 .replace("__SCHEME__", scheme);
     }
 

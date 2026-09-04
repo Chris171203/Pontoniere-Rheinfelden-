@@ -49,13 +49,13 @@ public class FirstUseGateSourceTest {
     @Test public void publicLandingOffersDiscoveryAndSocialLinksBeforeUnlock() throws Exception {
         String source = source();
         String gate = gate(source);
-        assertTrue(source.contains("https://www.pfvr.ch/schnuppertraining-mitglied-werden-formulare/"));
-        assertTrue(source.contains("https://www.facebook.com/PontoniereRheinfelden"));
-        assertTrue(source.contains("https://www.instagram.com/pontoniererheinfelden"));
+        assertTrue(PublicLinks.JOIN.startsWith("https://www.pfvr.ch/"));
+        assertTrue(PublicLinks.FACEBOOK.startsWith("https://www.facebook.com/"));
+        assertTrue(PublicLinks.INSTAGRAM.startsWith("https://www.instagram.com/"));
         assertTrue(gate.contains("Schnuppertraining & Mitglied werden"));
-        assertTrue(gate.contains("external(JOIN_INFO)"));
-        assertTrue(gate.contains("external(INSTAGRAM)"));
-        assertTrue(gate.contains("external(FACEBOOK)"));
+        assertTrue(gate.contains("external(PublicLinks.JOIN)"));
+        assertTrue(gate.contains("external(PublicLinks.INSTAGRAM)"));
+        assertTrue(gate.contains("external(PublicLinks.FACEBOOK)"));
         assertTrue(gate.contains("setUiLanguage(UiLanguage.SWISS_GERMAN)"));
     }
 }

@@ -10,7 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 public class InternalAttendanceSkinTest {
     private static String script(){
-        return InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        return InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5",UiLanguage.DE);
     }
 
     @Test public void separatesStatusFromConcatenatedAppointmentText(){
@@ -186,4 +186,20 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("setTimeout(buildMobile,900)"));
         assertFalse(script.contains("overflow-wrap:anywhere"));
     }
+    @Test public void generatedScriptLocalizesProjectedAttendanceControls(){
+        String script=InternalAttendanceSkin.javascript(
+                "#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5",
+                UiLanguage.SWISS_GERMAN
+        );
+        assertTrue(script.contains("withFood:'Mit Ässe'"));
+        assertTrue(script.contains("withoutFood:'Ohni Ässe'"));
+        assertTrue(script.contains("notSelected:'Nüt gwählt'"));
+        assertTrue(script.contains("notComing:'Ich chumme nöd'"));
+        assertTrue(script.contains("managePeople:'Persone verwalte'"));
+        assertTrue(script.contains("rebuildConfirm:'No einisch tippe: würkli neu ufbaue'"));
+        assertTrue(script.contains("removeFromView:'Person us de Aasicht entferne: '"));
+        assertTrue(script.contains("participant:'Person'"));
+        assertFalse(script.contains("managePeople:'Personen verwalten'"));
+    }
+
 }

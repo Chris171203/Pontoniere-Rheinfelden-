@@ -6,7 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 public class InternalAttendanceUiRegressionTest {
     private String script(){
-        return InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5");
+        return InternalAttendanceSkin.javascript("#11171C","#1A2228","#232E36","#ECF1F4","#A0B0BA","#344550","#5BBED5",UiLanguage.DE);
     }
 
     @Test public void keepsAViewportFixedHeaderFallbackForBrokenStickyAncestors(){

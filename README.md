@@ -19,8 +19,8 @@ Schwerpunkte des aktuellen Stands:
 - lokale Personenverwaltung für die interne Ansicht, während die bestehende PFVR-Seite Quelle der Wahrheit bleibt;
 - personalisierbare Kacheln für Home, Kasse und Verein; die Kachelverwaltung behält beim Umordnen ihre Scrollposition;
 - Vereinsbeiz mit Warenkorb, freiem Betrag, Swiss QR, Banking-App-Handoff und TWINT;
-- Deutsch/Schwiizerdütsch-Umschaltung mit durchgängig nachgezogenen App-eigenen UI-Texten; externe Vereinsinhalte bleiben unverändert;
-- öffentliche Erstfreigabe-/Landingpage mit Schnuppertraining-/Mitgliedschaftsinfo sowie PFVR-Instagram und -Facebook, ohne vor der Freigabe interne oder Live-Bereiche zu initialisieren;
+- Deutsch/Schwiizerdütsch-Umschaltung mit durchgängig nachgezogenen App-eigenen UI-Texten bis in die app-erzeugte interne Personenverwaltung; externe Vereinsinhalte und Namen bleiben unverändert;
+- öffentliche Erstfreigabe-/Landingpage mit Hinweis auf Schnuppertraining vor der Mitgliedschaft sowie verifizierten PFVR-Links zu Einstieg/Formularen, Instagram und Facebook, ohne vor der Freigabe interne oder Live-Bereiche zu initialisieren;
 - Hell-/Dunkelmodus sowie für Android 16 / API 36 vorbereiteter Build;
 - CI-geprüftes Debug-Testpaket mit stabilem öffentlichen Testschlüssel; Produktionssignierung bleibt getrennt.
 
