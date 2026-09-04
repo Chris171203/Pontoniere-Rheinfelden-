@@ -117,11 +117,13 @@ final class InternalAttendanceSkin {
                   .pfvr-managed-person-actions{display:flex!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;}
                   .pfvr-managed-person-actions button,.pfvr-managed-person-actions input[type=submit],.pfvr-managed-person-actions input[type=button],.pfvr-managed-person-actions a{min-height:34px!important;min-width:34px!important;padding:5px 7px!important;font-size:12px!important;border-radius:9px!important;}
                   .pfvr-managed-action-label{font-size:10px!important;color:${COLORS.muted}!important;}
+                  .pfvr-matrix-head-scroll{position:sticky!important;top:0!important;z-index:8!important;display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;padding:0 0 6px!important;background:${COLORS.background}!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;scrollbar-width:none!important;}
+                  .pfvr-matrix-head-scroll::-webkit-scrollbar{display:none!important;}
                   .pfvr-matrix-scroll{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:visible!important;box-sizing:border-box!important;padding:0 0 4px!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important;}
-                  .pfvr-attendance-matrix{--pfvr-day-col:96px;--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px);display:grid!important;gap:6px!important;align-items:stretch!important;width:max-content!important;min-width:100%!important;box-sizing:border-box!important;}
+                  .pfvr-attendance-head,.pfvr-attendance-matrix{--pfvr-day-col:96px;--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px);display:grid!important;gap:6px!important;align-items:stretch!important;width:max-content!important;min-width:100%!important;box-sizing:border-box!important;}
                   .pfvr-matrix-corner,.pfvr-person-header,.pfvr-day-meta,.pfvr-person-cell{box-sizing:border-box!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;background:${COLORS.card}!important;min-width:0!important;}
-                  .pfvr-matrix-corner{position:sticky!important;top:0!important;left:0!important;z-index:8!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:11px!important;font-weight:700!important;color:${COLORS.muted}!important;display:flex!important;align-items:center!important;box-shadow:3px 3px 8px rgba(0,0,0,.10)!important;}
-                  .pfvr-person-header{position:sticky!important;top:0!important;z-index:7!important;padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
+                  .pfvr-matrix-corner{position:sticky!important;left:0!important;z-index:10!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:11px!important;font-weight:700!important;color:${COLORS.muted}!important;display:flex!important;align-items:center!important;box-shadow:3px 3px 8px rgba(0,0,0,.10)!important;}
+                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
                   .pfvr-day-meta{position:sticky!important;left:0!important;z-index:3!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:12px!important;overflow-wrap:break-word!important;word-break:normal!important;box-shadow:3px 0 8px rgba(0,0,0,.04)!important;}
                   .pfvr-day-meta>*{max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-person-cell{width:var(--pfvr-person-col)!important;padding:8px!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;}
@@ -135,7 +137,7 @@ final class InternalAttendanceSkin {
                   .pfvr-empty-status{font-size:11px!important;color:${COLORS.muted}!important;}
                   .pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:4px 6px!important;margin:0 0 4px!important;font-size:11px!important;border-radius:8px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-attendance-detail{display:block!important;margin:0 0 3px!important;font-size:11px!important;line-height:1.3!important;color:${COLORS.text}!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
-                  @media(max-width:340px){.pfvr-attendance-matrix{--pfvr-day-col:84px;--pfvr-person-col:102px;}.pfvr-day-meta{padding:7px!important;font-size:11px!important;}.pfvr-person-header{font-size:11px!important;padding:7px 5px!important;}.pfvr-person-cell{padding:6px!important;}.pfvr-name-small{font-size:9px!important;}.pfvr-name-tiny{font-size:8.5px!important;}.pfvr-person-control{min-height:58px!important;}.pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{min-height:54px!important;font-size:12px!important;padding:8px 5px!important;}}
+                  @media(max-width:340px){.pfvr-attendance-head,.pfvr-attendance-matrix{--pfvr-day-col:84px;--pfvr-person-col:102px;}.pfvr-day-meta{padding:7px!important;font-size:11px!important;}.pfvr-person-header{font-size:11px!important;padding:7px 5px!important;}.pfvr-person-cell{padding:6px!important;}.pfvr-name-small{font-size:9px!important;}.pfvr-name-tiny{font-size:8.5px!important;}.pfvr-person-control{min-height:58px!important;}.pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{min-height:54px!important;font-size:12px!important;padding:8px 5px!important;}}
                   `;
                   var style=document.getElementById('pfvr-internal-style');
                   if(!style){style=document.createElement('style');style.id='pfvr-internal-style';document.head.appendChild(style);}
@@ -394,12 +396,16 @@ final class InternalAttendanceSkin {
                     setTimeout(buildMobile,1400);return true;
                   };
                   var updateMatrixColumns=function(matrix){
-                    if(!matrix)return;var count=Array.from(matrix.querySelectorAll('.pfvr-person-header')).filter(function(header){return header.style.display!=='none';}).length;
-                    matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
+                    if(!matrix)return;
+                    var matrixHead=document.querySelector('.pfvr-attendance-head');
+                    var count=Array.from((matrixHead||document).querySelectorAll('.pfvr-person-header')).filter(function(header){return header.style.display!=='none';}).length;
+                    var columns='var(--pfvr-day-col) repeat('+count+',var(--pfvr-person-col))';
+                    matrix.style.gridTemplateColumns=columns;if(matrixHead)matrixHead.style.gridTemplateColumns=columns;
                   };
                   var setPersonColumnHidden=function(name,hidden){
                     var matrix=document.querySelector('.pfvr-attendance-matrix');if(!matrix)return false;
-                    var changed=false;Array.from(matrix.querySelectorAll('[data-pfvr-person]')).forEach(function(el){if(samePersonName(el.getAttribute('data-pfvr-person')||'',name)){el.style.display=hidden?'none':'';changed=true;}});
+                    var mobile=document.querySelector('.pfvr-attendance-mobile'),changed=false;
+                    Array.from((mobile||matrix).querySelectorAll('[data-pfvr-person]')).forEach(function(el){if(samePersonName(el.getAttribute('data-pfvr-person')||'',name)){el.style.display=hidden?'none':'';changed=true;}});
                     updateMatrixColumns(matrix);return changed;
                   };
                   var showDesiredPerson=function(state,name){
@@ -429,15 +435,16 @@ final class InternalAttendanceSkin {
                     list.appendChild(line);
                   };
                   var matrixHasPerson=function(matrix,name){
-                    if(!matrix)return false;return Array.from(matrix.querySelectorAll('.pfvr-person-header')).some(function(el){return samePersonName(el.getAttribute('data-pfvr-person')||'',name);});
+                    var matrixHead=document.querySelector('.pfvr-attendance-head');if(!matrix||!matrixHead)return false;
+                    return Array.from(matrixHead.querySelectorAll('.pfvr-person-header')).some(function(el){return samePersonName(el.getAttribute('data-pfvr-person')||'',name);});
                   };
                   var appendPersonColumn=function(table,row,personName,state){
-                    var matrix=document.querySelector('.pfvr-attendance-matrix');if(!table||!row||!matrix||matrixHasPerson(matrix,personName))return false;
-                    var rows=Array.from(table.rows||[]),header=rows[0];if(!header||!header.cells||header.cells.length<2)return false;
-                    var metas=Array.from(matrix.querySelectorAll('.pfvr-day-meta'));if(metas.length!==header.cells.length-1)return false;
+                    var matrix=document.querySelector('.pfvr-attendance-matrix'),matrixHead=document.querySelector('.pfvr-attendance-head');if(!table||!row||!matrix||!matrixHead||matrixHasPerson(matrix,personName))return false;
+                    var rows=Array.from(table.rows||[]),sourceHeader=rows[0];if(!sourceHeader||!sourceHeader.cells||sourceHeader.cells.length<2)return false;
+                    var metas=Array.from(matrix.querySelectorAll('.pfvr-day-meta'));if(metas.length!==sourceHeader.cells.length-1)return false;
                     var key=personKey(personName),personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',key);
-                    matrix.insertBefore(personHeader,metas[0]||null);
-                    for(var column=1;column<header.cells.length;column++){
+                    matrixHead.appendChild(personHeader);
+                    for(var column=1;column<sourceHeader.cells.length;column++){
                       var cell=element('div','pfvr-person-cell');cell.setAttribute('data-pfvr-person',key);
                       var control=element('div','pfvr-person-control');if(row.cells[column])moveChildren(row.cells[column],control);
                       if(!control.textContent.trim()&&!control.querySelector('button,input,select,a')){var empty=element('span','pfvr-empty-status');empty.textContent='Keine Auswahl für diesen Termin';control.appendChild(empty);}
@@ -504,6 +511,12 @@ final class InternalAttendanceSkin {
                     if(anchor&&anchor!==scope)anchor.style.display='none';return panel;
                   };
 
+                  var bindHorizontalHeaderSync=function(headScroll,matrixScroll){
+                    if(!headScroll||!matrixScroll)return;var syncing=false;
+                    var sync=function(source,target){if(syncing)return;syncing=true;target.scrollLeft=source.scrollLeft;requestAnimationFrame(function(){syncing=false;});};
+                    matrixScroll.addEventListener('scroll',function(){sync(matrixScroll,headScroll);},{passive:true});
+                    headScroll.addEventListener('scroll',function(){sync(headScroll,matrixScroll);},{passive:true});
+                  };
                   var saveViewState=function(){
                     try{
                       var matrixScroll=document.querySelector('.pfvr-matrix-scroll');
@@ -517,6 +530,7 @@ final class InternalAttendanceSkin {
                       requestAnimationFrame(function(){
                         window.scrollTo(0,state.y||0);
                         var matrixScroll=document.querySelector('.pfvr-matrix-scroll');if(matrixScroll)matrixScroll.scrollLeft=state.x||0;
+                        var matrixHeadScroll=document.querySelector('.pfvr-matrix-head-scroll');if(matrixHeadScroll)matrixHeadScroll.scrollLeft=state.x||0;
                       });
                     }catch(ignore){}
                   };
@@ -560,11 +574,14 @@ final class InternalAttendanceSkin {
                     allParticipantRows.forEach(function(row,index){if(!isHiddenPerson(peopleState,allNames[index])){participantRows.push(row);names.push(allNames[index]);}});
                     var mobile=element('div','pfvr-attendance-mobile');table.parentNode.insertBefore(mobile,table);
                     var tools=findPersonTools(toolInfo,peopleState,names);if(tools)mobile.appendChild(tools);
+                    var columns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))';
+                    var matrixHeadScroll=element('div','pfvr-matrix-head-scroll');
+                    var matrixHead=element('div','pfvr-attendance-head');matrixHead.style.gridTemplateColumns=columns;
+                    var corner=element('div','pfvr-matrix-corner');corner.textContent='Termin';matrixHead.appendChild(corner);
+                    names.forEach(function(personName){var personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',personKey(personName));matrixHead.appendChild(personHeader);});
+                    matrixHeadScroll.appendChild(matrixHead);mobile.appendChild(matrixHeadScroll);
                     var matrixScroll=element('div','pfvr-matrix-scroll');
-                    var matrix=element('div','pfvr-attendance-matrix');
-                    matrix.style.gridTemplateColumns='var(--pfvr-day-col) repeat('+names.length+',var(--pfvr-person-col))';
-                    var corner=element('div','pfvr-matrix-corner');corner.textContent='Termin';matrix.appendChild(corner);
-                    names.forEach(function(personName){var personHeader=element('div','pfvr-person-header');fitPersonName(personHeader,personName);personHeader.setAttribute('data-pfvr-person',personKey(personName));matrix.appendChild(personHeader);});
+                    var matrix=element('div','pfvr-attendance-matrix');matrix.style.gridTemplateColumns=columns;
                     for(var column=1;column<header.cells.length;column++){
                       var meta=element('div','pfvr-day-meta');moveChildren(header.cells[column],meta);matrix.appendChild(meta);
                       participantRows.forEach(function(row,rowIndex){
@@ -575,7 +592,7 @@ final class InternalAttendanceSkin {
                         cell.appendChild(control);matrix.appendChild(cell);
                       });
                     }
-                    matrixScroll.appendChild(matrix);mobile.appendChild(matrixScroll);
+                    matrixScroll.appendChild(matrix);mobile.appendChild(matrixScroll);bindHorizontalHeaderSync(matrixHeadScroll,matrixScroll);
                     table.classList.add('pfvr-attendance-source');
                     splitStatusText(mobile);styleInteractive(mobile);bindStatePreservation(mobile);bindInteractiveObserver(mobile);bindSourcePeopleObserver(table,peopleState);restoreViewState();
                     return true;
