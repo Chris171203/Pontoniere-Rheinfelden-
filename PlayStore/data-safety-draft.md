@@ -1,6 +1,6 @@
 # Google Play Data Safety – Arbeitsblatt
 
-Stand: App `0.11.3`, Paket `ch.pfvr.app`.
+Stand: App `0.11.4`, Paket `ch.pfvr.app`.
 
 Dieses Dokument ist die technische Vorarbeit für die Play-Console-Angaben. Es ist **kein automatisches Formular** und muss vor Einreichung gegen die dann ausgelieferte App, das reale `intern.pfvr.ch`-Verhalten und den tatsächlichen Herausgeber geprüft werden.
 
@@ -27,19 +27,20 @@ Google definiert „Erhebung“ grundsätzlich als Übertragung von Nutzerdaten 
 
 ## Manifest-/Permission-Audit
 
-Aktuell wird nur `android.permission.INTERNET` angefordert.
+Das eigene App-Manifest deklariert `android.permission.INTERNET`. Android-/WorkManager-Bibliotheken können gewöhnliche technische Berechtigungen in das finale Manifest mergen; deshalb ist **die gebaute APK** maßgeblich und nicht nur das Quellmanifest.
 
-Nicht angefordert werden insbesondere:
+CI exportiert bei jedem Release-Readiness-Build die final zusammengeführte Berechtigungsliste und bricht ab, falls unter anderem folgende unerwartete Berechtigungen auftauchen:
 
-- Standort (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`),
-- Kamera,
-- Mikrofon,
-- Kontakte,
-- SMS/Anrufliste,
-- Kalender,
-- allgemeiner Datei-/Medienspeicher,
-- Advertising ID,
-- `QUERY_ALL_PACKAGES`.
+- Standort (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`),
+- Kamera oder Mikrofon,
+- Kontakte/Konten,
+- SMS, Anrufliste oder Telefonstatus,
+- persönlicher Kalender,
+- allgemeiner Datei-/Medienzugriff,
+- `QUERY_ALL_PACKAGES`,
+- Benachrichtigungen,
+- Installation fremder Apps / Overlay,
+- Exact-Alarm-Berechtigungen.
 
 Die Manifest-`<queries>` und Intent-Queries dienen ausschließlich dazu, lokal geeignete Banking-/Share-Apps zu finden. Sie sind keine Android-Berechtigung zum Hochladen einer installierten App-Liste.
 
@@ -79,13 +80,15 @@ Für Data Safety bei Einreichung prüfen:
 - ob aufgrund der übertragenen Zahlungsdaten überhaupt ein Play-Datentyp des Nutzers betroffen ist; der Empfänger-IBAN gehört dem Verein, nicht dem Nutzer,
 - dass keine Nutzer-Bankdaten von der PFVR-App gelesen oder gespeichert werden.
 
-## Sicherheit
+## Sicherheit und Backup
 
 - Cleartext-Traffic ist deaktiviert.
 - App-Netzwerkverbindungen verwenden HTTPS.
 - Persönlicher Intern-Link liegt im privaten App-Speicher.
+- App-Dateien, Datenbanken, Shared Preferences und externe App-Dateien sind für Cloud-Backup und Device-to-Device-Transfer explizit ausgeschlossen.
 - Kein eigenes Analytics-/Tracking-Backend.
 - Keine Werbe-SDKs.
+- Release-CI prüft finale Berechtigungen und verhindert bekannte persönliche PFVR-Zugangsmuster bzw. rohe Produktions-/Upload-Key-Dateien im Repository.
 
 Im Play-Formular darf „Daten werden bei der Übertragung verschlüsselt“ nur gewählt werden, wenn dies für **alle** dort als erhoben angegebenen Nutzerdaten gilt. Für den aktuellen internen PFVR-Datenfluss ist HTTPS vorgesehen; dies vor Einreichung mit dem Review-/Testzugang verifizieren.
 
@@ -112,8 +115,9 @@ Für das Data-Safety-Badge „Löschanfrage möglich“ nur dann Ja wählen, wen
 
 1. Mit separatem Review-/Demo-Zugang den Netzwerk-/Serverfluss der internen An-/Abmeldung verifizieren.
 2. Prüfen, ob intern.pfvr.ch außer Name/Status weitere Daten wie E-Mail, Telefonnummer oder Gerätekennungen verarbeitet.
-3. Finalen Herausgeber und Datenschutzprozess einsetzen.
-4. Prüfen, ob seit diesem Audit neue SDKs/Berechtigungen/Funktionen hinzugekommen sind.
-5. Data-Safety-Antworten und Privacy Policy müssen übereinstimmen.
+3. Finale CI-Datei `merged-permissions.txt` prüfen.
+4. Finalen Herausgeber und Datenschutzprozess einsetzen.
+5. Prüfen, ob seit diesem Audit neue SDKs/Berechtigungen/Funktionen hinzugekommen sind.
+6. Data-Safety-Antworten und Privacy Policy müssen übereinstimmen.
 
 Offizielle Referenz: https://support.google.com/googleplay/android-developer/answer/10787469
