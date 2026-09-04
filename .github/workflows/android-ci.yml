@@ -44,7 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           if grep -R -n -E 'id_person=|intern\.pfvr\.ch/index\.php\?what=|key=[0-9a-fA-F]{32,}' . \
-              --exclude-dir=.git --exclude-dir=build; then
+              --exclude-dir=.git --exclude-dir=build \
+              --exclude='android-ci.yml' --exclude='play-release.yml'; then
             echo 'Personal PFVR access data found in repository.' >&2
             exit 1
           fi
