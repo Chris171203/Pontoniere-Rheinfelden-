@@ -223,6 +223,7 @@ public class MainActivity extends Activity {
     private SettingsTab settingsTab = SettingsTab.GENERAL;
     private TileLayoutStore tileLayoutStore;
     private TileLayoutStore.Area tileSettingsArea = TileLayoutStore.Area.HOME;
+    private ScrollView tileSettingsScroll;
     private ScrollView homeScroll;
     private LinearLayout homeLiveStack;
     private Handler dataRefreshHandler;
@@ -351,6 +352,7 @@ public class MainActivity extends Activity {
     private void navigate(Screen screen) {
         current = screen; activeWebView = null;
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
+        if(screen!=Screen.TILE_SETTINGS)tileSettingsScroll=null;
         if (headerBack != null) headerBack.setVisibility((screen == Screen.HOME || screen == Screen.INTERNAL) ? View.GONE : View.VISIBLE);
         Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen;
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
@@ -858,20 +860,22 @@ private void rebuildHomePreservingScroll(){
 
     private String formatMetric(HydroStation station,RiverMetric metric,double value){
         if(!Double.isFinite(value))return "–";
-        if(station==HydroStation.BASEL_RHEINHALLE&&metric==RiverMetric.LEVEL)return String.format(Locale.GERMAN,"%.0f",value);
+        if(metric==RiverMetric.LEVEL){
+            int decimals=RiverDisplay.levelDecimals(station);
+            if(decimals==0)return String.format(Locale.GERMAN,"%.0f",value);
+            return String.format(Locale.GERMAN,"%.2f",value);
+        }
         return formatMetric(metric,value);
     }
 
     private String metricUnit(HydroStation station,RiverMetric metric){
-        return station==HydroStation.BASEL_RHEINHALLE&&metric==RiverMetric.LEVEL?"cm":metric.unit;
+        return metric==RiverMetric.LEVEL?RiverDisplay.levelUnit(station):metric.unit;
     }
 
     private double displayHydroValue(HydroStation station,RiverMetric metric,double rawValue){
         if(!Double.isFinite(rawValue))return rawValue;
-        return station==HydroStation.BASEL_RHEINHALLE&&metric==RiverMetric.LEVEL?baselLevelCm(rawValue):rawValue;
+        return metric==RiverMetric.LEVEL?RiverDisplay.levelValue(station,rawValue):rawValue;
     }
-
-    private double baselLevelCm(double metres){return (metres-240.0d)*100.0d;}
 
     private View thresholdGrid(HydroStation station){
         LinearLayout stack=new LinearLayout(this);
@@ -1129,11 +1133,12 @@ private void rebuildHomePreservingScroll(){
                 if(!(parameter.equals("Q")||parameter.equals("W")||parameter.equals("WT")))continue;
                 if(!timestamps.containsKey(parameter)||timestamp.compareTo(timestamps.get(parameter))>0){timestamps.put(parameter,timestamp);values.put(parameter,row.optDouble("value",Double.NaN));}
             }
-            double q=values.getOrDefault("Q",Double.NaN),w=values.getOrDefault("W",Double.NaN),wt=values.getOrDefault("WT",Double.NaN);
+            double q=values.getOrDefault("Q",Double.NaN),wRaw=values.getOrDefault("W",Double.NaN),wt=values.getOrDefault("WT",Double.NaN);
+            double w=displayHydroValue(station,RiverMetric.LEVEL,wRaw);
             String latest="";for(String timestamp:timestamps.values())if(timestamp.compareTo(latest)>0)latest=timestamp;
             String main=Double.isNaN(q)?station.label:String.format(Locale.GERMAN,"%.0f m³/s",q);
             StringBuilder sub=new StringBuilder();
-            if(!Double.isNaN(w))sub.append(String.format(Locale.GERMAN,"Pegel %.2f m ü.M.",w));
+            if(Double.isFinite(w))sub.append("Pegel ").append(formatMetric(station,RiverMetric.LEVEL,w)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
             if(station.supportsTemperature&&!Double.isNaN(wt)){if(sub.length()>0)sub.append("\n");sub.append(String.format(Locale.GERMAN,"Wasser %.1f °C",wt));}
             String stand="BAFU "+station.id;
             try{if(!latest.isBlank())stand+=" · Stand "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}
@@ -1171,8 +1176,10 @@ private void rebuildHomePreservingScroll(){
             result.times.add(entry.getKey());
             result.values.add(entry.getValue());
         }
-        if(station==HydroStation.BASEL_RHEINHALLE&&"W".equals(parameter)){
-            for(int index=0;index<result.values.size();index++)result.values.set(index,baselLevelCm(result.values.get(index)));
+        if("W".equals(parameter)){
+            for(int index=0;index<result.values.size();index++){
+                result.values.set(index,RiverDisplay.levelValue(station,result.values.get(index)));
+            }
         }
         return result;
     }
@@ -1432,6 +1439,7 @@ private void rebuildHomePreservingScroll(){
 
     private View tileSettingsScreen(){
     ScrollView scroll=new ScrollView(this);
+    tileSettingsScroll=scroll;
     LinearLayout body=body();
     scroll.addView(body);
 
@@ -1452,10 +1460,20 @@ private void rebuildHomePreservingScroll(){
     reset.setOnClickListener(v->{
         tileLayoutStore.reset(tileSettingsArea);
         Toast.makeText(this,tileSettingsArea.label+"-Kacheln zurückgesetzt.",Toast.LENGTH_SHORT).show();
-        navigate(Screen.TILE_SETTINGS);
+        rebuildTileSettingsPreservingScroll();
     });
     body.addView(reset,margin(-1,dp(46),0,6,0,12));
     return scroll;
+}
+
+private void rebuildTileSettingsPreservingScroll(){
+    final int scrollY=tileSettingsScroll==null?0:tileSettingsScroll.getScrollY();
+    navigate(Screen.TILE_SETTINGS);
+    final ScrollView target=tileSettingsScroll;
+    if(target!=null){
+        target.postOnAnimation(()->target.scrollTo(0,scrollY));
+        target.postDelayed(()->target.scrollTo(0,scrollY),80);
+    }
 }
 
 private View tileAreaSelector(){
@@ -1496,18 +1514,18 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     Button up=btn("↑",Color.rgb(232,240,244),NAVY);
     up.setContentDescription(spec.label+" nach oben");
     up.setEnabled(canUp);up.setAlpha(canUp?1f:0.35f);
-    up.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,-1);navigate(Screen.TILE_SETTINGS);});
+    up.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,-1);rebuildTileSettingsPreservingScroll();});
     actions.addView(up,new LinearLayout.LayoutParams(0,dp(42),0.8f));
     Button down=btn("↓",Color.rgb(232,240,244),NAVY);
     down.setContentDescription(spec.label+" nach unten");
     down.setEnabled(canDown);down.setAlpha(canDown?1f:0.35f);
-    down.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,1);navigate(Screen.TILE_SETTINGS);});
+    down.setOnClickListener(v->{tileLayoutStore.move(spec.area,spec.id,1);rebuildTileSettingsPreservingScroll();});
     LinearLayout.LayoutParams downParams=new LinearLayout.LayoutParams(0,dp(42),0.8f);
     downParams.setMargins(dp(7),0,0,0);
     actions.addView(down,downParams);
     Button toggle=btn(spec.pinned?"Fixiert":(visible?"Ausblenden":"Einblenden"),spec.pinned?Color.rgb(232,240,244):(visible?Color.rgb(232,240,244):NAVY),spec.pinned||visible?NAVY:Color.WHITE);
     toggle.setEnabled(!spec.pinned);toggle.setAlpha(spec.pinned?0.55f:1f);
-    toggle.setOnClickListener(v->{tileLayoutStore.setVisible(spec,!visible);navigate(Screen.TILE_SETTINGS);});
+    toggle.setOnClickListener(v->{tileLayoutStore.setVisible(spec,!visible);rebuildTileSettingsPreservingScroll();});
     LinearLayout.LayoutParams toggleParams=new LinearLayout.LayoutParams(0,dp(42),1.8f);
     toggleParams.setMargins(dp(7),0,0,0);
     actions.addView(toggle,toggleParams);
