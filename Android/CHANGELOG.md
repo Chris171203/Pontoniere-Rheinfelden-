@@ -1,5 +1,12 @@
 # Android Changelog
 
+## 0.10.8
+- Teilnehmernamen werden robust aus getrennten DOM-Textteilen, CamelCase und vorhandenen Personen-IDs gelesen und als `Nachname, Vorname` dargestellt.
+- Der App-Modus verwendet den linken Werkzeugleisten-Button als direkt erreichbare modale Personenverwaltung; Hinzufügen, Entfernen und Wieder-Einblenden liegen an einer Stelle.
+- `Alle anzeigen/hinzufügen` wird im App-Modus nicht mehr gespiegelt. Die Funktion bleibt ausschließlich in der unveränderten Originalansicht verfügbar.
+- Lokales Entfernen blendet Personenspalten nur aus und löscht die darin enthaltenen echten Website-Controls nicht mehr aus dem DOM.
+- Alte generische Namen aus 0.10.7 werden bei der Migration verworfen; letzte erkannte Zeilennamen dienen nur noch als Fallback.
+
 ## 0.10.7
 - Aktuell in der Originaltabelle vorhandene Personenzeilen sind die Quelle der Wahrheit und werden nicht mehr durch eine exakte lokale Namens-Whitelist entfernt.
 - Auswahltext und Tabellenname werden über gespeicherten Optionswert sowie tokenbasierte Namensnormalisierung zusammengeführt; Vorname/Nachname-Reihenfolge darf abweichen.

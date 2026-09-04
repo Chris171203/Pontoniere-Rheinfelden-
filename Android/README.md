@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.10.7`.
+Aktuelle Android-Testversion: `0.10.8`.
 
 ## Entwicklung
 
@@ -16,8 +16,10 @@ Aktuelle Android-Testversion: `0.10.7`.
 - Die Personalisierung wird ausschließlich unter Einstellungen → Ansicht & Kacheln geöffnet; Home, Kasse und Verein bleiben auf ihre eigentlichen Inhalte fokussiert.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Gerätetest 0.10.7
+## Gerätetest 0.10.8
 
+- Namen werden als `Nachname, Vorname` angezeigt. Getrennte DOM-Textteile und zusammengezogene Formen wie `NeugebauerChristoph` müssen gleich ausgewertet werden; generische `Person 1`-Bezeichnungen dürfen nur als letzter technischer Fallback erscheinen.
+- In der App-Ansicht öffnet der linke Werkzeugleisten-Button `Personen` eine modale Verwaltung zum Hinzufügen, Entfernen und Wieder-Einblenden. Der separate Website-Befehl `Alle anzeigen/hinzufügen` wird dort bewusst nicht angeboten und bleibt der Originalansicht vorbehalten.
 - Ausgangslage für die Regression: Ist die zweite Person in `Original` bereits sichtbar, muss sie nach Wechsel zu `App` dauerhaft als zweite feste Personenspalte stehen bleiben und darf nicht mehr kurz aufblitzen und wieder verschwinden.
 - Zusatzperson über den sichtbaren App-Select hinzufügen: jede danach in der Originaltabelle vorhandene Personenzeile muss in der App-Matrix sichtbar bleiben. Die Originaltabelle ist die Quelle der Wahrheit; nur ausdrücklich lokal entfernte Personen werden ausgeblendet.
 - Unterschiedliche Reihenfolge oder Schreibweise von Auswahltext und Tabellenname darf die Person nicht mehr herausfiltern. Für die Wiederherstellung wird zusätzlich der Optionswert gespeichert und der Name tokenbasiert verglichen.
@@ -39,7 +41,7 @@ Der persönliche `intern.pfvr.ch`-Link wird ausschließlich in den App-Einstellu
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.7 verwendet `versionCode 31` und denselben Test-Zertifikatsfingerprint.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. 0.10.8 verwendet `versionCode 32` und denselben Test-Zertifikatsfingerprint.
 
 Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 

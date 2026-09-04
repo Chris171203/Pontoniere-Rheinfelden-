@@ -1,8 +1,11 @@
 # Status
 
-Stand: Testversion `0.10.7` · aktualisiert 2026-09-04.
+Stand: Testversion `0.10.8` · aktualisiert 2026-09-04.
 
 ## Implementiert / im Test
+
+- Namen in der mobilen Teilnehmermatrix werden aus Textknoten und Personenattributen rekonstruiert, CamelCase wird getrennt und die Anzeige auf `Nachname, Vorname` normalisiert.
+- Der linke App-Werkzeugleistenbutton öffnet eine modale Personenverwaltung. `Alle anzeigen/hinzufügen` bleibt der Originalansicht vorbehalten; Entfernen ist als nicht-destruktives lokales Ausblenden mit Wieder-Einblenden umgesetzt.
 
 - Die aktuelle Originaltabelle ist für vorhandene Teilnehmer die Quelle der Wahrheit. Jede serverseitig vorhandene Zeile wird angezeigt, außer die Person wurde lokal ausdrücklich entfernt. Auswahltext und Tabellenname werden über Optionswert plus tokenbasierte Namensnormalisierung verbunden.
 
@@ -37,7 +40,7 @@ Stand: Testversion `0.10.7` · aktualisiert 2026-09-04.
 - Zusätzliche Unit-Tests prüfen Live-Restyling aus Button-/Select-Werten, verzögerte Neuberechnung und DOM-Mutationserkennung ohne Voll-Reload.
 - Unit-Tests prüfen weiterhin Statusaufteilung und die Kachel-Layoutmigration.
 - Android-Kompilierung, Unit-Tests, APK-Build, Paket/Version und fester Test-Zertifikatsfingerprint werden in CI geprüft.
-- Finale Testidentität: `0.10.7`, `versionCode 31`, Paket `ch.pfvr.app.test`.
+- Finale Testidentität: `0.10.8`, `versionCode 32`, Paket `ch.pfvr.app.test`.
 - APK/AAB-Dateien werden nicht im Git-Repository versioniert, sondern ausschließlich als CI-Artefakte erzeugt.
 
 ## Noch auf realen Geräten zu prüfen

@@ -2839,10 +2839,13 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         WebView web=web(false); activeWebView=web; web.setBackgroundColor(themeBg(Color.WHITE));
         if(android.os.Build.VERSION.SDK_INT>=33) web.getSettings().setAlgorithmicDarkeningAllowed(false);
         web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-        Button back=btn("‹ Zurück",Color.WHITE,NAVY); back.setOnClickListener(v->handleBack()); tools.addView(back,new LinearLayout.LayoutParams(0,dp(40),1));
         boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
+        Button people=btn(appView?"Personen":"‹ Zurück",Color.WHITE,NAVY);
+        people.setContentDescription(appView?"Personen hinzufügen oder entfernen":"Zurück");
+        people.setOnClickListener(v->{if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))openInternalPeopleManager(web,0);else handleBack();});
+        tools.addView(people,new LinearLayout.LayoutParams(0,dp(40),1));
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");web.clearCache(false);web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(next?"Original":"App-Ansicht");people.setText(next?"Personen":"‹ Zurück");people.setContentDescription(next?"Personen hinzufügen oder entfernen":"Zurück");web.clearCache(false);web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
@@ -2852,6 +2855,17 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             @Override public void onReceivedHttpError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceResponse e){super.onReceivedHttpError(v,r,e);if(r.isForMainFrame()&&e.getStatusCode()>=400)showInternalLoadError(v,"PFVR antwortet mit HTTP "+e.getStatusCode());}
         });
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1)); web.loadUrl(url); return root;
+    }
+
+    private void openInternalPeopleManager(WebView web,int attempt){
+        if(web==null)return;
+        String script="(function(){try{return !!(window.pfvrOpenPeopleManager&&window.pfvrOpenPeopleManager());}catch(e){return false;}})();";
+        web.evaluateJavascript(script,result->{
+            if("true".equalsIgnoreCase(String.valueOf(result)))return;
+            if(attempt>=2){Toast.makeText(this,"Personenverwaltung ist auf dieser Seite nicht verfügbar.",Toast.LENGTH_SHORT).show();return;}
+            if(attempt==0)internalSkin(web);
+            new Handler(Looper.getMainLooper()).postDelayed(()->openInternalPeopleManager(web,attempt+1),attempt==0?260L:650L);
+        });
     }
 
     private void showInternalLoadError(WebView v,String message){
