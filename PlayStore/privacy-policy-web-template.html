@@ -31,8 +31,9 @@
   <p>Für ihre Funktionen verbindet sich die App direkt mit bestehenden öffentlichen beziehungsweise vereinsinternen Diensten. Dabei können die jeweiligen Server technisch erforderliche Verbindungsdaten verarbeiten.</p>
 
   <h2>3. Android-Berechtigungen und Geräteschnittstellen</h2>
-  <p>Die App fordert ausschließlich Internetzugriff an. Sie fordert insbesondere keine Berechtigung für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS, Anrufliste, persönlichen Kalender oder allgemeinen Speicherzugriff an.</p>
-  <p>Für die Auswahl einer Banking-App prüft die App lokal, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.</p>
+  <p>Das eigene App-Manifest fordert Internetzugriff an. Eingebundene Android-Systembibliotheken können zusätzlich gewöhnliche technische Berechtigungen für Hintergrundarbeit in das finale Manifest einbringen; die zusammengeführte Berechtigungsliste wird im Release-Build automatisiert geprüft.</p>
+  <p>Die App fordert nach aktuellem Stand insbesondere keine sensiblen Laufzeitberechtigungen für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS/Telefon, persönlichen Kalender oder allgemeinen Medien-/Speicherzugriff an und verwendet nicht <code>QUERY_ALL_PACKAGES</code>.</p>
+  <p>Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.</p>
 
   <h2>4. Lokal gespeicherte Daten</h2>
   <p>Je nach Nutzung speichert die App lokal unter anderem Sprache und Darstellung, Kachelreihenfolge, die bevorzugte Banking-App, den persönlichen Link zum internen PFVR-Bereich, den lokalen Freigabestatus, zwischengespeicherte öffentliche Kalender-, Wetter-, Rhein- und Vereinsdaten, Zustände der internen Teilnehmerdarstellung, WebView-Cookies sowie vorübergehend erzeugte Swiss-QR-Dateien.</p>
@@ -56,8 +57,9 @@
   <h2>9. Werbung und Analytics</h2>
   <p>Die App enthält nach aktuellem Stand keine Werbung, kein Ad-SDK, kein Analytics-SDK und kein eigenes Nutzertracking. Änderungen daran würden vor Veröffentlichung in dieser Datenschutzerklärung und den Google-Play-Angaben nachgeführt.</p>
 
-  <h2>10. Datensicherheit</h2>
+  <h2>10. Datensicherheit und Android-Backup</h2>
   <p>Netzwerkzugriffe der App erfolgen über HTTPS; unverschlüsselter Cleartext-Verkehr ist in der Android-Konfiguration deaktiviert. Persönliche Intern-Links und Einstellungen liegen im privaten App-Speicher des Android-Geräts.</p>
+  <p>Cloud-Backup ist deaktiviert. Zusätzlich schließen die App-Regeln Dateien, Datenbanken, Shared Preferences und externe App-Dateien ausdrücklich von Android-Backup und Device-to-Device-Transfer aus. Damit sollen insbesondere der persönliche PFVR-Link, Freigabezustände und interne Teilnehmerzustände nicht automatisch auf ein anderes Gerät übertragen werden.</p>
 
   <h2>11. Löschung</h2>
   <p>Öffentliche Cache-Daten können innerhalb der App gelöscht werden. Sämtliche lokalen App-Daten können über die Android-Systemeinstellungen beziehungsweise durch Löschen der App-Daten oder Deinstallation entfernt werden.</p>
