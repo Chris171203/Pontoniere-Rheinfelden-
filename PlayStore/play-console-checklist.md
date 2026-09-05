@@ -1,34 +1,41 @@
 # Play Console Checkliste – PFVR Rheinfelden
 
-Arbeitsstand für `ch.pfvr.app`. Die Reihenfolge ist so gewählt, dass externe Blocker früh auffallen.
+Arbeitsstand für `ch.pfvr.app`. Veröffentlichungsmodell: **privat entwickeltes Hobbyprojekt über ein persönliches Google-Play-Entwicklerkonto, mit schriftlicher Genehmigung des Pontonierfahrvereins Rheinfelden für Vereinsname/Logo/Inhalte und Veröffentlichung.**
 
-## 1. Entwicklerkonto / Herausgeber
+## 1. Entwicklerkonto / Herausgeber / Vereinsfreigabe
 
-- `[ ]` Entscheiden: Organisationskonto des Pontonierfahrvereins Rheinfelden.
-- `[ ]` Prüfen, ob der Verein bereits eine D-U-N-S-Nummer besitzt.
-- `[ ]` Falls nein: D-U-N-S beantragen. Google weist auf bis zu 30 Tage Bearbeitungszeit hin.
-- `[ ]` Organisationsname, Anschrift, Telefonnummer, Website und Kontaktperson exakt mit den offiziellen Vereinsdaten abgleichen.
-- `[ ]` Öffentliche Entwickler-E-Mail und -Telefonnummer festlegen und verifizieren.
-- `[ ]` Entwicklername festlegen, empfohlen: `Pontonierfahrverein Rheinfelden` oder eine vom Verein freigegebene Kurzform.
+- `[x]` Veröffentlichungsmodell festgelegt: persönliches Google-Play-Entwicklerkonto.
+- `[ ]` Persönliches Entwicklerkonto vollständig verifizieren; rechtlicher Name und von Google verlangte Kontaktdaten aktuell halten.
+- `[ ]` Öffentlichen Entwicklernamen festlegen. Empfehlung nach Vereinsfreigabe: neutraler Entwicklername oder persönliche Entwicklerbezeichnung; nicht so formulieren, als wäre das Konto selbst der Verein.
+- `[ ]` Dauerhaft erreichbare Entwickler-/Support-E-Mail festlegen und verifizieren.
+- `[ ]` Vereinsfreigabe gemäß `vereinsfreigabe-anfrage.md` einholen.
+- `[ ]` Vom Verein bestätigte Freigabe gemäß `vereinsfreigabe-bestaetigung.md` archivieren.
+- `[ ]` Freigabe deckt mindestens ab: `PFVR Rheinfelden`, ausgeschriebenen Vereinsnamen, Vereinslogo, öffentliche Vereinsinformationen/Links, Store-Screenshots/-Grafiken sowie Veröffentlichung und Updates über das persönliche Entwicklerkonto.
+- `[ ]` Nur dann Formulierungen wie `offizielle App` verwenden, wenn der Verein genau diese Außendarstellung ausdrücklich freigibt. Standardformulierung: `Privat entwickelt mit Genehmigung des Pontonierfahrvereins Rheinfelden`.
 
 Google: https://support.google.com/googleplay/android-developer/answer/13628312
 
 ## 2. Neue App in Play Console anlegen
 
-- `[ ]` Standard-Sprache: Deutsch (Schweiz), sofern verfügbar; ansonsten Deutsch.
+- `[ ]` Standard-Sprache: Deutsch; wenn die Console eine Schweizer Variante anbietet und sie zum Listing passt, Deutsch (Schweiz) verwenden.
 - `[ ]` App-Name: `PFVR Rheinfelden`.
-- `[ ]` App: keine kostenpflichtige Download-App.
-- `[ ]` Kategorie: `Sport`.
-- `[ ]` Paketname beim ersten AAB kontrollieren: `ch.pfvr.app`.
-- `[ ]` Paketname danach nicht mehr ändern.
+- `[ ]` Paketname: **`ch.pfvr.app`**.
+- `[ ]` Paketname-Verfügbarkeit prüfen und danach nicht mehr ändern.
+- `[ ]` Typ: **App**.
+- `[ ]` Preis: **Kostenlos**.
+- `[ ]` Play App Signing akzeptieren/aktivieren.
+- `[ ]` erforderliche Export-/Programmerklärungen wahrheitsgemäß bestätigen.
+- `[ ]` Kategorie später im Store-Eintrag: `Sport`.
 
 ## 3. App-Inhalte / Policy
 
 ### Datenschutz
 
-- `[ ]` Herausgeber + Datenschutzkontakt in `privacy-policy-draft.md` final einsetzen.
-- `[ ]` Erklärung als normale öffentliche HTTPS-Webseite veröffentlichen, vorzugsweise auf `pfvr.ch`.
-- `[ ]` URL ohne Login/Geoblocking erreichbar; kein PDF.
+- `[ ]` Privaten Herausgeber/Verantwortlichen und Datenschutzkontakt in `privacy-policy-draft.md` final einsetzen.
+- `[ ]` Rolle klar beschreiben: App-Herausgeber ist der private Entwickler; PFVR betreibt weiterhin seine eigenen Webseiten/internen Systeme.
+- `[ ]` Erklärung als normale öffentliche HTTPS-Webseite veröffentlichen.
+- `[ ]` Bei Veröffentlichung auf `pfvr.ch` muss die Vereinsfreigabe dies abdecken; alternativ eigene dauerhaft kontrollierte HTTPS-Seite verwenden.
+- `[ ]` URL ohne Login/Geoblocking erreichbar.
 - `[ ]` gleiche Erklärung oder Link innerhalb der Produktions-App zugänglich machen, bevor der Store-Release eingereicht wird.
 
 Google: https://support.google.com/googleplay/android-developer/answer/10144311
@@ -49,7 +56,7 @@ Google: https://support.google.com/googleplay/android-developer/answer/9859455
 
 ### Zielgruppe
 
-- `[ ]` Verein bestätigt tatsächliches Mindestalter der vorgesehenen Nutzer.
+- `[ ]` Mit dem Verein tatsächliche vorgesehene Zielgruppe/Mindestalter abstimmen.
 - `[ ]` Zielaltersgruppen wahrheitsgemäß auswählen.
 - `[ ]` Falls Kinder unter 13 zur Zielgruppe gehören, Families-Policy separat vollständig prüfen; nicht ohne fachliche Entscheidung aktivieren.
 
@@ -104,29 +111,31 @@ Google: https://support.google.com/googleplay/android-developer/answer/10523915
 ## 4. Store-Haupteintrag
 
 - `[ ]` Text aus `store-listing-de.md` übernehmen.
-- `[ ]` Website `https://www.pfvr.ch/`.
-- `[ ]` Support-E-Mail final vom Verein bestätigen.
+- `[ ]` Transparenzsatz nach Freigabe verwenden: `Privat entwickelt mit Genehmigung des Pontonierfahrvereins Rheinfelden.`
+- `[ ]` Website `https://www.pfvr.ch/` nur als Vereinswebsite angeben, sofern der Verein dies für den Store-Eintrag freigibt; ansonsten geeignete Projekt-/Supportseite verwenden.
+- `[ ]` Support-E-Mail des privaten Herausgebers final einsetzen; `info@pfvr.ch` nur mit ausdrücklicher Zustimmung als Supportadresse verwenden.
 - `[ ]` Datenschutz-URL eintragen.
 - `[ ]` 512×512 Store-Icon hochladen.
 - `[ ]` 1024×500 Feature Graphic hochladen.
 - `[ ]` mindestens zwei Phone-Screenshots; empfohlen sechs gemäß `store-assets.md`.
 - `[ ]` Keine echten Intern-Tokens oder unnötigen Teilnehmerdaten auf Screenshots.
+- `[ ]` Vereinslogo/Name nur im schriftlich genehmigten Umfang verwenden.
 
 Google: https://support.google.com/googleplay/android-developer/answer/9866151
 
 ## 5. Signierung / AAB
 
-- `[ ]` Upload-Key lokal auf einem vertrauenswürdigen Admin-Gerät gemäß `upload-key.md` erzeugen.
+- `[ ]` Upload-Key lokal auf einem vertrauenswürdigen privaten/Admin-Gerät gemäß `upload-key.md` erzeugen.
 - `[ ]` Original-Keystore + Zugangsdaten mindestens zweimal getrennt offline sichern.
 - `[ ]` GitHub-Secrets setzen.
-- `[ ]` GitHub-Environment `play-store` mit erforderlichen Reviewern/Schutzregeln anlegen.
+- `[ ]` GitHub-Environment `play-store` mit erforderlichen Schutzregeln anlegen.
 - `[ ]` `.github/workflows/play-release.yml` auf `main` manuell starten.
 - `[ ]` AAB-SHA256 und Signaturbericht archivieren.
 - `[ ]` Beim ersten Upload **Play App Signing** aktivieren.
 
-## 6. Testtrack
+## 6. Testtracks beim persönlichen Entwicklerkonto
 
-Empfohlen zuerst `Internal testing` mit einer `0.11.x`-Version.
+Zuerst `Internal testing` mit einer `0.11.x`-Version.
 
 - `[ ]` Kleine Testgruppe im Verein definieren.
 - `[ ]` Play-Install statt Sideload prüfen.
@@ -136,16 +145,24 @@ Empfohlen zuerst `Internal testing` mit einer `0.11.x`-Version.
 - `[ ]` Banking-Handoff auf mehreren Geräten/Banking-Apps testen.
 - `[ ]` Datenschutzlink aus der Produktions-App testen.
 
-Falls entgegen der Empfehlung ein **neues persönliches Entwicklerkonto** verwendet wird, verlangt Google aktuell vor Produktionszugriff einen Closed Test mit mindestens 12 Testern, die 14 Tage kontinuierlich angemeldet sind.
+Falls das persönliche Entwicklerkonto unter Googles Closed-Test-Pflicht für neue persönliche Konten fällt:
+
+- `[ ]` Closed-Test-Track einrichten.
+- `[ ]` mindestens **12 Tester** dauerhaft angemeldet halten.
+- `[ ]` **14 aufeinanderfolgende Tage** vollständig absolvieren.
+- `[ ]` Testerfeedback und reale Nutzung dokumentieren.
+- `[ ]` anschließend Produktionszugang in der Play Console beantragen.
 
 Google: https://support.google.com/googleplay/android-developer/answer/14151465
 
 ## 7. Vor 1.0.0
 
+- `[ ]` Vereinsfreigabe schriftlich archiviert.
 - `[ ]` Alle Gerätetests aus `Android/README.md` abgearbeitet.
 - `[ ]` Keine bekannten kritischen Fehler.
 - `[ ]` Review-Zugang funktioniert.
 - `[ ]` Privacy/Data Safety final.
-- `[ ]` Store-Assets final.
-- `[ ]` Vereinsfreigabe für Herausgeber, Logo, Texte, Screenshots und Veröffentlichung dokumentiert.
+- `[ ]` Store-Assets final und vom Verein hinsichtlich Logo/Name freigegeben.
+- `[ ]` Persönlicher Herausgeber/Support und Vereinsrolle im Store widerspruchsfrei dargestellt.
+- `[ ]` ggf. Closed-Test-/Produktionszugang abgeschlossen.
 - `[ ]` Version erst dann auf `1.0.0` setzen.
