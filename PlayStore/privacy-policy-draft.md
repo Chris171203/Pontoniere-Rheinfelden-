@@ -1,15 +1,19 @@
 # Datenschutzerklärung PFVR Rheinfelden – ENTWURF FÜR GOOGLE PLAY
 
-> **Vor Veröffentlichung zwingend ersetzen:** Herausgeber/Rechtssubjekt, vollständige veröffentlichungspflichtige Kontaktangaben, Datenschutzkontakt und öffentliche URL. Die Angaben müssen mit dem tatsächlichen Google-Play-Entwicklerkonto übereinstimmen. Diese Datei ist kein Ersatz für die öffentlich veröffentlichte Datenschutzerklärung.
+> **Vor Veröffentlichung zwingend ersetzen:** vollständiger Name des privaten App-Herausgebers, veröffentlichungspflichtige Kontaktangaben, Datenschutzkontakt und öffentliche URL. Die Angaben müssen mit dem tatsächlichen persönlichen Google-Play-Entwicklerkonto übereinstimmen. Die schriftliche Genehmigung des Pontonierfahrvereins Rheinfelden zur Nutzung von Vereinsname/Logo/Inhalten und zur Veröffentlichung der App ist separat zu archivieren. Diese Datei ist kein Ersatz für die öffentlich veröffentlichte Datenschutzerklärung.
 
-## 1. Verantwortlicher
+## 1. Verantwortlicher für die App
 
-**[Herausgeber / Rechtssubjekt vor Release einsetzen]**  
-**[Anschrift vor Release einsetzen]**  
-E-Mail: **[Datenschutzkontakt vor Release einsetzen]**  
-Website: https://www.pfvr.ch/
+**[Vollständiger Name des privaten App-Herausgebers]**  
+**[von Google/rechtlich erforderliche Kontaktanschrift einsetzen]**  
+E-Mail: **[Datenschutz-/Entwicklerkontakt einsetzen]**  
+Projekt-/Datenschutzseite: **[öffentliche HTTPS-URL einsetzen]**
 
 App: **PFVR Rheinfelden** (`ch.pfvr.app`)
+
+Die App wird privat entwickelt und über ein persönliches Google-Play-Entwicklerkonto veröffentlicht. Die Verwendung des Vereinsnamens, der PFVR-Bezeichnung, des Vereinslogos und vereinbarter Vereinsinhalte erfolgt mit Genehmigung des Pontonierfahrvereins Rheinfelden. Der Verein ist dadurch nicht automatisch technischer Betreiber oder Herausgeber der Android-App.
+
+Für Daten, die über die bestehenden Webseiten bzw. Systeme des Pontonierfahrvereins Rheinfelden verarbeitet werden, insbesondere `pfvr.ch` und `intern.pfvr.ch`, gelten zusätzlich die Verantwortlichkeiten und Datenschutzinformationen des jeweiligen Vereinsangebots.
 
 ## 2. Grundsatz
 
@@ -23,7 +27,7 @@ Das eigene App-Manifest fordert Internetzugriff an. Eingebundene Android-Systemb
 
 Die App fordert nach aktuellem Stand insbesondere **keine sensiblen Laufzeitberechtigungen** für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS/Telefon, persönlichen Kalender oder allgemeinen Medien-/Speicherzugriff an. Sie verwendet außerdem nicht `QUERY_ALL_PACKAGES`.
 
-Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird ausschließlich auf dem Gerät verarbeitet und nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.
+Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird ausschließlich auf dem Gerät verarbeitet und nicht an den App-Herausgeber, den Verein oder einen eigenen Server übertragen.
 
 ## 4. Lokal auf dem Gerät gespeicherte Daten
 
@@ -71,7 +75,7 @@ Bei Nutzung des internen Bereichs können personenbezogene Daten bzw. personenbe
 - Essens-/Teilnahmestatus oder vergleichbare Auswahlwerte,
 - technisch erforderliche Sitzungs-/Zugriffsinformationen des bestehenden PFVR-Systems.
 
-Diese Daten werden direkt zwischen der App/WebView und dem bestehenden PFVR-System übertragen. Die App betreibt hierfür keinen eigenen Zwischenserver und verwendet diese Daten nicht für Werbung, Profiling oder Analysen.
+Diese Daten werden direkt zwischen der App/WebView und dem bestehenden PFVR-System übertragen. Der private App-Herausgeber betreibt hierfür keinen eigenen Zwischenserver und verwendet diese Daten nicht für Werbung, Profiling oder Analysen.
 
 Der gemeinsame App-Freigabecode ist lediglich eine lokale Zugangshürde vor der App-Oberfläche und ersetzt keine serverseitige Authentifizierung des vereinsinternen Systems.
 
@@ -109,17 +113,17 @@ Cloud-Backup ist deaktiviert. Zusätzlich schließen die App-Regeln Dateien, Dat
 
 Die Sicherheit und Aufbewahrung serverseitiger Daten des bestehenden PFVR-Systems sowie externer Dienste liegt zusätzlich in deren jeweiligem Verantwortungsbereich.
 
-## 11. Speicherdauer und Löschung
+## 11. Speicherdauer, Löschung und Anfragen
 
 Öffentliche Cache-Daten können innerhalb der App gelöscht werden. Lokale App-Daten einschließlich Einstellungen und persönlichem Intern-Link können über die Android-Systemeinstellungen bzw. durch Löschen der App-Daten oder Deinstallation entfernt werden.
 
-Personenbezogene Daten, die bereits an das bestehende PFVR-System übertragen wurden, werden dadurch nicht automatisch auf dem PFVR-Server gelöscht. Für Auskunft, Berichtigung oder Löschung dieser Vereinsdaten gelten die Prozesse des verantwortlichen Vereins und dessen Datenschutzkontakt.
+Personenbezogene Daten, die bereits an das bestehende PFVR-System übertragen wurden, werden dadurch nicht automatisch auf dem PFVR-Server gelöscht. Für Auskunft, Berichtigung oder Löschung dieser Vereinsdaten ist der für das jeweilige PFVR-System verantwortliche Verein zu kontaktieren. Der App-Herausgeber kann nur Auskunft über die von der App selbst verantworteten lokalen bzw. eigenen Datenflüsse geben.
 
 Die App selbst bietet keine eigenständige Kontoerstellung an. Ein bestehender PFVR-Zugang wird außerhalb der App verwaltet.
 
 ## 12. Kinder und Jugendliche
 
-Die App ist eine Vereins-/Sportanwendung. Das tatsächlich in Google Play deklarierte Zielalter muss vor Veröffentlichung vom Herausgeber festgelegt werden. Sofern die App für Minderjährige angeboten wird, gelten die entsprechenden gesetzlichen und Google-Play-Anforderungen zusätzlich.
+Die App ist eine Vereins-/Sportanwendung. Das tatsächlich in Google Play deklarierte Zielalter muss vor Veröffentlichung vom Herausgeber festgelegt und mit dem vorgesehenen Vereinsgebrauch abgestimmt werden. Sofern die App für Minderjährige angeboten wird, gelten die entsprechenden gesetzlichen und Google-Play-Anforderungen zusätzlich.
 
 ## 13. Änderungen
 
@@ -129,10 +133,11 @@ Diese Datenschutzerklärung wird angepasst, wenn sich Funktionen, Datenflüsse, 
 
 ## Release-Prüfung vor Veröffentlichung
 
-- `[ ]` Herausgebername entspricht dem Play-Developer-Profil.
-- `[ ]` Anschrift und Datenschutzkontakt sind eingesetzt und erreichbar.
+- `[ ]` Vollständiger Name/Kontakt des privaten Herausgebers entspricht dem verifizierten Play-Developer-Profil und den rechtlichen Anforderungen.
+- `[ ]` Vereinsfreigabe für Name/Logo/Inhalte/Store-Veröffentlichung ist schriftlich archiviert.
 - `[ ]` Öffentliche HTTPS-URL funktioniert ohne Login oder Geoblocking.
 - `[ ]` Gleiche Privacy-Policy bzw. Link ist in der App zugänglich.
+- `[ ]` Verantwortlichkeit der App und Verantwortlichkeit des PFVR-Backends sind klar getrennt.
 - `[ ]` `data-safety-draft.md` wurde gegen die finale App und das reale PFVR-Backend geprüft.
 - `[ ]` Finale CI-Berechtigungsliste wurde geprüft.
 - `[ ]` Änderungen an Banking, WebView, Analytics, Werbung oder externen SDKs wurden nachgezogen.
