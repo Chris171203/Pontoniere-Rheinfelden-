@@ -131,4 +131,4 @@ jobs:
           name: PFVR-PlayStore-AAB-${{ github.run_number }}
           path: dist/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
