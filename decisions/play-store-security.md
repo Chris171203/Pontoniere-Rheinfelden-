@@ -1,10 +1,19 @@
 # Play-Store- und Release-Sicherheitsentscheidungen
 
-Stand: 2026-09-04
+Stand: 2026-09-05
 
 ## Ziel
 
 Die öffentliche Android-App `ch.pfvr.app` soll über Google Play verteilt werden können, ohne persönliche PFVR-Zugänge oder produktive Signierschlüssel in Quellcode/CI-Artefakte einzubauen.
+
+## Veröffentlichungsmodell
+
+- Die App bleibt ein privat entwickeltes, nicht kommerzielles Hobbyprojekt.
+- Google-Play-Herausgeber ist der Inhaber des persönlichen Entwicklerkontos, nicht automatisch der Pontonierfahrverein Rheinfelden.
+- Vor öffentlicher Veröffentlichung wird eine schriftliche Vereinsfreigabe für Vereinsname/PFVR-Bezeichnung, Logo, vereinbarte öffentliche Inhalte/Links, Store-Material und Veröffentlichung unter dem persönlichen Entwicklerkonto archiviert.
+- Store-Eintrag und Datenschutzerklärung trennen die Rollen klar: privater App-Herausgeber einerseits, bestehende PFVR-Webseiten/-Backends andererseits.
+- Die Formulierung `offizielle App` wird nur verwendet, wenn der Verein diese Außendarstellung ausdrücklich schriftlich freigibt; Standard ist `privat entwickelt mit Genehmigung des Pontonierfahrvereins Rheinfelden`.
+- D-U-N-S und ein Vereins-Organisationskonto sind damit kein Projektblocker. Falls das persönliche Entwicklerkonto unter Googles Closed-Test-Anforderung fällt, wird der erforderliche Test vor Produktionszugang absolviert.
 
 ## Signierung
 

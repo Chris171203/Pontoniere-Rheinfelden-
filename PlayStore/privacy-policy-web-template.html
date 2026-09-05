@@ -17,14 +17,16 @@
 <main>
 <article>
   <h1>Datenschutzerklärung – PFVR Rheinfelden App</h1>
-  <p class="notice">VOR VERÖFFENTLICHUNG: Platzhalter für Herausgeber, Anschrift, Datenschutzkontakt und Stand ersetzen. Erst danach diese Seite als Google-Play-Datenschutz-URL verwenden.</p>
+  <p class="notice">VOR VERÖFFENTLICHUNG: Platzhalter für privaten Herausgeber, Kontaktangaben, Datenschutz-URL und Stand ersetzen. Vereinsfreigabe separat archivieren. Erst danach diese Seite als Google-Play-Datenschutz-URL verwenden.</p>
 
-  <h2>1. Verantwortlicher</h2>
-  <p><strong>[Herausgeber / Rechtssubjekt]</strong><br>
-     [Anschrift]<br>
+  <h2>1. Verantwortlicher für die App</h2>
+  <p><strong>[VOLLSTÄNDIGER NAME DES PRIVATEN APP-HERAUSGEBERS]</strong><br>
+     [ERFORDERLICHE KONTAKTANSCHRIFT]<br>
      E-Mail: <a href="mailto:[DATENSCHUTZ-EMAIL]">[DATENSCHUTZ-EMAIL]</a><br>
-     Website: <a href="https://www.pfvr.ch/">https://www.pfvr.ch/</a></p>
+     Projekt-/Datenschutzseite: <a href="[DATENSCHUTZ-URL]">[DATENSCHUTZ-URL]</a></p>
   <p>App: <strong>PFVR Rheinfelden</strong> (<code>ch.pfvr.app</code>)</p>
+  <p>Die App wird privat entwickelt und über ein persönliches Google-Play-Entwicklerkonto veröffentlicht. Vereinsname, PFVR-Bezeichnung, Vereinslogo und vereinbarte Vereinsinhalte werden mit Genehmigung des Pontonierfahrvereins Rheinfelden verwendet. Der Verein ist dadurch nicht automatisch technischer Betreiber oder Herausgeber der Android-App.</p>
+  <p>Für Daten, die über bestehende Vereinsangebote wie <code>pfvr.ch</code> oder <code>intern.pfvr.ch</code> verarbeitet werden, gelten zusätzlich die Verantwortlichkeiten und Datenschutzinformationen des jeweiligen Vereinsangebots.</p>
 
   <h2>2. Grundsatz</h2>
   <p>Die PFVR-Rheinfelden-App betreibt keinen eigenen Werbe-, Analyse- oder Trackingdienst und enthält nach aktuellem Stand kein Werbe-SDK. Sie überträgt keine Nutzungsstatistiken, Werbe-IDs, Crash-Telemetrie oder Gerätekennungen an einen eigenen App-Backendserver.</p>
@@ -33,7 +35,7 @@
   <h2>3. Android-Berechtigungen und Geräteschnittstellen</h2>
   <p>Das eigene App-Manifest fordert Internetzugriff an. Eingebundene Android-Systembibliotheken können zusätzlich gewöhnliche technische Berechtigungen für Hintergrundarbeit in das finale Manifest einbringen; die zusammengeführte Berechtigungsliste wird im Release-Build automatisiert geprüft.</p>
   <p>Die App fordert nach aktuellem Stand insbesondere keine sensiblen Laufzeitberechtigungen für Gerätestandort, Kamera, Mikrofon, Kontakte, SMS/Telefon, persönlichen Kalender oder allgemeinen Medien-/Speicherzugriff an und verwendet nicht <code>QUERY_ALL_PACKAGES</code>.</p>
-  <p>Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird nicht an den Verein, den App-Entwickler oder einen eigenen Server übertragen.</p>
+  <p>Für die Auswahl einer Banking-App prüft die App lokal anhand begrenzter Paket-/Intent-Abfragen, welche kompatiblen Apps auf dem Gerät verfügbar sind. Diese Information wird nicht an den privaten App-Herausgeber, den Verein oder einen eigenen Server übertragen.</p>
 
   <h2>4. Lokal gespeicherte Daten</h2>
   <p>Je nach Nutzung speichert die App lokal unter anderem Sprache und Darstellung, Kachelreihenfolge, die bevorzugte Banking-App, den persönlichen Link zum internen PFVR-Bereich, den lokalen Freigabestatus, zwischengespeicherte öffentliche Kalender-, Wetter-, Rhein- und Vereinsdaten, Zustände der internen Teilnehmerdarstellung, WebView-Cookies sowie vorübergehend erzeugte Swiss-QR-Dateien.</p>
@@ -48,7 +50,7 @@
 
   <h2>7. Interner PFVR-Bereich</h2>
   <p>Der interne Bereich basiert auf dem bestehenden <code>intern.pfvr.ch</code>-System. Bei dessen Nutzung können Name beziehungsweise Personenbezug, An-/Abmeldestatus, Essens-/Teilnahmestatus sowie technisch erforderliche Sitzungs- und Zugriffsinformationen direkt an dieses PFVR-System übertragen werden.</p>
-  <p>Die App betreibt hierfür keinen eigenen Zwischenserver und verwendet diese Daten nicht für Werbung, Profiling oder Analysen. Der gemeinsame App-Freigabecode ist nur eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung des vereinsinternen Systems.</p>
+  <p>Der private App-Herausgeber betreibt hierfür keinen eigenen Zwischenserver und verwendet diese Daten nicht für Werbung, Profiling oder Analysen. Der gemeinsame App-Freigabecode ist nur eine lokale Zugangshürde und ersetzt keine serverseitige Authentifizierung des vereinsinternen Systems.</p>
 
   <h2>8. Zahlungen und Banking-Apps</h2>
   <p>Die Vereinsbeiz-Funktion dient der Bezahlung physischer Konsumationen. Warenkorb und Swiss-QR-Zahlungsdaten werden lokal erzeugt. Die App verarbeitet keine Bankzugangsdaten, liest keine Karteninformationen aus und führt selbst keine Banktransaktion aus.</p>
@@ -61,9 +63,10 @@
   <p>Netzwerkzugriffe der App erfolgen über HTTPS; unverschlüsselter Cleartext-Verkehr ist in der Android-Konfiguration deaktiviert. Persönliche Intern-Links und Einstellungen liegen im privaten App-Speicher des Android-Geräts.</p>
   <p>Cloud-Backup ist deaktiviert. Zusätzlich schließen die App-Regeln Dateien, Datenbanken, Shared Preferences und externe App-Dateien ausdrücklich von Android-Backup und Device-to-Device-Transfer aus. Damit sollen insbesondere der persönliche PFVR-Link, Freigabezustände und interne Teilnehmerzustände nicht automatisch auf ein anderes Gerät übertragen werden.</p>
 
-  <h2>11. Löschung</h2>
+  <h2>11. Löschung und Anfragen</h2>
   <p>Öffentliche Cache-Daten können innerhalb der App gelöscht werden. Sämtliche lokalen App-Daten können über die Android-Systemeinstellungen beziehungsweise durch Löschen der App-Daten oder Deinstallation entfernt werden.</p>
-  <p>Personenbezogene Daten, die bereits an das bestehende PFVR-System übertragen wurden, werden dadurch nicht automatisch auf dem PFVR-Server gelöscht. Für Auskunft, Berichtigung oder Löschung dieser Vereinsdaten ist der oben genannte Verantwortliche zu kontaktieren. Die App erstellt selbst kein neues Benutzerkonto.</p>
+  <p>Personenbezogene Daten, die bereits an das bestehende PFVR-System übertragen wurden, werden dadurch nicht automatisch auf dem PFVR-Server gelöscht. Für Auskunft, Berichtigung oder Löschung dieser Vereinsdaten ist der für das jeweilige PFVR-System verantwortliche Verein zu kontaktieren. Der private App-Herausgeber ist für die von der App selbst verantworteten lokalen beziehungsweise eigenen Datenflüsse Ansprechpartner.</p>
+  <p>Die App erstellt selbst kein neues Benutzerkonto.</p>
 
   <h2>12. Kinder und Jugendliche</h2>
   <p>Die App ist eine Vereins- und Sportanwendung. Soweit sie Minderjährigen angeboten wird, gelten die gesetzlichen und plattformspezifischen Anforderungen für die entsprechende Zielgruppe.</p>

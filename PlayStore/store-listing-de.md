@@ -9,6 +9,8 @@ Termine, Rhein, Wetter, Vereinsinfos und Vereinsbeiz der Pontoniere Rheinfelden.
 ## Vollständige Beschreibung
 Die PFVR-App bündelt die wichtigsten Informationen und Funktionen rund um den Pontonierfahrverein Rheinfelden in einer mobilen Vereins-App.
 
+**Privat entwickelt und über ein persönliches Entwicklerkonto veröffentlicht; Verwendung von Vereinsname, Logo und vereinbarten Vereinsinhalten mit Genehmigung des Pontonierfahrvereins Rheinfelden.**
+
 Funktionen:
 
 - Jahresprogramm und kommende Termine aus dem öffentlichen Vereinskalender
@@ -32,16 +34,24 @@ Die Zahlungsfunktion der Vereinsbeiz dient der Bezahlung physischer Konsumatione
 Sport
 
 ## Website
-https://www.pfvr.ch/
+**Nach Vereinsfreigabe vorgesehen:** https://www.pfvr.ch/
+
+Die Website ist die Vereinswebsite und nicht automatisch die Support-/Herausgeberseite des privaten App-Entwicklers.
 
 ## Support / Kontakt
-info@pfvr.ch
+**Vor Einreichung einsetzen:** `[Support-E-Mail des privaten App-Herausgebers]`
+
+`info@pfvr.ch` nur verwenden, wenn der Verein ausdrücklich zustimmt, Supportanfragen zur App über diese Adresse anzunehmen.
 
 ## Datenschutz
-**Vor Einreichung ersetzen:** öffentliche URL der finalen Datenschutzerklärung auf `pfvr.ch` oder einer anderen dauerhaft kontrollierten Vereinsdomain.
+**Vor Einreichung einsetzen:** öffentliche HTTPS-URL der finalen Datenschutzerklärung des privaten App-Herausgebers.
+
+Eine Seite auf `pfvr.ch` darf als Datenschutz-URL verwendet werden, wenn der Verein deren Veröffentlichung und dauerhafte Bereitstellung genehmigt. Alternativ eine eigene dauerhaft kontrollierte HTTPS-Seite verwenden.
 
 ## Hinweise für Metadaten
 
+- Der private Entwickler ist Store-Herausgeber; der PFVR ist der Verein, für dessen Gebrauch die App entwickelt wird.
+- `Offizielle App` nur verwenden, wenn der Verein diese Bezeichnung ausdrücklich schriftlich freigibt. Ansonsten bei `privat entwickelt mit Genehmigung des PFVR` bleiben.
 - Die App nicht als Nachrichten-/Magazinprodukt kategorisieren; öffentliche Vereinsmeldungen sind nur eine Teilfunktion.
-- Keine Aussagen wie „offiziell“, „sicherste“, „beste“ oder ähnliche Qualitäts-/Rankingbehauptungen verwenden, solange diese nicht ausdrücklich vom Herausgeber freigegeben und belegbar sind.
+- Keine Aussagen wie `sicherste`, `beste` oder ähnliche Qualitäts-/Rankingbehauptungen verwenden.
 - Screenshots dürfen keine persönlichen Intern-Links, echten Zugangstokens oder unnötige personenbezogene Teilnehmerdaten zeigen.
