@@ -23,6 +23,12 @@ final class AppLinkPolicy {
         return isPfvrHost(host) || isGoogleCalendarHost(host);
     }
 
+    static boolean mayOpenExternally(String scheme) {
+        String normalized = normalize(scheme);
+        return "http".equals(normalized) || "https".equals(normalized) || "mailto".equals(normalized)
+                || "tel".equals(normalized) || "geo".equals(normalized);
+    }
+
     private static String normalize(String host) {
         return host == null ? "" : host.trim().toLowerCase(Locale.ROOT);
     }

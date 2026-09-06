@@ -75,6 +75,8 @@ final class UiLanguage {
         put("Öffnen", "Ufmache");
         put("Öffnen  →", "Ufmache  →");
         put("Neu laden", "Neu lade");
+        put("Gespeicherte Personen wiederherstellen", "Gspeichereti Persone wiederherställe");
+        put("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet.", "Dä Linktyp wird us Sicherheitsgründ nöd uf gmacht.");
         put("Aktualisieren", "Aktualisiere");
         put("NÄCHSTES TRAINING", "NÖCHSCHTS TRAINING");
         put("Wetter wird geladen …", "Wätter wird glade …");

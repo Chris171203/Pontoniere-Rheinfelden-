@@ -28,4 +28,10 @@ public class AppLinkPolicyTest {
         assertFalse(AppLinkPolicy.mayStayInPublicWebView("accounts.google.com"));
         assertFalse(AppLinkPolicy.mayStayInPublicWebView("google.com.evil.example"));
     }
+    @Test public void externalLinksAllowOnlyExpectedSchemes() {
+        assertTrue(AppLinkPolicy.mayOpenExternally("https"));assertTrue(AppLinkPolicy.mayOpenExternally("http"));
+        assertTrue(AppLinkPolicy.mayOpenExternally("mailto"));assertTrue(AppLinkPolicy.mayOpenExternally("tel"));assertTrue(AppLinkPolicy.mayOpenExternally("geo"));
+        assertFalse(AppLinkPolicy.mayOpenExternally("intent"));assertFalse(AppLinkPolicy.mayOpenExternally("file"));assertFalse(AppLinkPolicy.mayOpenExternally("javascript"));assertFalse(AppLinkPolicy.mayOpenExternally(null));
+    }
+
 }

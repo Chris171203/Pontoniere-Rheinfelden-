@@ -1,6 +1,6 @@
 # Google Play Vorbereitung
 
-Stand: Android-Testversion `0.11.4` (`versionCode 51`), Paket `ch.pfvr.app`, `targetSdk 36` / `compileSdk 36`, `minSdk 26`.
+Stand: Android-Testversion `0.11.5` (`versionCode 52`), Paket `ch.pfvr.app`, `targetSdk 36` / `compileSdk 36`, `minSdk 26`.
 
 Die App ist technisch weit genug für die Google-Play-Vorbereitung und einen ersten internen Play-Test. `1.0.0` bleibt für den ersten öffentlichen Produktionsrelease reserviert.
 
@@ -61,7 +61,7 @@ Die Secrets gehören in die GitHub-Environment `play-store`; dort sollten Freiga
 2. Vereinsfreigabe schriftlich einholen und archivieren.
 3. Privacy-/Supportangaben finalisieren und öffentliche Datenschutz-URL bereitstellen.
 4. Upload-Key erzeugen, Play App Signing beim ersten AAB-Upload aktivieren.
-5. `0.11.4` bzw. einen daraus abgeleiteten `0.11.x`-Stand als **Internal testing** über Google Play verteilen.
+5. `0.11.5` bzw. einen daraus abgeleiteten `0.11.x`-Stand als **Internal testing** über Google Play verteilen.
 6. Store-Eintrag, Data Safety und Review-Zugang mit echten Angaben abschließen.
 7. Falls für das persönliche Konto erforderlich: Closed Test mit 12 Testern / 14 Tagen absolvieren und Produktionszugang beantragen.
 8. Reale Gerätetests und Rückmeldungen sammeln; keine neue Funktionswelle kurz vor Release.

@@ -627,6 +627,10 @@ private View homeWeatherTile(){
 private View homeRiverSummaryTile(){
     LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");
     group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));
+    TextView safety=txt("BAFU-Aktuellwerte sind ungeprüfte Rohdaten und können Fehler enthalten. Die angezeigte Schifffahrtslage dient der Orientierung und ist keine amtliche Freigabe. Massgebend sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);
+    safety.setPadding(dp(2),dp(7),dp(2),dp(3));
+    safety.setOnClickListener(v->external(RIVER_NAVIGATION_SOURCE));
+    group.addView(safety);
     return group;
 }
 
@@ -760,9 +764,9 @@ private void rebuildHomePreservingScroll(){
         double level=displayHydroValue(station,RiverMetric.LEVEL,rawLevel);
         double gaugeCm=RiverDisplay.hasVerifiedGaugeCentimetres(station)?RiverDisplay.gaugeCentimetres(station,rawLevel):Double.NaN;
         double temperature=station.supportsTemperature?currentHydroValue(station,"WT"):Double.NaN;
-        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
-        int levelColor=navigationLevelColor(stage);
-        int flowColor=navigationFlowColor(stage);
+        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;
+        int levelColor=riverLevelColor(station,stage);
+        int flowColor=riverFlowColor(station,stage);
 
         LinearLayout c=card();
         c.setOrientation(LinearLayout.VERTICAL);
@@ -807,7 +811,7 @@ private void rebuildHomePreservingScroll(){
         c.addView(timestampSpacer,new LinearLayout.LayoutParams(1,0,1));
         String[] summary=hydroSummary(station);
         TextView stand=txtRaw(summary[3],10,Color.rgb(126,140,150),false);
-        stand.setMaxLines(1);
+        stand.setMaxLines(2);
         stand.setPadding(0,dp(7),0,0);
         c.addView(stand);
         return c;
@@ -927,9 +931,9 @@ private void rebuildHomePreservingScroll(){
         TrendSeries level=hydroSeries(station,"W",range);
         double flowNow=currentHydroValue(station,"Q");
         double levelNow=graphLevelValue(station,currentHydroValue(station,"W"));
-        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
-        int flowColor=navigationFlowColor(stage);
-        int levelColor=navigationLevelColor(stage);
+        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;
+        int flowColor=riverFlowColor(station,stage);
+        int levelColor=riverLevelColor(station,stage);
 
         LinearLayout card=card();
         card.setOrientation(LinearLayout.VERTICAL);
@@ -1078,12 +1082,16 @@ private void rebuildHomePreservingScroll(){
     }
 
     private RhineNavigation.Stage navigationStage(){
-        double raw=currentHydroValue(HydroStation.BASEL_RHEINHALLE,"W");
-        return RhineNavigation.fromBaselGaugeCm(RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,raw));
+        HydroPoint point=currentHydroPoint(HydroStation.BASEL_RHEINHALLE,"W");
+        if(point==null)return RhineNavigation.Stage.UNKNOWN;
+        long now=System.currentTimeMillis();
+        long cacheUpdated=prefs.getLong(HydroStation.BASEL_RHEINHALLE.liveUpdatedKey(),0L);
+        double gaugeCm=RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,point.value);
+        return RhineNavigation.fromCurrentBaselGaugeCm(gaugeCm,point.time,cacheUpdated,now);
     }
 
     private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){
-        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;
+        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;
         if(!Double.isFinite(displayedLevel))return RhineNavigation.Stage.UNKNOWN;
         double centimetres=riverGraphLevelCentimetres(station)
                 ?displayedLevel
@@ -1105,6 +1113,14 @@ private void rebuildHomePreservingScroll(){
         if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(224,169,72):Color.rgb(174,103,0);
         if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(225,111,76):Color.rgb(166,66,31);
         return darkMode?Color.rgb(210,77,88):Color.rgb(139,39,45);
+    }
+
+    private int riverLevelColor(HydroStation station,RhineNavigation.Stage stage){
+        return station==HydroStation.BASEL_RHEINHALLE?navigationLevelColor(stage):themeText(WATER);
+    }
+
+    private int riverFlowColor(HydroStation station,RhineNavigation.Stage stage){
+        return station==HydroStation.BASEL_RHEINHALLE?navigationFlowColor(stage):themeText(RiverMetric.FLOW.color);
     }
 
     private LinearLayout segmentedBackground(){
@@ -1356,21 +1372,15 @@ private void rebuildHomePreservingScroll(){
     private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?" · Cache "+(min/60)+" h":" · "+ui("vor")+" "+min+" min");}
     private String weatherCode(int c){if(c==0)return ui("klar");if(c<=2)return ui("leicht bewölkt");if(c==3)return ui("bewölkt");if(c==45||c==48)return ui("Nebel");if(c>=51&&c<=57)return ui("Nieselregen");if(c>=61&&c<=67)return ui("Regen");if(c>=71&&c<=77)return ui("Schnee");if(c>=80&&c<=82)return ui("Schauer");if(c>=85&&c<=86)return ui("Schneeschauer");if(c>=95)return ui("Gewitter");return ui("Wetter");}
 
-    private double currentHydroValue(HydroStation station,String parameter){
+    private HydroPoint currentHydroPoint(HydroStation station,String parameter){
         String raw=prefs.getString(station.liveCacheKey(),"");
-        if(raw.isBlank())return Double.NaN;
-        try{
-            JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");
-            String latest="";
-            double value=Double.NaN;
-            for(int i=0;i<data.length();i++){
-                JSONObject row=data.getJSONObject(i);
-                if(!parameter.equals(row.optString("parameterName","")))continue;
-                String timestamp=row.optString("timestamp","");
-                if(timestamp.compareTo(latest)>0){latest=timestamp;value=row.optDouble("value",Double.NaN);}
-            }
-            return value;
-        }catch(Exception ignored){return Double.NaN;}
+        if(raw.isBlank())return null;
+        return latestHydroPoint(raw,"data_live",parameter);
+    }
+
+    private double currentHydroValue(HydroStation station,String parameter){
+        HydroPoint point=currentHydroPoint(station,parameter);
+        return point==null?Double.NaN:point.value;
     }
 
     private float riverLow(HydroStation station){
@@ -1421,7 +1431,7 @@ private void rebuildHomePreservingScroll(){
             if(Double.isFinite(w))sub.append(ui("Pegel")).append(' ').append(formatMetric(station,RiverMetric.LEVEL,w)).append(' ').append(metricUnit(station,RiverMetric.LEVEL));
             if(station.supportsTemperature&&!Double.isNaN(wt)){if(sub.length()>0)sub.append("\n");sub.append(ui("Wasser")).append(' ').append(String.format(Locale.GERMAN,"%.1f °C",wt));}
             String stand="BAFU "+station.id;
-            try{if(!latest.isBlank())stand+=" · "+ui("Stand")+" "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}
+            try{if(!latest.isBlank())stand+=" · "+ui("Stand")+" "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"));}catch(Exception ignored){}
             if(cache>0&&(System.currentTimeMillis()-cache)>45*60000L)stand+=" · Cache";
             return new String[]{title,main,sub.length()==0?ui("Messwerte derzeit unvollständig"):sub.toString(),stand};
         }catch(Exception ignored){return new String[]{title,ui("Gespeicherter Stand"),ui("Messdaten nicht lesbar"),"BAFU · Cache"};}
@@ -3256,7 +3266,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     String border=darkMode?"#344550":"#DCE5EA";
     String link=darkMode?"#5BBED5":"#247E99";
     String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
-    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode()),null);
+    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl),null);
 }
 
     private View internalMissing() {
@@ -3551,7 +3561,13 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
                 .replace("Sonntag","Sunntig");
     }
     private String cap(String s){return s==null||s.isEmpty()?s:s.substring(0,1).toUpperCase(Locale.GERMAN)+s.substring(1);}
-    private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}}
+    private void external(String url){
+        try{
+            Uri uri=Uri.parse(url);
+            if(!AppLinkPolicy.mayOpenExternally(uri.getScheme())){Toast.makeText(this,ui("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet."),Toast.LENGTH_SHORT).show();return;}
+            startActivity(new Intent(Intent.ACTION_VIEW,uri));
+        }catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}
+    }
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
     private void handleBack(){if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
@@ -3624,9 +3640,9 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             if(maxTime<=minTime)maxTime=minTime+1;
             HydroMath.AxisScale flowScale=HydroMath.niceAxis(flow.values);
             HydroMath.AxisScale levelScale=HydroMath.niceAxis(level.values);
-            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;
-            int flowColor=navigationFlowColor(currentStage);
-            int levelColor=navigationLevelColor(currentStage);
+            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;
+            int flowColor=riverFlowColor(station,currentStage);
+            int levelColor=riverLevelColor(station,currentStage);
 
             grid.setColor(darkMode?Color.rgb(57,72,82):Color.rgb(220,229,234));
             label.setColor(themeText(MUTED));
@@ -3651,7 +3667,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         }
 
         private RhineNavigation.Stage navigationStageAtGraphTime(long timestamp){
-            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;
+            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;
             int index=HydroMath.nearestIndex(level.times,timestamp);
             if(index<0)return RhineNavigation.Stage.UNKNOWN;
             return navigationStageForGraphValue(station,level.values.get(index));
@@ -3726,7 +3742,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
             Paint cross=new Paint(Paint.ANTI_ALIAS_FLAG);cross.setColor(Color.argb(darkMode?150:100,128,145,155));cross.setStrokeWidth(dp(1));canvas.drawLine(x,top,x,bottom,cross);
 
             double q=flow.values.get(qi),w=level.values.get(wi);
-            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.NORMAL;
+            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.UNKNOWN;
             if(station==HydroStation.BASEL_RHEINHALLE){
                 flowColor=navigationFlowColor(selectedStage);
                 levelColor=navigationLevelColor(selectedStage);
