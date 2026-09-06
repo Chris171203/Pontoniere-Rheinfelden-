@@ -129,6 +129,11 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("Aus Initiallink neu aufbauen"));
         assertTrue(script.contains("Nochmal tippen: wirklich neu aufbauen"));
         assertTrue(script.contains("resetRecoveryConfirm"));
+        assertTrue(script.contains("restoreSaved"));
+        assertTrue(script.contains("RESTORE_REQUEST_KEY"));
+        assertTrue(script.contains("restoreRequested&&tryRestoreMissingPerson"));
+        assertFalse(script.contains("if(toolInfo&&tryRestoreMissingPerson"));
+        assertFalse(script.contains("window.__pfvrBaseInternalUrl"));
         assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));
         assertFalse(script.contains("localStorage.clear()"));
     }

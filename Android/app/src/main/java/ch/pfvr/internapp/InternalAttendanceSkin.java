@@ -78,6 +78,20 @@ final class InternalAttendanceSkin {
             String link,
             String language
     ) {
+        return javascript(background,card,soft,text,muted,border,link,language,"");
+    }
+
+    static String javascript(
+            String background,
+            String card,
+            String soft,
+            String text,
+            String muted,
+            String border,
+            String link,
+            String language,
+            String baseInternalUrl
+    ) {
         String template = """
                 (function(){
                   if(window.__pfvrAttendanceMobileV2)return;
@@ -106,12 +120,15 @@ final class InternalAttendanceSkin {
                     appointment:'__I_APPOINTMENT__',
                     removeFromView:'__I_REMOVE_FROM_VIEW__',
                     addPersonAria:'__I_ADD_PERSON_ARIA__',
-                    participant:'__I_PARTICIPANT__'
+                    participant:'__I_PARTICIPANT__',
+                    restoreSaved:'__I_RESTORE_SAVED__'
                   };
                   var STORAGE_KEY='pfvr-attendance-view-state-v2';
                   var PEOPLE_KEY='pfvr-attendance-people-v4';
                   var LEGACY_PEOPLE_KEY='pfvr-attendance-people-v3';
                   var RESTORE_KEY='pfvr-attendance-restore-v4';
+                  var RESTORE_REQUEST_KEY='pfvr-attendance-explicit-restore-v1';
+                  var baseInternalUrl='__BASE_INTERNAL_URL__';
                   var sourceTableRef=null;
                   var sourcePeopleObserver=null;
                   var headerOverlay=null;
@@ -826,7 +843,7 @@ final class InternalAttendanceSkin {
                         if(!removeDesiredPerson(state,personName))return;
                         saveViewState();
                         closePersonManager();
-                        var base=window.__pfvrBaseInternalUrl||'';
+                        var base=baseInternalUrl;
                         if(base){window.location.replace(base);return;}
                         setPersonColumnHidden(personName,true);
                         line.remove();
@@ -1004,11 +1021,12 @@ final class InternalAttendanceSkin {
                     }catch(ignore){}
                     try{
                       sessionStorage.removeItem(RESTORE_KEY);
+                      sessionStorage.removeItem(RESTORE_REQUEST_KEY);
                       sessionStorage.removeItem(STORAGE_KEY);
                     }catch(ignore){}
                   };
                   var resetPeopleViewFromBase=function(){
-                    var base=window.__pfvrBaseInternalUrl||'';
+                    var base=baseInternalUrl;
                     if(!base)return false;
                     clearLocalPeopleState();
                     closePersonManager();
@@ -1113,6 +1131,17 @@ final class InternalAttendanceSkin {
                       body.appendChild(unavailable);
                     }
 
+                    var missingDesired=(state.desired||[]).filter(function(name){return !isHiddenPerson(state,name)&&!(currentNames||[]).some(function(current){return samePersonName(current,name);});});
+                    if(select&&missingDesired.length){
+                      var restoreSaved=element('button');restoreSaved.type='button';restoreSaved.textContent=I18N.restoreSaved+' ('+missingDesired.length+')';
+                      restoreSaved.addEventListener('click',function(){
+                        try{sessionStorage.setItem(RESTORE_REQUEST_KEY,'1');}catch(ignore){}
+                        closePersonManager();
+                        if(!tryRestoreMissingPerson(select,currentNames||[],state)){try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}}
+                      });
+                      body.appendChild(restoreSaved);
+                    }
+
                     var note=element('div');
                     note.textContent=I18N.removeNote;
                     note.style.color=COLORS.muted;
@@ -1212,8 +1241,9 @@ final class InternalAttendanceSkin {
                     var allNames=resolvePersonNames(allParticipantRows,toolInfo&&toolInfo.select,seedState);
                     var peopleState=loadPeopleState(allNames,seedState);
 
-                    if(toolInfo&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;
-                    try{sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}
+                    var restoreRequested=false;try{restoreRequested=sessionStorage.getItem(RESTORE_REQUEST_KEY)==='1';}catch(ignore){}
+                    if(toolInfo&&restoreRequested&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;
+                    if(restoreRequested){try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}}
 
                     var participantRows=[],names=[];
                     allParticipantRows.forEach(function(row,index){
@@ -1352,6 +1382,8 @@ final class InternalAttendanceSkin {
                 .replace("__I_REMOVE_FROM_VIEW__", escapeJs(UiLanguage.translate("Person aus Ansicht entfernen: ", language)))
                 .replace("__I_ADD_PERSON_ARIA__", escapeJs(UiLanguage.translate("Person hinzufügen", language)))
                 .replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))
+                .replace("__I_RESTORE_SAVED__", escapeJs(UiLanguage.translate("Gespeicherte Personen wiederherstellen", language)))
+                .replace("__BASE_INTERNAL_URL__", escapeJs(baseInternalUrl == null ? "" : baseInternalUrl))
                 .replace("__SCHEME__", scheme);
     }
 
