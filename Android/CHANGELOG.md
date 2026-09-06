@@ -1,5 +1,13 @@
 # Android Changelog
 
+## 0.11.5
+- Sicherheitsreview gegen die Opus-Analyse umgesetzt: Die aktuelle Schifffahrtslage aus Basel-Rheinhalle wird nur noch aus Messwert und Cache mit höchstens 60 Minuten Alter abgeleitet. Danach zeigt die App `Lage unklar` statt eine vermeintlich aktuelle Normal-/Sperrstufe.
+- `Rhein aktuell` nennt Datum und Uhrzeit des Messstands und weist ausdrücklich darauf hin, dass BAFU-Aktuellwerte ungeprüfte Rohdaten sind; die App ist keine amtliche Freigabe und verweist auf die Schweizerischen Rheinhäfen als massgebende Stelle. Rheinfelden bleibt ohne künstliche lokale `NORMAL`-Stufe neutral eingefärbt.
+- Die interne Personenansicht stellt lokal gespeicherte, serverseitig fehlende Zusatzpersonen nicht mehr still beim Seitenaufbau wieder her. Eine Wiederherstellung wird nur noch nach ausdrücklicher Nutzeraktion in `Personen verwalten` angestossen.
+- Der persönliche Intern-Basislink wird nicht mehr als globale `window.__pfvrBaseInternalUrl`-Variable in den Seitenkontext geschrieben. Externe App-Links werden zentral auf `http`, `https`, `mailto`, `tel` und `geo` begrenzt.
+- Zielarchitektur für zentral aktuelle Preise/IBAN und eine spätere authentifizierte interne JSON-API in `decisions/runtime-config-and-internal-api.md` dokumentiert. Die vollständige Bewertung der Opus-Analyse liegt in `docs/opus-review-2026-09-06.md`.
+- Versionsstand `0.11.5`, `versionCode 52`.
+
 ## 0.11.4
 - Google-Play-Readiness als eigener Test-Meilenstein: `lintRelease`, Debug-APK und Release-AAB werden gemeinsam in CI gebaut; die tatsächlich gemergten APK-Berechtigungen werden zusätzlich gegen unerwartete sensible/hochwirksame Berechtigungen geprüft und als Artefakt dokumentiert.
 - Store-Release-Pipeline gehärtet: signierte AABs dürfen nur manuell von `main` mit separatem Upload-Key aus der geschützten GitHub-Environment `play-store` erzeugt werden. Test- und Produktionssignierung bleiben strikt getrennt.

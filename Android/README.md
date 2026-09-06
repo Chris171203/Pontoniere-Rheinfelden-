@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
+Aktuelle Android-Testversion: `0.11.5` (`versionCode 52`).
 
 ## Entwicklung
 
@@ -16,7 +16,7 @@ Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
 - Kachelreihenfolge und Sichtbarkeit werden zentral in `TileLayoutStore.java` gepflegt. Stabile Tile-IDs erhalten bestehende Benutzerlayouts über App-Updates hinweg.
 - Die interne An-/Abmeldeseite wird ausschließlich per WebView-Skin aufbereitet; der Originalmodus bleibt unverändert.
 
-## Play-Store-Readiness 0.11.4
+## Play-Store-Readiness 0.11.5
 
 - Produktions-Paket: `ch.pfvr.app`; Debug/Test bleibt `ch.pfvr.app.test`.
 - Der Play-Bundle-Workflow darf ausschließlich manuell von `main` laufen und verwendet die geschützte GitHub-Environment `play-store`.
@@ -43,8 +43,9 @@ Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
 - Aktuell besitzt Basel-Rheinhalle einen solchen bestätigten cm-Bezug. Rheinfelden wird nicht auf Basis eines vermuteten oder historischen Pegelnullpunkts umgerechnet und bleibt daher in `m ü.M.`.
 - In `Rhein aktuell` erscheint der zusätzliche cm-Wert folglich nur bei Basel-Rheinhalle.
 - In `Rhein-Grafiken` wird der Umschalter `m ü.M.` / `cm` ebenfalls nur bei Stationen mit verifiziertem cm-Bezug angeboten. Bei nicht unterstützten Stationen erzwingt die Darstellungslogik `m ü.M.`, auch wenn aus einer älteren App-Version noch eine cm-Einstellung gespeichert sein sollte.
-- Die offizielle Schifffahrtslage richtet sich ausschließlich nach dem Pegel Basel-Rheinhalle: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs.
-- Der Abfluss bleibt ein eigener hydrologischer Messwert und steuert keine offizielle Sperrstufe.
+- Die Schifffahrtslage wird aus dem Pegel Basel-Rheinhalle abgeleitet: 700 cm = HWM I/Voralarm, 790 cm = HWM IIb/Sperrung Kleinschifffahrt und Fähren Basel–Rheinfelden, 820 cm = HWM IIa/Sperrung Rheinfelden–Kembs. Für die **aktuelle** Stufe müssen Messwert und Live-Cache höchstens 60 Minuten alt sein; sonst zeigt die App `Lage unklar`.
+- BAFU-Aktuellwerte sind ungeprüfte Rohdaten und können Fehler enthalten. Die App weist deshalb ausdrücklich darauf hin, dass ihre Lageanzeige der Orientierung dient und keine amtliche Freigabe ersetzt; massgebend sind die Schweizerischen Rheinhäfen.
+- Der Abfluss bleibt ein eigener hydrologischer Messwert und steuert keine offizielle Sperrstufe. Rheinfelden erhält keine künstliche lokale `NORMAL`-Stufe, sondern bleibt neutral eingefärbt.
 - Im Basel-Diagramm werden die drei Hochwassermarken auf der Pegelachse eingezeichnet. Pegel- und Abflusskurve folgen je Abschnitt der zeitgleichen Pegelstufe, verwenden innerhalb derselben Stufe aber unterschiedliche Farbtöne.
 - Im Normalzustand ist der Abfluss neutral stahlblau. Warnfarben dürfen erst mit einer tatsächlichen Basel-Hochwasserstufe erscheinen.
 
@@ -55,16 +56,17 @@ Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
 - Teilnehmernamen werden aus der tatsächlichen Originaltabelle einschließlich Bearbeiten-/Namens-Controls rekonstruiert. Nach `Original → Alle anzeigen → App-Ansicht` bleibt die Originalzeile die Quelle für Name, Reihenfolge und Status.
 - Der Werkzeugleistenbutton `Personen` öffnet Hinzufügen/Entfernen und bleibt auch bei einem unvollständigen Website-Zustand über eine lokale Fallback-Verwaltung nutzbar.
 - `Aus Initiallink neu aufbauen` löscht nur lokale Personen-/Restore-Zustände und lädt den gespeicherten persönlichen Initiallink erneut.
+- Lokal gespeicherte Zusatzpersonen, die auf der aktuellen Serveransicht fehlen, werden **nicht automatisch** zurückgeschrieben. Die Wiederherstellung kann nur ausdrücklich über `Personen verwalten` angestossen werden.
 - Website-Bulk-Aktionen wie `Alle anzeigen` sind im App-Modus blockiert; im unveränderten Originalmodus können sie bewusst verwendet werden.
 - Statusentscheidungen werden ausschließlich über die echten Website-Controls vorgenommen.
 - Koch-/Verantwortlichkeitsnamen in der linken Terminspalte sind in der App-Ansicht reine Anzeigetexte: nicht fokussierbar, nicht editierbar und ohne Tastatur. Das ursprüngliche Website-Feld bleibt nur technisch verborgen erhalten; lange Namen werden automatisch kleiner skaliert und Datumsangaben fett hervorgehoben.
 
-## Gerätetest 0.11.4
+## Gerätetest 0.11.5
 
 - Frische Installation/App-Daten: Die Landingpage muss sichtbar sein, zwischen Deutsch und Schwiizerdütsch umschalten und die hinterlegten PFVR-Ziele für Schnuppertraining/Formulare, Instagram sowie Facebook ohne Freigabe öffnen. Home, Live-Daten und interner WebView dürfen vor Codeeingabe nicht initialisiert werden.
 - Schwiizerdütsch: Home, Rhein, Termine, News, Einstellungen, Kachelverwaltung, Verein, Kasse sowie die app-erzeugte Personenverwaltung/Anmeldestatus auf verbliebene hochdeutsche App-Texte prüfen. Inhalte aus Kalender, News, Personennamen und Original-PFVR-Seite müssen unverändert bleiben.
 - Verein: neue Kacheln für Schnuppertraining/Mitgliedschaft, Instagram und Facebook prüfen; bestehende benutzerdefinierte Kachelreihenfolgen müssen die neuen IDs automatisch ergänzen.
-- `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral.
+- `Rhein aktuell`: Der Pegel ist wieder die größere Hauptgröße. Basel muss abhängig von seiner aktuellen Hochwasserstufe Pegelwert und Lage-Badge passend einfärben; der Abfluss bleibt kleiner und farblich unterscheidbar. Rheinfelden bleibt ohne erfundene lokale Sperrstufe neutral. Ein Basel-Messwert oder Live-Cache älter als 60 Minuten muss `Lage unklar` ergeben; der Messstand muss Datum und Uhrzeit zeigen.
 - Im Normalzustand müssen Abflusswert und Abflusskurve neutral stahlblau wirken und dürfen nicht wie eine Warnung aussehen. Gelb/Orange/Rot dürfen erst bei einer tatsächlichen Basel-Hochwasserstufe erscheinen.
 - `Rhein aktuell`: Basel-Rheinhalle und Rheinfelden müssen beide den Wasserstand in `m ü.M.` zeigen. Nur Basel darf darunter zusätzlich einen cm-Pegel anzeigen. Die beiden Zeitstempel müssen am unteren Kartenrand auf derselben Höhe stehen.
 - `Rhein-Grafiken`: Basel muss zwischen `m ü.M.` und `cm` umschaltbar sein; Rheinfelden darf keinen cm-Umschalter erhalten. Aktueller Wert, rechte Achse, Kurve, Hinweis und Tooltip müssen jeweils dieselbe Einheit verwenden.
@@ -72,7 +74,7 @@ Aktuelle Android-Testversion: `0.11.4` (`versionCode 51`).
 - Bei einem ausgewählten Basel-Diagrammpunkt müssen die beiden Punkte zur dortigen historischen Stufe passen und der Tooltip zusätzlich die damalige Stufe nennen.
 - Kacheln verschieben/ein- oder ausblenden: Die Kachelverwaltung darf danach nicht mehr an den Seitenanfang springen.
 - `Original → Alle anzeigen → App-Ansicht`: alle Originalpersonen müssen mit echtem Namen, korrekter Reihenfolge und ihrem eigenen Status übernommen werden.
-- `Personen`: Hinzufügen, Entfernen und Neuaufbau aus Initiallink auch nach App-Neustart prüfen.
+- `Personen`: Hinzufügen, Entfernen und Neuaufbau aus Initiallink auch nach App-Neustart prüfen. Eine auf dem Server fehlende, lokal gespeicherte Zusatzperson darf beim normalen Öffnen nicht automatisch wieder angelegt werden; Wiederherstellung muss eine sichtbare Nutzeraktion erfordern.
 - Beim langen vertikalen Scrollen müssen `Termin` und die aktuell sichtbaren Teilnehmernamen stehen bleiben; horizontales Wischen muss Kopf und Personenspalten exakt synchron halten.
 - Koch-/Verantwortlichkeitsnamen in der Terminspalte dürfen nicht fokussierbar oder editierbar sein und beim Antippen keine Tastatur öffnen. Lange Namen müssen sich verkleinern; das Datum soll fett bleiben, ohne Zähler oder Termintext mitzuskalieren.
 - Android 8/API 26: App-Start und Navigation testen; die API-27-spezifische helle Navigationsleiste darf dort keinen Ressourcenzugriffsfehler verursachen.
@@ -86,6 +88,6 @@ Cloud-Backup und Android-Device-to-Device-Transfer für die App-Daten sind bewus
 
 ## Testpaket und Release
 
-Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
+Debug-Testpakete verwenden `ch.pfvr.app.test` und seit 0.9.5 einen festen, bewusst öffentlichen Testschlüssel im Repository. Damit sind spätere Test-APKs bei steigendem `versionCode` überinstallierbar. **Jeder mit diesem öffentlichen Schlüssel könnte jedoch ebenfalls eine manipulierte `.test`-APK als technisch gültiges Update signieren.** Test-APKs deshalb nur aus dem eigenen zugehörigen CI-Run installieren und die bereitgestellte SHA-256-Prüfsumme abgleichen; für reguläre Tester ist Google Play Internal Testing vorzuziehen. Der Testschlüssel darf niemals für `ch.pfvr.app` oder einen Store-Release verwendet werden; die Produktionssignierung bleibt geheim und separat.
 
 Ein signiertes Play-AAB wird ausschließlich über `.github/workflows/play-release.yml` aus `main` und mit einem separaten Upload-Key erzeugt. `1.0.0` bleibt für den ersten offiziellen Produktionsrelease reserviert.

@@ -8,6 +8,7 @@ Aktueller Android-Teststand: `0.11.4` (`versionCode 51`).
 
 Schwerpunkte des aktuellen Stands:
 
+- Sicherheitsreview 0.11.5: veraltete Basel-Pegeldaten führen nach 60 Minuten zu `Lage unklar`, BAFU-Rohdatenhinweis/amtliche Quelle sind sichtbar, stille Personen-Wiederherstellung wurde durch eine explizite Aktion ersetzt und externe URI-Schemata wurden gehärtet;
 - nächstes Training aus dem öffentlichen Vereinskalender mit saisonalem Fallback;
 - Wetter passend zum tatsächlichen Trainingszeitraum;
 - BAFU-Rheindaten mit Abfluss, Wasserstand, Wassertemperatur und interaktiven Verläufen; beide Stationen zeigen den Wasserstand in m ü.M., eine zusätzliche cm-Darstellung wird nur bei Messpunkten mit verifiziertem Bezug angeboten;
