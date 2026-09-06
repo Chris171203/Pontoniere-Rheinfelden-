@@ -7,6 +7,7 @@ final class RhineNavigation {
     static final double HWM_I_CM = 700.0d;
     static final double HWM_IIB_CM = 790.0d;
     static final double HWM_IIA_CM = 820.0d;
+    static final long MAX_CURRENT_AGE_MS = 60L * 60L * 1000L;
 
     private RhineNavigation() {}
 
@@ -18,8 +19,21 @@ final class RhineNavigation {
         return Stage.NORMAL;
     }
 
+    static boolean isCurrent(long measurementTimestamp,long cacheUpdatedTimestamp,long now){
+        if(measurementTimestamp<=0L||cacheUpdatedTimestamp<=0L||now<=0L)return false;
+        long measurementAge=now-measurementTimestamp;
+        long cacheAge=now-cacheUpdatedTimestamp;
+        if(measurementAge<0L||cacheAge<0L)return false;
+        return measurementAge<=MAX_CURRENT_AGE_MS&&cacheAge<=MAX_CURRENT_AGE_MS;
+    }
+
+    static Stage fromCurrentBaselGaugeCm(double gaugeCm,long measurementTimestamp,long cacheUpdatedTimestamp,long now){
+        if(!isCurrent(measurementTimestamp,cacheUpdatedTimestamp,now))return Stage.UNKNOWN;
+        return fromBaselGaugeCm(gaugeCm);
+    }
+
     static String shortLabel(Stage stage){
-        if(stage==Stage.UNKNOWN)return "Keine Lage";
+        if(stage==Stage.UNKNOWN)return "Lage unklar";
         if(stage==Stage.HWM_I)return "HWM I";
         if(stage==Stage.HWM_IIB)return "Sperre IIb";
         if(stage==Stage.HWM_IIA)return "Sperre IIa";
@@ -27,7 +41,7 @@ final class RhineNavigation {
     }
 
     static String detail(Stage stage){
-        if(stage==Stage.UNKNOWN)return "Basel-Pegel derzeit nicht verfügbar.";
+        if(stage==Stage.UNKNOWN)return "Basel-Pegel fehlt oder ist älter als 60 Minuten. Massgebend sind die Schweizerischen Rheinhäfen.";
         if(stage==Stage.HWM_I)return "Voralarm ab 700 cm Pegel Basel-Rheinhalle.";
         if(stage==Stage.HWM_IIB)return "Kleinschifffahrt und Fähren Basel–Rheinfelden gesperrt.";
         if(stage==Stage.HWM_IIA)return "Schifffahrt Rheinfelden–Kembs gesperrt.";
