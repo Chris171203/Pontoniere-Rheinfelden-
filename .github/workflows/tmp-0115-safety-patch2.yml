@@ -1,0 +1,102 @@
+name: Temporary 0.11.5 safety patch retry
+
+on:
+  push:
+    branches: [dev-0.11.5-safety]
+    paths: ['.github/workflows/tmp-0115-safety-patch2.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.11.5-safety
+      - name: Apply reviewed safety changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def one(text,old,new,label):
+              n=text.count(old)
+              if n!=1: raise SystemExit(f'{label}: expected 1, got {n}')
+              return text.replace(old,new,1)
+
+          p=Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java'); s=p.read_text()
+          s=one(s,
+          '''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;\n        int levelColor=navigationLevelColor(stage);\n        int flowColor=navigationFlowColor(stage);''',
+          '''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;\n        int levelColor=riverLevelColor(station,stage);\n        int flowColor=riverFlowColor(station,stage);''','summary stage')
+          s=one(s,
+          '''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;\n        int flowColor=navigationFlowColor(stage);\n        int levelColor=navigationLevelColor(stage);''',
+          '''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;\n        int flowColor=riverFlowColor(station,stage);\n        int levelColor=riverLevelColor(station,stage);''','combined stage')
+          s=one(s,
+          '''    private RhineNavigation.Stage navigationStage(){\n        double raw=currentHydroValue(HydroStation.BASEL_RHEINHALLE,"W");\n        return RhineNavigation.fromBaselGaugeCm(RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,raw));\n    }\n\n    private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){\n        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;''',
+          '''    private RhineNavigation.Stage navigationStage(){\n        HydroPoint point=currentHydroPoint(HydroStation.BASEL_RHEINHALLE,"W");\n        if(point==null)return RhineNavigation.Stage.UNKNOWN;\n        long now=System.currentTimeMillis();\n        long cacheUpdated=prefs.getLong(HydroStation.BASEL_RHEINHALLE.liveUpdatedKey(),0L);\n        double gaugeCm=RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,point.value);\n        return RhineNavigation.fromCurrentBaselGaugeCm(gaugeCm,point.time,cacheUpdated,now);\n    }\n\n    private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){\n        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;''','fresh stage')
+          anchor='''    private int navigationFlowColor(RhineNavigation.Stage stage){\n        if(stage==RhineNavigation.Stage.UNKNOWN)return themeText(MUTED);\n        if(stage==RhineNavigation.Stage.NORMAL)return darkMode?Color.rgb(126,171,204):Color.rgb(77,119,153);\n        if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(224,169,72):Color.rgb(174,103,0);\n        if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(225,111,76):Color.rgb(166,66,31);\n        return darkMode?Color.rgb(210,77,88):Color.rgb(139,39,45);\n    }'''
+          s=one(s,anchor,anchor+'''\n\n    private int riverLevelColor(HydroStation station,RhineNavigation.Stage stage){\n        return station==HydroStation.BASEL_RHEINHALLE?navigationLevelColor(stage):themeText(WATER);\n    }\n\n    private int riverFlowColor(HydroStation station,RhineNavigation.Stage stage){\n        return station==HydroStation.BASEL_RHEINHALLE?navigationFlowColor(stage):themeText(RiverMetric.FLOW.color);\n    }''','neutral colors')
+          s=one(s,
+          '''private View homeRiverSummaryTile(){\n    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");\n    group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));\n    return group;\n}''',
+          '''private View homeRiverSummaryTile(){\n    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");\n    group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));\n    TextView safety=txt("BAFU-Aktuellwerte sind ungeprüfte Rohdaten und können Fehler enthalten. Die angezeigte Schifffahrtslage dient der Orientierung und ist keine amtliche Freigabe. Massgebend sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);\n    safety.setPadding(dp(2),dp(7),dp(2),dp(3));\n    safety.setOnClickListener(v->external(RIVER_NAVIGATION_SOURCE));\n    group.addView(safety);\n    return group;\n}''','safety notice')
+          s=one(s,'stand.setMaxLines(1);','stand.setMaxLines(2);','timestamp lines')
+          s=one(s,
+          '''    private double currentHydroValue(HydroStation station,String parameter){\n        String raw=prefs.getString(station.liveCacheKey(),"");\n        if(raw.isBlank())return Double.NaN;\n        try{\n            JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");\n            String latest="";\n            double value=Double.NaN;\n            for(int i=0;i<data.length();i++){\n                JSONObject row=data.getJSONObject(i);\n                if(!parameter.equals(row.optString("parameterName","")))continue;\n                String timestamp=row.optString("timestamp","");\n                if(timestamp.compareTo(latest)>0){latest=timestamp;value=row.optDouble("value",Double.NaN);}\n            }\n            return value;\n        }catch(Exception ignored){return Double.NaN;}\n    }''',
+          '''    private HydroPoint currentHydroPoint(HydroStation station,String parameter){\n        String raw=prefs.getString(station.liveCacheKey(),"");\n        if(raw.isBlank())return null;\n        return latestHydroPoint(raw,"data_live",parameter);\n    }\n\n    private double currentHydroValue(HydroStation station,String parameter){\n        HydroPoint point=currentHydroPoint(station,parameter);\n        return point==null?Double.NaN:point.value;\n    }''','hydro point')
+          s=one(s,'DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}\n            if(cache>0&&(System.currentTimeMillis()-cache)>45*60000L)stand+=" · Cache";',
+          'DateTimeFormatter.ofPattern("dd.MM. HH:mm"));}catch(Exception ignored){}\n            if(cache>0&&(System.currentTimeMillis()-cache)>45*60000L)stand+=" · Cache";','date stamp')
+          s=one(s,
+          '''            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;\n            int flowColor=navigationFlowColor(currentStage);\n            int levelColor=navigationLevelColor(currentStage);''',
+          '''            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;\n            int flowColor=riverFlowColor(station,currentStage);\n            int levelColor=riverLevelColor(station,currentStage);''','graph current')
+          s=one(s,'            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;','            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;','graph historical')
+          s=one(s,'            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.NORMAL;','            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.UNKNOWN;','selection neutral')
+          s=one(s,
+          '''    String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));\n    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode()),null);''',
+          '''    String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));\n    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl),null);''','base url')
+          s=one(s,
+          '''    private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}}''',
+          '''    private void external(String url){\n        try{\n            Uri uri=Uri.parse(url);\n            if(!AppLinkPolicy.mayOpenExternally(uri.getScheme())){Toast.makeText(this,ui("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet."),Toast.LENGTH_SHORT).show();return;}\n            startActivity(new Intent(Intent.ACTION_VIEW,uri));\n        }catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}\n    }''','scheme filter')
+          p.write_text(s)
+
+          p=Path('Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java'); s=p.read_text()
+          s=one(s,
+          '''    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language\n    ) {\n        String template = """''',
+          '''    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language\n    ) {\n        return javascript(background,card,soft,text,muted,border,link,language,"");\n    }\n\n    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language,\n            String baseInternalUrl\n    ) {\n        String template = """''','skin overload')
+          s=one(s,"                    participant:'__I_PARTICIPANT__'\n                  };","                    participant:'__I_PARTICIPANT__',\n                    restoreSaved:'__I_RESTORE_SAVED__'\n                  };",'i18n')
+          s=one(s,"                  var RESTORE_KEY='pfvr-attendance-restore-v4';\n                  var sourceTableRef=null;","                  var RESTORE_KEY='pfvr-attendance-restore-v4';\n                  var RESTORE_REQUEST_KEY='pfvr-attendance-explicit-restore-v1';\n                  var baseInternalUrl='__BASE_INTERNAL_URL__';\n                  var sourceTableRef=null;",'restore key')
+          if s.count("window.__pfvrBaseInternalUrl||''")!=2: raise SystemExit('base URL refs != 2')
+          s=s.replace("window.__pfvrBaseInternalUrl||''","baseInternalUrl")
+          s=one(s,"                      sessionStorage.removeItem(RESTORE_KEY);\n                      sessionStorage.removeItem(STORAGE_KEY);","                      sessionStorage.removeItem(RESTORE_KEY);\n                      sessionStorage.removeItem(RESTORE_REQUEST_KEY);\n                      sessionStorage.removeItem(STORAGE_KEY);",'clear explicit flag')
+          marker="""                    var note=element('div');\n                    note.textContent=I18N.removeNote;\n                    note.style.color=COLORS.muted;\n                    note.style.fontSize='11px';\n                    body.appendChild(note);"""
+          restore="""                    var missingDesired=(state.desired||[]).filter(function(name){return !isHiddenPerson(state,name)&&!(currentNames||[]).some(function(current){return samePersonName(current,name);});});\n                    if(select&&missingDesired.length){\n                      var restoreSaved=element('button');restoreSaved.type='button';restoreSaved.textContent=I18N.restoreSaved+' ('+missingDesired.length+')';\n                      restoreSaved.addEventListener('click',function(){\n                        try{sessionStorage.setItem(RESTORE_REQUEST_KEY,'1');}catch(ignore){}\n                        closePersonManager();\n                        if(!tryRestoreMissingPerson(select,currentNames||[],state)){try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}}\n                      });\n                      body.appendChild(restoreSaved);\n                    }\n\n"""+marker
+          s=one(s,marker,restore,'explicit restore UI')
+          s=one(s,"                    if(toolInfo&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;\n                    try{sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}","                    var restoreRequested=false;try{restoreRequested=sessionStorage.getItem(RESTORE_REQUEST_KEY)==='1';}catch(ignore){}\n                    if(toolInfo&&restoreRequested&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;\n                    if(restoreRequested){try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}}",'no auto restore')
+          s=one(s,'.replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))\n                .replace("__SCHEME__", scheme);','.replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))\n                .replace("__I_RESTORE_SAVED__", escapeJs(UiLanguage.translate("Gespeicherte Personen wiederherstellen", language)))\n                .replace("__BASE_INTERNAL_URL__", escapeJs(baseInternalUrl == null ? "" : baseInternalUrl))\n                .replace("__SCHEME__", scheme);','replace vars')
+          p.write_text(s)
+
+          p=Path('Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java'); s=p.read_text()
+          s=one(s,'        put("Neu laden", "Neu lade");','        put("Neu laden", "Neu lade");\n        put("Gespeicherte Personen wiederherstellen", "Gspeichereti Persone wiederherställe");\n        put("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet.", "Dä Linktyp wird us Sicherheitsgründ nöd uf gmacht.");','language')
+          p.write_text(s)
+
+          p=Path('Android/app/src/main/java/ch/pfvr/internapp/AppLinkPolicy.java'); s=p.read_text()
+          s=one(s,'    static boolean mayStayInPublicWebView(String host) {\n        return isPfvrHost(host) || isGoogleCalendarHost(host);\n    }','    static boolean mayStayInPublicWebView(String host) {\n        return isPfvrHost(host) || isGoogleCalendarHost(host);\n    }\n\n    static boolean mayOpenExternally(String scheme) {\n        String normalized = normalize(scheme);\n        return "http".equals(normalized) || "https".equals(normalized) || "mailto".equals(normalized)\n                || "tel".equals(normalized) || "geo".equals(normalized);\n    }','policy')
+          p.write_text(s)
+
+          p=Path('Android/app/src/test/java/ch/pfvr/internapp/AppLinkPolicyTest.java'); s=p.read_text()
+          insert='''\n    @Test public void externalLinksAllowOnlyExpectedSchemes() {\n        assertTrue(AppLinkPolicy.mayOpenExternally("https"));assertTrue(AppLinkPolicy.mayOpenExternally("http"));\n        assertTrue(AppLinkPolicy.mayOpenExternally("mailto"));assertTrue(AppLinkPolicy.mayOpenExternally("tel"));assertTrue(AppLinkPolicy.mayOpenExternally("geo"));\n        assertFalse(AppLinkPolicy.mayOpenExternally("intent"));assertFalse(AppLinkPolicy.mayOpenExternally("file"));assertFalse(AppLinkPolicy.mayOpenExternally("javascript"));assertFalse(AppLinkPolicy.mayOpenExternally(null));\n    }\n'''
+          s=one(s,'\n}',insert+'\n}','policy test'); p.write_text(s)
+
+          p=Path('Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java'); s=p.read_text()
+          s=one(s,'        assertTrue(script.contains("resetRecoveryConfirm"));\n        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));','        assertTrue(script.contains("resetRecoveryConfirm"));\n        assertTrue(script.contains("restoreSaved"));\n        assertTrue(script.contains("RESTORE_REQUEST_KEY"));\n        assertTrue(script.contains("restoreRequested&&tryRestoreMissingPerson"));\n        assertFalse(script.contains("if(toolInfo&&tryRestoreMissingPerson"));\n        assertFalse(script.contains("window.__pfvrBaseInternalUrl"));\n        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));','skin tests'); p.write_text(s)
+
+          Path('Android/app/src/test/java/ch/pfvr/internapp/OpusSafetyRegressionTest.java').write_text('''package ch.pfvr.internapp;\nimport static org.junit.Assert.*;\nimport java.nio.charset.StandardCharsets;import java.nio.file.*;import org.junit.Test;\npublic class OpusSafetyRegressionTest {\n private static String source() throws Exception {String r="src/main/java/ch/pfvr/internapp/MainActivity.java";Path[] c={Paths.get(r),Paths.get("app",r),Paths.get("Android","app",r)};for(Path p:c)if(Files.isRegularFile(p))return Files.readString(p,StandardCharsets.UTF_8);throw new IllegalStateException();}\n @Test public void currentNavigationRequiresFreshData() throws Exception {String s=source();assertTrue(s.contains("fromCurrentBaselGaugeCm"));assertTrue(s.contains("dd.MM. HH:mm"));assertTrue(s.contains("riverLevelColor(HydroStation station"));}\n @Test public void webFlowsAreHardened() throws Exception {String s=source();assertTrue(s.contains("AppLinkPolicy.mayOpenExternally(uri.getScheme())"));assertFalse(s.contains("window.__pfvrBaseInternalUrl="));}\n}\n''')
+          PY
+      - name: Commit patched source
+        run: |
+          git config user.name 'PFVR maintenance'
+          git config user.email '126019214+Chris171203@users.noreply.github.com'
+          git add Android
+          git commit -m 'Harden stale Rhine status and internal WebView flows'
+          git push origin HEAD:dev-0.11.5-safety
