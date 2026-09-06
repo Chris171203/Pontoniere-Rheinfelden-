@@ -1,0 +1,161 @@
+name: Temporary 0.11.5 safety patch
+
+on:
+  push:
+    branches: [dev-0.11.5-safety]
+    paths: ['.github/workflows/tmp-0115-safety-patch.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-0.11.5-safety
+      - name: Apply reviewed safety changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count=text.count(old)
+              if count!=1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, got {count}')
+              return text.replace(old,new,1)
+
+          main_path=Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          main=main_path.read_text()
+
+          old='''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;\n        int levelColor=navigationLevelColor(stage);\n        int flowColor=navigationFlowColor(stage);'''
+          new='''        RhineNavigation.Stage stage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;\n        int levelColor=riverLevelColor(station,stage);\n        int flowColor=riverFlowColor(station,stage);'''
+          if main.count(old)!=2:
+              raise SystemExit(f'summary/combined stage: expected 2 occurrences, got {main.count(old)}')
+          main=main.replace(old,new)
+
+          old='''    private RhineNavigation.Stage navigationStage(){\n        double raw=currentHydroValue(HydroStation.BASEL_RHEINHALLE,"W");\n        return RhineNavigation.fromBaselGaugeCm(RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,raw));\n    }\n\n    private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){\n        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;'''
+          new='''    private RhineNavigation.Stage navigationStage(){\n        HydroPoint point=currentHydroPoint(HydroStation.BASEL_RHEINHALLE,"W");\n        if(point==null)return RhineNavigation.Stage.UNKNOWN;\n        long now=System.currentTimeMillis();\n        long cacheUpdated=prefs.getLong(HydroStation.BASEL_RHEINHALLE.liveUpdatedKey(),0L);\n        double gaugeCm=RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,point.value);\n        return RhineNavigation.fromCurrentBaselGaugeCm(gaugeCm,point.time,cacheUpdated,now);\n    }\n\n    private RhineNavigation.Stage navigationStageForGraphValue(HydroStation station,double displayedLevel){\n        if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;'''
+          main=replace_once(main,old,new,'navigation stage freshness')
+
+          anchor='''    private int navigationFlowColor(RhineNavigation.Stage stage){\n        if(stage==RhineNavigation.Stage.UNKNOWN)return themeText(MUTED);\n        if(stage==RhineNavigation.Stage.NORMAL)return darkMode?Color.rgb(126,171,204):Color.rgb(77,119,153);\n        if(stage==RhineNavigation.Stage.HWM_I)return darkMode?Color.rgb(224,169,72):Color.rgb(174,103,0);\n        if(stage==RhineNavigation.Stage.HWM_IIB)return darkMode?Color.rgb(225,111,76):Color.rgb(166,66,31);\n        return darkMode?Color.rgb(210,77,88):Color.rgb(139,39,45);\n    }'''
+          replacement=anchor+'''\n\n    private int riverLevelColor(HydroStation station,RhineNavigation.Stage stage){\n        return station==HydroStation.BASEL_RHEINHALLE?navigationLevelColor(stage):themeText(WATER);\n    }\n\n    private int riverFlowColor(HydroStation station,RhineNavigation.Stage stage){\n        return station==HydroStation.BASEL_RHEINHALLE?navigationFlowColor(stage):themeText(RiverMetric.FLOW.color);\n    }'''
+          main=replace_once(main,anchor,replacement,'neutral Rheinfelden colors')
+
+          old='''private View homeRiverSummaryTile(){\n    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");\n    group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));\n    return group;\n}'''
+          new='''private View homeRiverSummaryTile(){\n    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");\n    group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));\n    TextView safety=txt("BAFU-Aktuellwerte sind ungeprüfte Rohdaten und können Fehler enthalten. Die angezeigte Schifffahrtslage dient der Orientierung und ist keine amtliche Freigabe. Massgebend sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);\n    safety.setPadding(dp(2),dp(7),dp(2),dp(3));\n    safety.setOnClickListener(v->external(RIVER_NAVIGATION_SOURCE));\n    group.addView(safety);\n    return group;\n}'''
+          main=replace_once(main,old,new,'Rhine safety notice')
+
+          old='''        TextView stand=txtRaw(summary[3],10,Color.rgb(126,140,150),false);\n        stand.setMaxLines(1);'''
+          new='''        TextView stand=txtRaw(summary[3],10,Color.rgb(126,140,150),false);\n        stand.setMaxLines(2);'''
+          main=replace_once(main,old,new,'summary timestamp lines')
+
+          old='''    private double currentHydroValue(HydroStation station,String parameter){\n        String raw=prefs.getString(station.liveCacheKey(),"");\n        if(raw.isBlank())return Double.NaN;\n        try{\n            JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray("data_live");\n            String latest="";\n            double value=Double.NaN;\n            for(int i=0;i<data.length();i++){\n                JSONObject row=data.getJSONObject(i);\n                if(!parameter.equals(row.optString("parameterName","")))continue;\n                String timestamp=row.optString("timestamp","");\n                if(timestamp.compareTo(latest)>0){latest=timestamp;value=row.optDouble("value",Double.NaN);}\n            }\n            return value;\n        }catch(Exception ignored){return Double.NaN;}\n    }'''
+          new='''    private HydroPoint currentHydroPoint(HydroStation station,String parameter){\n        String raw=prefs.getString(station.liveCacheKey(),"");\n        if(raw.isBlank())return null;\n        return latestHydroPoint(raw,"data_live",parameter);\n    }\n\n    private double currentHydroValue(HydroStation station,String parameter){\n        HydroPoint point=currentHydroPoint(station,parameter);\n        return point==null?Double.NaN:point.value;\n    }'''
+          main=replace_once(main,old,new,'current hydro point')
+
+          old='''            try{if(!latest.isBlank())stand+=" · "+ui("Stand")+" "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("HH:mm"));}catch(Exception ignored){}'''
+          new='''            try{if(!latest.isBlank())stand+=" · "+ui("Stand")+" "+java.time.Instant.parse(latest).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"));}catch(Exception ignored){}'''
+          main=replace_once(main,old,new,'hydro date stamp')
+
+          old='''            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.NORMAL;\n            int flowColor=navigationFlowColor(currentStage);\n            int levelColor=navigationLevelColor(currentStage);'''
+          new='''            RhineNavigation.Stage currentStage=station==HydroStation.BASEL_RHEINHALLE?navigationStage():RhineNavigation.Stage.UNKNOWN;\n            int flowColor=riverFlowColor(station,currentStage);\n            int levelColor=riverLevelColor(station,currentStage);'''
+          main=replace_once(main,old,new,'dual graph neutral current')
+          main=replace_once(main,
+              '''            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.NORMAL;''',
+              '''            if(station!=HydroStation.BASEL_RHEINHALLE)return RhineNavigation.Stage.UNKNOWN;''',
+              'dual historical non-Basel stage')
+          main=replace_once(main,
+              '''            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.NORMAL;''',
+              '''            RhineNavigation.Stage selectedStage=station==HydroStation.BASEL_RHEINHALLE?navigationStageForGraphValue(station,w):RhineNavigation.Stage.UNKNOWN;''',
+              'dual selection neutral')
+
+          old='''    String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));\n    view.evaluateJavascript("window.__pfvrBaseInternalUrl="+JSONObject.quote(baseInternalUrl)+";"+InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode()),null);'''
+          new='''    String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));\n    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl),null);'''
+          main=replace_once(main,old,new,'internal base URL scope')
+
+          old='''    private void external(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}}'''
+          new='''    private void external(String url){\n        try{\n            Uri uri=Uri.parse(url);\n            if(!AppLinkPolicy.mayOpenExternally(uri.getScheme())){\n                Toast.makeText(this,ui("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet."),Toast.LENGTH_SHORT).show();\n                return;\n            }\n            startActivity(new Intent(Intent.ACTION_VIEW,uri));\n        }catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}\n    }'''
+          main=replace_once(main,old,new,'external scheme whitelist')
+          main_path.write_text(main)
+
+          skin_path=Path('Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java')
+          skin=skin_path.read_text()
+          old='''    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language\n    ) {\n        String template = """'''
+          new='''    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language\n    ) {\n        return javascript(background,card,soft,text,muted,border,link,language,"");\n    }\n\n    static String javascript(\n            String background,\n            String card,\n            String soft,\n            String text,\n            String muted,\n            String border,\n            String link,\n            String language,\n            String baseInternalUrl\n    ) {\n        String template = """'''
+          skin=replace_once(skin,old,new,'skin overload')
+          skin=replace_once(skin,
+              '''                    participant:'__I_PARTICIPANT__'\n                  };''',
+              '''                    participant:'__I_PARTICIPANT__',\n                    restoreSaved:'__I_RESTORE_SAVED__'\n                  };''',
+              'restore i18n key')
+          skin=replace_once(skin,
+              '''                  var RESTORE_KEY='pfvr-attendance-restore-v4';\n                  var sourceTableRef=null;''',
+              '''                  var RESTORE_KEY='pfvr-attendance-restore-v4';\n                  var RESTORE_REQUEST_KEY='pfvr-attendance-explicit-restore-v1';\n                  var baseInternalUrl='__BASE_INTERNAL_URL__';\n                  var sourceTableRef=null;''',
+              'restore/base keys')
+          if skin.count("window.__pfvrBaseInternalUrl||''")!=2:
+              raise SystemExit('expected two global base URL references')
+          skin=skin.replace("window.__pfvrBaseInternalUrl||''","baseInternalUrl")
+
+          old='''                    try{\n                      sessionStorage.removeItem(RESTORE_KEY);\n                      sessionStorage.removeItem(STORAGE_KEY);\n                    }catch(ignore){}'''
+          new='''                    try{\n                      sessionStorage.removeItem(RESTORE_KEY);\n                      sessionStorage.removeItem(RESTORE_REQUEST_KEY);\n                      sessionStorage.removeItem(STORAGE_KEY);\n                    }catch(ignore){}'''
+          skin=replace_once(skin,old,new,'clear restore request')
+
+          old='''                    var note=element('div');\n                    note.textContent=I18N.removeNote;\n                    note.style.color=COLORS.muted;\n                    note.style.fontSize='11px';\n                    body.appendChild(note);'''
+          new='''                    var missingDesired=(state.desired||[]).filter(function(name){\n                      return !isHiddenPerson(state,name)&&!(currentNames||[]).some(function(current){return samePersonName(current,name);});\n                    });\n                    if(select&&missingDesired.length){\n                      var restoreSaved=element('button');\n                      restoreSaved.type='button';\n                      restoreSaved.textContent=I18N.restoreSaved+' ('+missingDesired.length+')';\n                      restoreSaved.addEventListener('click',function(){\n                        try{sessionStorage.setItem(RESTORE_REQUEST_KEY,'1');}catch(ignore){}\n                        closePersonManager();\n                        if(!tryRestoreMissingPerson(select,currentNames||[],state)){\n                          try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}\n                        }\n                      });\n                      body.appendChild(restoreSaved);\n                    }\n\n                    var note=element('div');\n                    note.textContent=I18N.removeNote;\n                    note.style.color=COLORS.muted;\n                    note.style.fontSize='11px';\n                    body.appendChild(note);'''
+          skin=replace_once(skin,old,new,'explicit restore button')
+
+          old='''                    if(toolInfo&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;\n                    try{sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}'''
+          new='''                    var restoreRequested=false;\n                    try{restoreRequested=sessionStorage.getItem(RESTORE_REQUEST_KEY)==='1';}catch(ignore){}\n                    if(toolInfo&&restoreRequested&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;\n                    if(restoreRequested){\n                      try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}\n                    }'''
+          skin=replace_once(skin,old,new,'no silent restore')
+
+          old='''.replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))\n                .replace("__SCHEME__", scheme);'''
+          new='''.replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))\n                .replace("__I_RESTORE_SAVED__", escapeJs(UiLanguage.translate("Gespeicherte Personen wiederherstellen", language)))\n                .replace("__BASE_INTERNAL_URL__", escapeJs(baseInternalUrl == null ? "" : baseInternalUrl))\n                .replace("__SCHEME__", scheme);'''
+          skin=replace_once(skin,old,new,'skin replacements')
+          skin_path.write_text(skin)
+
+          lang_path=Path('Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java')
+          lang=lang_path.read_text()
+          lang=replace_once(lang,
+              '''        put("Neu laden", "Neu lade");''',
+              '''        put("Neu laden", "Neu lade");\n        put("Gespeicherte Personen wiederherstellen", "Gspeichereti Persone wiederherställe");\n        put("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet.", "Dä Linktyp wird us Sicherheitsgründ nöd uf gmacht.");''',
+              'Swiss safety labels')
+          lang_path.write_text(lang)
+
+          policy_path=Path('Android/app/src/main/java/ch/pfvr/internapp/AppLinkPolicy.java')
+          policy=policy_path.read_text()
+          policy=replace_once(policy,
+              '''    static boolean mayStayInPublicWebView(String host) {\n        return isPfvrHost(host) || isGoogleCalendarHost(host);\n    }''',
+              '''    static boolean mayStayInPublicWebView(String host) {\n        return isPfvrHost(host) || isGoogleCalendarHost(host);\n    }\n\n    static boolean mayOpenExternally(String scheme) {\n        String normalized = normalize(scheme);\n        return "http".equals(normalized) || "https".equals(normalized) || "mailto".equals(normalized)\n                || "tel".equals(normalized) || "geo".equals(normalized);\n    }''',
+              'external schemes')
+          policy_path.write_text(policy)
+
+          policy_test=Path('Android/app/src/test/java/ch/pfvr/internapp/AppLinkPolicyTest.java')
+          ptest=policy_test.read_text()
+          ptest=replace_once(ptest,
+              '''    @Test\n    public void publicWebViewAllowsOnlyRequiredGoogleHost() {\n        assertTrue(AppLinkPolicy.mayStayInPublicWebView("calendar.google.com"));\n        assertFalse(AppLinkPolicy.mayStayInPublicWebView("accounts.google.com"));\n        assertFalse(AppLinkPolicy.mayStayInPublicWebView("google.com.evil.example"));\n    }''',
+              '''    @Test\n    public void publicWebViewAllowsOnlyRequiredGoogleHost() {\n        assertTrue(AppLinkPolicy.mayStayInPublicWebView("calendar.google.com"));\n        assertFalse(AppLinkPolicy.mayStayInPublicWebView("accounts.google.com"));\n        assertFalse(AppLinkPolicy.mayStayInPublicWebView("google.com.evil.example"));\n    }\n\n    @Test\n    public void externalLinksAllowOnlyExpectedSchemes() {\n        assertTrue(AppLinkPolicy.mayOpenExternally("https"));\n        assertTrue(AppLinkPolicy.mayOpenExternally("http"));\n        assertTrue(AppLinkPolicy.mayOpenExternally("mailto"));\n        assertTrue(AppLinkPolicy.mayOpenExternally("tel"));\n        assertTrue(AppLinkPolicy.mayOpenExternally("geo"));\n        assertFalse(AppLinkPolicy.mayOpenExternally("intent"));\n        assertFalse(AppLinkPolicy.mayOpenExternally("file"));\n        assertFalse(AppLinkPolicy.mayOpenExternally("javascript"));\n        assertFalse(AppLinkPolicy.mayOpenExternally(null));\n    }''',
+              'scheme tests')
+          policy_test.write_text(ptest)
+
+          skin_test=Path('Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceSkinTest.java')
+          stest=skin_test.read_text()
+          stest=replace_once(stest,
+              '''        assertTrue(script.contains("resetRecoveryConfirm"));\n        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));\n        assertFalse(script.contains("localStorage.clear()"));''',
+              '''        assertTrue(script.contains("resetRecoveryConfirm"));\n        assertTrue(script.contains("restoreSaved"));\n        assertTrue(script.contains("RESTORE_REQUEST_KEY"));\n        assertTrue(script.contains("restoreRequested&&tryRestoreMissingPerson"));\n        assertFalse(script.contains("if(toolInfo&&tryRestoreMissingPerson"));\n        assertFalse(script.contains("window.__pfvrBaseInternalUrl"));\n        assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));\n        assertFalse(script.contains("localStorage.clear()"));''',
+              'skin safety tests')
+          skin_test.write_text(stest)
+
+          main_reg=Path('Android/app/src/test/java/ch/pfvr/internapp/OpusSafetyRegressionTest.java')
+          main_reg.write_text('''package ch.pfvr.internapp;\n\nimport static org.junit.Assert.assertFalse;\nimport static org.junit.Assert.assertTrue;\n\nimport java.nio.charset.StandardCharsets;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.Paths;\n\nimport org.junit.Test;\n\npublic class OpusSafetyRegressionTest {\n    private static String source() throws Exception {\n        String relative="src/main/java/ch/pfvr/internapp/MainActivity.java";\n        Path[] candidates={Paths.get(relative),Paths.get("app",relative),Paths.get("Android","app",relative)};\n        for(Path candidate:candidates)if(Files.isRegularFile(candidate))return Files.readString(candidate,StandardCharsets.UTF_8);\n        throw new IllegalStateException("MainActivity.java not found");\n    }\n\n    @Test public void navigationStageRequiresFreshMeasurementAndCache() throws Exception {\n        String source=source();\n        assertTrue(source.contains("fromCurrentBaselGaugeCm"));\n        assertTrue(source.contains("currentHydroPoint(HydroStation.BASEL_RHEINHALLE,\\\"W\\\")"));\n        assertTrue(source.contains("liveUpdatedKey()"));\n        assertTrue(source.contains("dd.MM. HH:mm"));\n    }\n\n    @Test public void nonBaselRiverColorsAreNeutralAndExternalSchemesAreFiltered() throws Exception {\n        String source=source();\n        assertTrue(source.contains("riverLevelColor(HydroStation station"));\n        assertTrue(source.contains("riverFlowColor(HydroStation station"));\n        assertTrue(source.contains("AppLinkPolicy.mayOpenExternally(uri.getScheme())"));\n        assertFalse(source.contains("window.__pfvrBaseInternalUrl="));\n    }\n}\n''')
+          PY
+
+      - name: Commit patched source
+        shell: bash
+        run: |
+          git config user.name 'PFVR maintenance'
+          git config user.email '126019214+Chris171203@users.noreply.github.com'
+          git add Android
+          git commit -m 'Harden stale Rhine status and internal WebView flows'
+          git push origin HEAD:dev-0.11.5-safety
