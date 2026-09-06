@@ -3,6 +3,7 @@ package ch.pfvr.internapp;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class RhineNavigationTest {
@@ -26,5 +27,18 @@ public class RhineNavigationTest {
         assertEquals(RhineNavigation.Stage.UNKNOWN,RhineNavigation.fromBaselGaugeCm(Double.NaN));
         assertTrue(RhineNavigation.detail(RhineNavigation.Stage.HWM_IIB).contains("Kleinschifffahrt"));
         assertTrue(RhineNavigation.detail(RhineNavigation.Stage.HWM_IIA).contains("Rheinfelden"));
+    }
+
+    @Test public void currentNavigationRejectsOldMeasurementOrOldCache(){
+        long now=10_000_000L;
+        long fresh=now-30L*60L*1000L;
+        long tooOld=now-RhineNavigation.MAX_CURRENT_AGE_MS-1L;
+        assertTrue(RhineNavigation.isCurrent(fresh,fresh,now));
+        assertFalse(RhineNavigation.isCurrent(tooOld,fresh,now));
+        assertFalse(RhineNavigation.isCurrent(fresh,tooOld,now));
+        assertFalse(RhineNavigation.isCurrent(0L,fresh,now));
+        assertFalse(RhineNavigation.isCurrent(now+1L,fresh,now));
+        assertEquals(RhineNavigation.Stage.HWM_IIB,RhineNavigation.fromCurrentBaselGaugeCm(790.0,fresh,fresh,now));
+        assertEquals(RhineNavigation.Stage.UNKNOWN,RhineNavigation.fromCurrentBaselGaugeCm(790.0,tooOld,fresh,now));
     }
 }
