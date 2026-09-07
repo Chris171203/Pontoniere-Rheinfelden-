@@ -3432,18 +3432,20 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
         if(android.os.Build.VERSION.SDK_INT>=33) web.getSettings().setAlgorithmicDarkeningAllowed(false);
         web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         boolean appView=prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);
+        if(appView)hideInternalWebForAppView(web);
         Button people=btn("Personen",Color.WHITE,NAVY);
         people.setContentDescription(ui("Personen hinzufügen oder entfernen"));
         people.setVisibility(appView?View.VISIBLE:View.GONE);
         people.setOnClickListener(v->openInternalPeopleManager(web,0));
         tools.addView(people,new LinearLayout.LayoutParams(0,dp(40),1));
         Button mode=btn(appView?"Original":"App-Ansicht",NAVY,Color.WHITE);
-        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(ui(next?"Original":"App-Ansicht"));people.setVisibility(next?View.VISIBLE:View.GONE);web.clearCache(false);web.reload();});
+        mode.setOnClickListener(v->{boolean next=!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true);prefs.edit().putBoolean(PREF_INTERNAL_APP_VIEW,next).apply();mode.setText(ui(next?"Original":"App-Ansicht"));people.setVisibility(next?View.VISIBLE:View.GONE);if(next)hideInternalWebForAppView(web);else showInternalWeb(web);web.clearCache(false);web.reload();});
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
-        Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
+        Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))hideInternalWebForAppView(web);web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();if("https".equalsIgnoreCase(u.getScheme())&&AppLinkPolicy.isInternalPfvrHost(u.getHost()))return false;external(u.toString());return true;}
-            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))internalSkin(v);}
+            @Override public void onPageStarted(WebView v,String u,Bitmap icon){super.onPageStarted(v,u,icon);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))hideInternalWebForAppView(v);else showInternalWeb(v);}
+            @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){internalSkin(v);revealInternalAppViewWhenReady(v,0);}else showInternalWeb(v);}
             @Override public void onReceivedError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceError e){super.onReceivedError(v,r,e);if(r.isForMainFrame())showInternalLoadError(v,"Ladefehler "+e.getErrorCode()+": "+String.valueOf(e.getDescription()));}
             @Override public void onReceivedHttpError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceResponse e){super.onReceivedHttpError(v,r,e);if(r.isForMainFrame()&&e.getStatusCode()>=400)showInternalLoadError(v,"PFVR antwortet mit HTTP "+e.getStatusCode());}
         });
@@ -3479,6 +3481,19 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
     view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl),null);
 }
+
+    private void hideInternalWebForAppView(WebView web){if(web!=null){web.animate().cancel();web.setAlpha(1f);web.setVisibility(View.INVISIBLE);}}
+    private void showInternalWeb(WebView web){if(web!=null){web.animate().cancel();web.setAlpha(1f);web.setVisibility(View.VISIBLE);}}
+    private void revealInternalAppViewWhenReady(WebView web,int attempt){
+        if(web==null)return;
+        if(!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){showInternalWeb(web);return;}
+        web.evaluateJavascript("(function(){return !!document.querySelector('.pfvr-attendance-mobile');})()",result->{
+            if(!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){showInternalWeb(web);return;}
+            if("true".equalsIgnoreCase(String.valueOf(result))){web.animate().cancel();web.setAlpha(0f);web.setVisibility(View.VISIBLE);web.animate().alpha(1f).setDuration(80L).start();return;}
+            if(attempt>=24){showInternalWeb(web);return;}
+            new Handler(Looper.getMainLooper()).postDelayed(()->revealInternalAppViewWhenReady(web,attempt+1),100L);
+        });
+    }
 
     private View internalMissing() {
         ScrollView scroll=new ScrollView(this); LinearLayout b=body(); scroll.addView(b);

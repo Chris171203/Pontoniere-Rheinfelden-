@@ -51,4 +51,12 @@ public class InternalAttendanceUiRegressionTest {
         assertFalse(script.contains("el.value=formatted"));
         assertFalse(script.contains("else el.textContent=formatted"));
     }
+
+
+    @Test public void originalPersonAddPromptRemnantsAreHiddenInAppProjection(){
+        String script=script();
+        assertTrue(script.contains("scope.querySelectorAll('label,p,span,strong,small,div')"));
+        assertTrue(script.contains("v.indexOf('person')>=0&&v.indexOf('hinzuf')>=0"));
+        assertTrue(script.contains("!el.querySelector('select,button,input,a')"));
+    }
 }
