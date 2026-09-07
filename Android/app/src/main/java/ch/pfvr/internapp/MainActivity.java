@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
     private static final String PREF_WEATHER_CACHE = "weather_cache";
     private static final String PREF_WEATHER_UPDATED = "weather_updated";
     private static final String PREF_WEATHER_SOURCE = "weather_source";
+    private static final String PREF_CASH_CART = "cash_cart_v1";
     private static final String PREF_HYDRO_CACHE = "hydro_cache";
     private static final String PREF_HYDRO_UPDATED = "hydro_updated";
     private static final String PREF_HYDRO_FINE_CACHE = "hydro_fine_cache";
@@ -247,6 +248,7 @@ public class MainActivity extends Activity {
 
     private void startUnlockedApp(){
         tileLayoutStore = new TileLayoutStore(prefs);
+        loadCashCart();
         dataRefreshHandler = new Handler(Looper.getMainLooper());
         scheduleBackgroundRefresh();
         loadCachedEvents();
@@ -743,7 +745,8 @@ private void rebuildHomePreservingScroll(){
             return c;
         }
 
-        List<WeatherDaily.Summary> days=WeatherDaily.summarize(weatherHours(raw),LocalDate.now(ZoneId.of("Europe/Zurich")),3);
+        List<WeatherDaily.Hour> hours=weatherHours(raw);
+        List<WeatherDaily.Summary> days=WeatherDaily.summarize(hours,LocalDate.now(ZoneId.of("Europe/Zurich")),3);
         boolean hasAny=false;
         for(WeatherDaily.Summary day:days)if(day.hasData()){hasAny=true;break;}
         if(!hasAny){
@@ -754,21 +757,15 @@ private void rebuildHomePreservingScroll(){
             return c;
         }
 
-        boolean horizontal=getResources().getConfiguration().screenWidthDp>=520;
         LinearLayout dayStack=new LinearLayout(this);
-        dayStack.setOrientation(horizontal?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);
+        dayStack.setOrientation(LinearLayout.VERTICAL);
         dayStack.setBaselineAligned(false);
         c.addView(dayStack,new LinearLayout.LayoutParams(-1,-2));
 
         for(int index=0;index<days.size();index++){
-            View dayView=weatherDaySummaryView(days.get(index),index,horizontal);
-            LinearLayout.LayoutParams params=horizontal
-                    ?new LinearLayout.LayoutParams(0,-2,1)
-                    :new LinearLayout.LayoutParams(-1,-2);
-            if(index>0){
-                if(horizontal)params.setMargins(dp(7),0,0,0);
-                else params.setMargins(0,dp(7),0,0);
-            }
+            View dayView=weatherDaySummaryView(days.get(index),index,hours);
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+            if(index>0)params.setMargins(0,dp(8),0,0);
             dayStack.addView(dayView,params);
         }
 
@@ -778,44 +775,75 @@ private void rebuildHomePreservingScroll(){
         return c;
     }
 
-    private View weatherDaySummaryView(WeatherDaily.Summary summary,int index,boolean horizontal){
+    private View weatherDaySummaryView(WeatherDaily.Summary summary,int index,List<WeatherDaily.Hour> hours){
         LinearLayout day=new LinearLayout(this);
-        day.setOrientation(horizontal?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);
-        day.setGravity(horizontal?Gravity.TOP:Gravity.CENTER_VERTICAL);
+        day.setOrientation(LinearLayout.VERTICAL);
         day.setPadding(dp(11),dp(10),dp(11),dp(10));
         day.setBackground(round(Color.rgb(238,243,246),14));
-        String label=weatherDayLabel(summary.date,index);
 
-        if(horizontal){
-            day.addView(txtRaw(label,11,WATER,true));
-            TextView icon=txtRaw(weatherIcon(summary.weatherCode),30,TEXT,false);
-            icon.setGravity(Gravity.CENTER);
-            icon.setPadding(0,dp(4),0,dp(2));
-            day.addView(icon,new LinearLayout.LayoutParams(-1,dp(42)));
-            day.addView(txtRaw(weatherDayMain(summary),14,TEXT,true));
-            TextView details=txtRaw(weatherDayDetails(summary),10,MUTED,false);
-            details.setPadding(0,dp(5),0,0);
-            day.addView(details);
-        }else{
-            LinearLayout lead=new LinearLayout(this);
-            lead.setOrientation(LinearLayout.VERTICAL);
-            lead.setGravity(Gravity.CENTER_HORIZONTAL);
-            lead.addView(txtRaw(label,11,WATER,true));
-            TextView icon=txtRaw(weatherIcon(summary.weatherCode),30,TEXT,false);
-            icon.setGravity(Gravity.CENTER);
-            lead.addView(icon,new LinearLayout.LayoutParams(-1,dp(40)));
-            day.addView(lead,new LinearLayout.LayoutParams(dp(92),-2));
+        TextView label=txtRaw(weatherDayLabel(summary.date,index),12,WATER,true);
+        label.setPadding(dp(2),0,dp(2),dp(6));
+        day.addView(label);
 
-            LinearLayout info=new LinearLayout(this);
-            info.setOrientation(LinearLayout.VERTICAL);
-            info.setPadding(dp(8),0,0,0);
-            info.addView(txtRaw(weatherDayMain(summary),16,TEXT,true));
-            TextView details=txtRaw(weatherDayDetails(summary),11,MUTED,false);
-            details.setPadding(0,dp(4),0,0);
-            info.addView(details);
-            day.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout slots=new LinearLayout(this);
+        slots.setGravity(Gravity.TOP);
+        slots.setBaselineAligned(false);
+        List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,summary.date,10,14,18);
+        for(int slotIndex=0;slotIndex<values.size();slotIndex++){
+            if(slotIndex>0){
+                View divider=new View(this);
+                divider.setBackgroundColor(darkMode?Color.rgb(63,76,85):Color.rgb(216,226,232));
+                LinearLayout.LayoutParams dividerParams=new LinearLayout.LayoutParams(dp(1),dp(88));
+                dividerParams.setMargins(dp(3),dp(5),dp(3),0);
+                slots.addView(divider,dividerParams);
+            }
+            slots.addView(weatherDaySlotView(values.get(slotIndex)),new LinearLayout.LayoutParams(0,-2,1));
         }
+        day.addView(slots,new LinearLayout.LayoutParams(-1,-2));
+
+        TextView details=txtRaw(weatherDayDetails(summary),10,MUTED,false);
+        details.setPadding(dp(2),dp(8),dp(2),0);
+        day.addView(details);
         return day;
+    }
+
+    private View weatherDaySlotView(WeatherDaily.Slot slot){
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        box.setPadding(dp(3),0,dp(3),0);
+
+        String time=String.format(Locale.GERMAN,"%02d Uhr",slot.targetTime.getHour());
+        TextView timeView=txtRaw(time,10,WATER,true);
+        timeView.setGravity(Gravity.CENTER);
+        box.addView(timeView,new LinearLayout.LayoutParams(-1,-2));
+
+        if(!slot.hasData()){
+            TextView icon=txtRaw("◌",27,TEXT,false);
+            icon.setGravity(Gravity.CENTER);
+            box.addView(icon,new LinearLayout.LayoutParams(-1,dp(36)));
+            TextView temperature=txtRaw("–",14,TEXT,true);
+            temperature.setGravity(Gravity.CENTER);
+            box.addView(temperature);
+            TextView rain=txt("Regen –",9,MUTED,false);
+            rain.setGravity(Gravity.CENTER);
+            box.addView(rain);
+            return box;
+        }
+
+        WeatherDaily.Hour hour=slot.hour;
+        TextView icon=txtRaw(weatherIcon(hour.weatherCode),27,TEXT,false);
+        icon.setGravity(Gravity.CENTER);
+        box.addView(icon,new LinearLayout.LayoutParams(-1,dp(36)));
+        String temperature=Double.isFinite(hour.temperature)?String.format(Locale.GERMAN,"%.0f °C",hour.temperature):"–";
+        TextView temperatureView=txtRaw(temperature,14,TEXT,true);
+        temperatureView.setGravity(Gravity.CENTER);
+        box.addView(temperatureView);
+        TextView rain=txt(ui("Regen")+" "+hour.precipitationProbability+" %",9,MUTED,false);
+        rain.setGravity(Gravity.CENTER);
+        box.addView(rain);
+        box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" Prozent");
+        return box;
     }
 
     private String weatherDayLabel(LocalDate date,int index){
@@ -839,17 +867,22 @@ private void rebuildHomePreservingScroll(){
     private String weatherDayDetails(WeatherDaily.Summary summary){
         if(!summary.hasData())return ui("Für diesen Tag liegen noch keine Stundenwerte vor.");
         StringBuilder details=new StringBuilder();
-        details.append(ui("Regen")).append(' ').append(summary.precipitationProbabilityMax).append(" % · ")
-                .append(String.format(Locale.GERMAN,"%.1f mm",summary.precipitationSum));
-        if(Double.isFinite(summary.windMax)||Double.isFinite(summary.gustMax)){
-            details.append("\n").append(ui("Wind")).append(' ')
-                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(" km/h")
-                    .append(" · ").append(ui("Böen")).append(' ')
-                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(" km/h");
+        if(Double.isFinite(summary.minTemperature)&&Double.isFinite(summary.maxTemperature)){
+            details.append(ui("Tag")).append(' ').append(String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature));
+        }
+        if(Double.isFinite(summary.precipitationSum)){
+            if(details.length()>0)details.append(" · ");
+            details.append(ui("Regenmenge")).append(' ').append(String.format(Locale.GERMAN,"%.1f mm",summary.precipitationSum));
         }
         details.append("\nUV ");
         if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,"%.1f",summary.uvMax)).append(" · ").append(uvLabel(summary.uvMax));
         else details.append("–");
+        if(Double.isFinite(summary.windMax)||Double.isFinite(summary.gustMax)){
+            details.append(" · ").append(ui("Wind")).append(' ')
+                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(" km/h")
+                    .append(" · ").append(ui("Böen")).append(' ')
+                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(" km/h");
+        }
         return details.toString();
     }
 
@@ -2627,7 +2660,7 @@ private View cashCartTile(){
     directInfo.setPadding(0,dp(8),0,0);
     cart.addView(directInfo);
     TextView clearCart=link("Warenkorb leeren");
-    clearCart.setOnClickListener(v->{cashCart.clear();for(TextView quantity:cashQuantityViews.values())quantity.setText("0");updateCashSummary();});
+    clearCart.setOnClickListener(v->clearCashCart());
     cart.addView(clearCart);
     updateCashSummary();
     return group;
@@ -2943,8 +2976,28 @@ private View cashPaymentDetailsTile(){
 
     private void setCashQuantity(String itemId,int quantity){
         if(quantity<=0)cashCart.remove(itemId);else cashCart.put(itemId,quantity);
+        saveCashCart();
         TextView view=cashQuantityViews.get(itemId);
         if(view!=null)view.setText(String.valueOf(Math.max(0,quantity)));
+    }
+
+    private void loadCashCart(){
+        cashCart.clear();
+        if(prefs==null)return;
+        Set<String> stored=prefs.getStringSet(PREF_CASH_CART,null);
+        cashCart.putAll(CashCartState.decode(stored));
+    }
+
+    private void saveCashCart(){
+        if(prefs==null)return;
+        prefs.edit().putStringSet(PREF_CASH_CART,CashCartState.encode(cashCart)).apply();
+    }
+
+    private void clearCashCart(){
+        cashCart.clear();
+        saveCashCart();
+        for(TextView quantity:cashQuantityViews.values())quantity.setText("0");
+        updateCashSummary();
     }
 
     private View cashSummaryRow(CashCatalog.Item item,int quantity){

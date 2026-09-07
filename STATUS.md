@@ -1,9 +1,10 @@
 # Status
 
-Stand: Testversion `0.12.1` · aktualisiert 2026-09-07.
+Stand: Testversion `0.12.2` · aktualisiert 2026-09-07.
 
 ## Aktueller Teststand
 
+- `0.12.2` macht den Vereinsbeiz-Warenkorb dauerhaft: jede Mengenänderung wird unmittelbar lokal gespeichert und nach App-/Prozessneustart wieder geladen; geleert wird er nur über `Warenkorb leeren`. Die 3-Tage-Wetterkachel zeigt pro Tag zusätzlich drei feste Tageszeitpunkte um 10:00, 14:00 und 18:00 Uhr mit Wetter-Symbol, Temperatur und Regenwahrscheinlichkeit. Tages-Min/Max, Regenmenge, UV sowie Wind/Böen bleiben kompakt als Tageszusammenfassung erhalten. Die Darstellung nutzt weiterhin ausschließlich denselben vorhandenen 8-Tage-Stundencache und erzeugt keine weiteren Wetter-Requests.
 - `0.12.1` behebt die Persistenz ausdrücklich hinzugefügter Personen in der internen App-Ansicht. Eine Person, die der Nutzer einmal über `Personen` ausgewählt hat, trägt bereits einen gespeicherten Website-Optionswert (`restoreValues`) und wird bei späteren Seitenaufrufen automatisch wiederhergestellt, sofern sie im Original-Auswahlfeld weiterhin existiert. Allgemein aus der Website gelesene Personen werden weiterhin nicht automatisch zurückgeschrieben. Die Personenverwaltung zeigt gespeicherte Zusatzpersonen auch während eines noch ausstehenden Restores an.
 - `0.12.0` poliert den internen App-Modus: Textreste des originalen Personen-hinzufügen-Bereichs werden in der App-Ansicht ausgeblendet, die von der App benötigten echten Website-Controls bleiben erhalten. Ist die App-Ansicht gespeichert, bleibt die Originalseite beim Laden unsichtbar und wird erst nach erfolgreichem Aufbau der mobilen Matrix eingeblendet; ein begrenzter Timeout erhält die Originalseite als Fehler-Fallback. Umschalten auf `Original` bleibt direkt möglich.
 - `0.11.9` behebt einen Laufzeitfehler der in `0.11.8` injizierten App-Ansicht: Die neu eingefügten Zeilenumbrüche wurden im erzeugten JavaScript als echte Zeilenumbrüche innerhalb einfacher String-Literale ausgegeben und machten das komplette Skin-Skript syntaktisch ungültig. Die Escape-Sequenzen werden nun explizit erhalten und per Regressionstest geprüft. Statusbeschriftungen werden ausserdem nur noch visuell über ein CSS-Pseudoelement dargestellt; die echten Website-Buttons/-Inputs und deren Werte bleiben unverändert.

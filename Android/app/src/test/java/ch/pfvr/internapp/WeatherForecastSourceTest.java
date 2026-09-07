@@ -21,7 +21,10 @@ public class WeatherForecastSourceTest {
     @Test public void threeDayTileReusesExistingWeatherCacheAndRequest() throws Exception {
         String activity=source();
         assertTrue(activity.contains("case \"home_weather_3day\":return homeThreeDayWeatherTile();"));
-        assertTrue(activity.contains("WeatherDaily.summarize(weatherHours(raw)"));
+        assertTrue(activity.contains("List<WeatherDaily.Hour> hours=weatherHours(raw)"));
+        assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,10,14,18)"));
+        assertTrue(activity.contains("%02d Uhr"));
+        assertTrue(activity.contains("hour.precipitationProbability"));
         assertTrue(activity.contains("PREF_WEATHER_CACHE"));
         assertEquals(2,count(activity,"https://api.open-meteo.com/v1/forecast?"));
         assertTrue(activity.contains("supplementWeatherUv(raw)"));
