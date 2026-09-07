@@ -221,7 +221,7 @@ final class InternalAttendanceSkin {
                   .pfvr-attendance-head,.pfvr-attendance-matrix{--pfvr-day-col:96px;--pfvr-person-col:clamp(104px,calc((100vw - 128px)/2),138px);display:grid!important;gap:6px!important;align-items:stretch!important;width:max-content!important;min-width:100%!important;box-sizing:border-box!important;}
                   .pfvr-matrix-corner,.pfvr-person-header,.pfvr-day-meta,.pfvr-person-cell{box-sizing:border-box!important;border:1px solid ${COLORS.border}!important;border-radius:13px!important;background:${COLORS.card}!important;min-width:0!important;}
                   .pfvr-matrix-corner{position:sticky!important;left:0!important;z-index:10!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:11px!important;font-weight:700!important;color:${COLORS.muted}!important;display:flex!important;align-items:center!important;box-shadow:3px 3px 8px rgba(0,0,0,.10)!important;}
-                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
+                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;white-space:pre-line!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}
                   .pfvr-day-meta{position:sticky!important;left:0!important;z-index:3!important;width:var(--pfvr-day-col)!important;padding:8px!important;font-size:12px!important;overflow-wrap:break-word!important;word-break:normal!important;box-shadow:3px 0 8px rgba(0,0,0,.04)!important;}
                   .pfvr-day-meta>*{max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-day-source-input{display:none!important;}
@@ -234,7 +234,7 @@ final class InternalAttendanceSkin {
 
                   .pfvr-person-control{display:flex!important;flex-direction:column!important;justify-content:flex-end!important;gap:6px!important;margin-top:auto!important;min-width:0!important;min-height:64px!important;width:100%!important;}
                   .pfvr-person-control>*{max-width:100%!important;box-sizing:border-box!important;}
-                  .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:60px!important;padding:10px 8px!important;font-size:13px!important;border-radius:10px!important;}
+                  .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:60px!important;padding:10px 8px!important;font-size:13px!important;border-radius:10px!important;white-space:pre-line!important;text-align:center!important;}
                   .pfvr-empty-status{font-size:11px!important;color:${COLORS.muted}!important;}
                   .pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:4px 6px!important;margin:0 0 4px!important;font-size:11px!important;border-radius:8px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-attendance-detail{display:block!important;margin:0 0 3px!important;font-size:11px!important;line-height:1.3!important;color:${COLORS.text}!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
@@ -286,11 +286,21 @@ final class InternalAttendanceSkin {
                     }
                     return el.innerText||el.value||el.textContent||'';
                   };
+                  var formatAttendanceChoiceLabel=function(el,matched){
+                    if(!el||!matched||el.tagName==='SELECT')return;
+                    if(matched!==statusDefs[0]&&matched!==statusDefs[1])return;
+                    var label=controlValue(el);
+                    if(norm(label).indexOf('komme')<0)return;
+                    var formatted=label.replace(/,\s*(mit\s+essen|ohne\s+essen)/i,',\n$1');
+                    if(formatted===label)return;
+                    if(el.tagName==='INPUT')el.value=formatted;
+                    else el.textContent=formatted;
+                  };
                   var styleInteractive=function(root){
                     (root||document).querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn,select').forEach(function(el){
                       if(el.closest&&el.closest('.pfvr-person-tools'))return;
                       var matched=statusForValue(controlValue(el));
-                      if(matched){paint(el,matched.background,matched.foreground);return;}
+                      if(matched){formatAttendanceChoiceLabel(el,matched);paint(el,matched.background,matched.foreground);return;}
                       if(el.tagName==='SELECT'){
                         paint(el,COLORS.soft,COLORS.text);
                         el.style.setProperty('border-color',COLORS.border,'important');
@@ -501,8 +511,17 @@ final class InternalAttendanceSkin {
                   var personKey=function(value){return cleanPersonName(value).toLowerCase();};
                   var fitPersonName=function(el,value){
                     var clean=formatPersonName(value);
-                    el.textContent=clean;
                     el.title=clean;
+                    if(el.classList)el.classList.remove('pfvr-name-small','pfvr-name-tiny');
+                    if(el.classList&&el.classList.contains('pfvr-person-header')){
+                      var comma=clean.indexOf(',');
+                      if(comma>=0){
+                        var family=clean.slice(0,comma).trim(),given=clean.slice(comma+1).trim();
+                        el.textContent=given?family+',\n'+given:family;
+                      }else el.textContent=clean;
+                      return;
+                    }
+                    el.textContent=clean;
                     if(clean.length>28)el.classList.add('pfvr-name-tiny');
                     else if(clean.length>19)el.classList.add('pfvr-name-small');
                   };

@@ -32,4 +32,16 @@ public class InternalAttendanceUiRegressionTest {
         assertTrue(script.contains("panel.addEventListener('click'"));
         assertTrue(script.contains("Aus Initiallink neu aufbauen"));
     }
+
+    @Test public void personHeadersUseUniformTwoLineNamesAndFoodButtonsBreakAfterComma(){
+        String script=script();
+        assertTrue(script.contains(".pfvr-person-header{padding:8px 7px!important;font-size:12px!important"));
+        assertTrue(script.contains("white-space:pre-line!important"));
+        assertTrue(script.contains("-webkit-line-clamp:2"));
+        assertTrue(script.contains("el.classList.remove('pfvr-name-small','pfvr-name-tiny')"));
+        assertTrue(script.contains("el.classList.contains('pfvr-person-header')"));
+        assertTrue(script.contains("formatAttendanceChoiceLabel"));
+        assertTrue(script.contains("formatted=label.replace"));
+        assertTrue(script.contains("matched!==statusDefs[0]&&matched!==statusDefs[1]"));
+    }
 }
