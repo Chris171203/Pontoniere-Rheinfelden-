@@ -11,8 +11,10 @@ def replace_once(text, old, new, label):
 path = Path("Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java")
 text = path.read_text()
 
+# Keep the proven two-column/-webkit-line-clamp layout. Only add explicit newline
+# support; all person headers keep the same 12 px size (11 px on <=340 dp).
 old = """                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}"""
-new = """                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;white-space:pre-line!important;overflow-wrap:break-word!important;word-break:normal!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;overflow:hidden!important;min-height:48px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}"""
+new = """                  .pfvr-person-header{padding:8px 7px!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;white-space:pre-line!important;overflow-wrap:break-word!important;word-break:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;min-height:40px!important;box-shadow:0 3px 8px rgba(0,0,0,.10)!important;}"""
 text = replace_once(text, old, new, "uniform person header CSS")
 
 old = """                  .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:60px!important;padding:10px 8px!important;font-size:13px!important;border-radius:10px!important;}"""
@@ -83,11 +85,12 @@ addition = anchor + """
         String script=script();
         assertTrue(script.contains(".pfvr-person-header{padding:8px 7px!important;font-size:12px!important"));
         assertTrue(script.contains("white-space:pre-line!important"));
+        assertTrue(script.contains("-webkit-line-clamp:2"));
+        assertTrue(script.contains("el.classList.remove('pfvr-name-small','pfvr-name-tiny')"));
         assertTrue(script.contains("el.classList.contains('pfvr-person-header')"));
-        assertTrue(script.contains("family+',\\n'+given"));
         assertTrue(script.contains("formatAttendanceChoiceLabel"));
-        assertTrue(script.contains("mit\\\\s+essen|ohne\\\\s+essen"));
-        assertTrue(script.contains("',\\n$1'"));
+        assertTrue(script.contains("formatted=label.replace"));
+        assertTrue(script.contains("matched!==statusDefs[0]&&matched!==statusDefs[1]"));
     }
 """
 test = replace_once(test, anchor, addition, "attendance UI regression test")
