@@ -1,3 +1,4 @@
+# Retry after aligning LandingPageSourceTest with the new pre-unlock-only requirement.
 name: Temporary pre-unlock join-link cleanup
 
 on:
