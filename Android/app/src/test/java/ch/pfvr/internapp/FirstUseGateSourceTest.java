@@ -1,5 +1,6 @@
 package ch.pfvr.internapp;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -57,5 +58,18 @@ public class FirstUseGateSourceTest {
         assertTrue(gate.contains("external(PublicLinks.INSTAGRAM)"));
         assertTrue(gate.contains("external(PublicLinks.FACEBOOK)"));
         assertTrue(gate.contains("setUiLanguage(UiLanguage.SWISS_GERMAN)"));
+    }
+
+    @Test public void discoveryJoinLinkExistsOnlyBeforeUnlock() throws Exception {
+        String source = source();
+        int start = source.indexOf("private void showFirstUseGate()");
+        int end = source.indexOf("private void scheduleBackgroundRefresh()", start);
+        assertTrue(start >= 0 && end > start);
+        String gate = source.substring(start, end);
+        String unlockedSource = source.substring(0, start) + source.substring(end);
+        assertTrue(gate.contains("Schnuppertraining & Mitglied werden"));
+        assertTrue(gate.contains("external(PublicLinks.JOIN)"));
+        assertFalse(unlockedSource.contains("Schnuppertraining & Mitglied werden"));
+        assertFalse(unlockedSource.contains("club_join"));
     }
 }

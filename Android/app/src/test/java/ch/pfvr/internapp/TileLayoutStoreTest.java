@@ -61,12 +61,12 @@ public class TileLayoutStoreTest {
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 
-    @Test public void clubCatalogAddsPublicDiscoveryAndSocialTilesToOlderLayouts(){
+    @Test public void clubCatalogDropsRetiredJoinTileAndKeepsSocialTiles(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_about","club_news","club_contact")
+                List.of("club_about","club_join","club_news","club_contact")
         );
-        assertTrue(normalized.contains("club_join"));
+        assertFalse(normalized.contains("club_join"));
         assertTrue(normalized.contains("club_instagram"));
         assertTrue(normalized.contains("club_facebook"));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());

@@ -544,11 +544,6 @@ private View home() {
     LinearLayout.LayoutParams payParams = new LinearLayout.LayoutParams(0,dp(46),1);
     payParams.setMargins(dp(9),0,0,0);
     actions.addView(pay,payParams);
-    TextView joinInfo=txt("Schnuppertraining & Mitglied werden  →",12,Color.WHITE,true);
-    joinInfo.setGravity(Gravity.END);
-    joinInfo.setPadding(dp(4),dp(12),dp(2),0);
-    joinInfo.setOnClickListener(v->external(PublicLinks.JOIN));
-    hero.addView(joinInfo);
     homeLiveStack=new LinearLayout(this);
     homeLiveStack.setOrientation(LinearLayout.VERTICAL);
     body.addView(homeLiveStack,new LinearLayout.LayoutParams(-1,-2));
@@ -3165,7 +3160,6 @@ private View cashPaymentDetailsTile(){
 private View clubTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
         case "club_about":return clubAboutTile();
-        case "club_join":return clubActionTile("Schnuppertraining & Mitglied werden","Schnuppertraining auch vor der Mitgliedschaft · Infos und Formulare",v->external(PublicLinks.JOIN));
         case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
         case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
