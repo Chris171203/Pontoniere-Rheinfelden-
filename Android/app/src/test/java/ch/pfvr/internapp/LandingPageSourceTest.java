@@ -1,5 +1,6 @@
 package ch.pfvr.internapp;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -24,23 +25,35 @@ public class LandingPageSourceTest {
         throw new IllegalStateException(relative + " not found from " + System.getProperty("user.dir"));
     }
 
-    @Test public void firstUseLandingOffersPublicDestinationsBeforeUnlock() throws Exception {
-        String activity = source("src/main/java/ch/pfvr/internapp/MainActivity.java");
+    private static String landing(String activity) {
         int start = activity.indexOf("private void showFirstUseGate()");
         int end = activity.indexOf("private void scheduleBackgroundRefresh()", start);
         assertTrue(start >= 0 && end > start);
-        String landing = activity.substring(start, end);
+        return activity.substring(start, end);
+    }
+
+    private static String unlockedSource(String activity) {
+        int start = activity.indexOf("private void showFirstUseGate()");
+        int end = activity.indexOf("private void scheduleBackgroundRefresh()", start);
+        assertTrue(start >= 0 && end > start);
+        return activity.substring(0, start) + activity.substring(end);
+    }
+
+    @Test public void firstUseLandingOffersPublicDestinationsBeforeUnlock() throws Exception {
+        String activity = source("src/main/java/ch/pfvr/internapp/MainActivity.java");
+        String landing = landing(activity);
         assertTrue(landing.contains("Schnuppertraining ist auch vor der Mitgliedschaft möglich."));
         assertTrue(landing.contains("external(PublicLinks.JOIN)"));
         assertTrue(landing.contains("external(PublicLinks.FACEBOOK)"));
         assertTrue(landing.contains("external(PublicLinks.INSTAGRAM)"));
     }
 
-    @Test public void unlockedAppKeepsJoinAndSocialLinksReachable() throws Exception {
+    @Test public void unlockedAppKeepsSocialButNotJoinLinksReachable() throws Exception {
         String activity = source("src/main/java/ch/pfvr/internapp/MainActivity.java");
-        assertTrue(activity.contains("joinInfo.setOnClickListener(v->external(PublicLinks.JOIN))"));
-        assertTrue(activity.contains("case \"club_join\":return clubActionTile"));
-        assertTrue(activity.contains("case \"club_instagram\":return clubActionTile"));
-        assertTrue(activity.contains("case \"club_facebook\":return clubActionTile"));
+        String unlocked = unlockedSource(activity);
+        assertFalse(unlocked.contains("joinInfo.setOnClickListener(v->external(PublicLinks.JOIN))"));
+        assertFalse(unlocked.contains("case \"club_join\":return clubActionTile"));
+        assertTrue(unlocked.contains("case \"club_instagram\":return clubActionTile"));
+        assertTrue(unlocked.contains("case \"club_facebook\":return clubActionTile"));
     }
 }
