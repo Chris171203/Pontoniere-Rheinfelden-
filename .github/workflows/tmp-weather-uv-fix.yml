@@ -1,0 +1,118 @@
+name: Temporary weather UV fix
+
+on:
+  push:
+    branches: [fix/weather-uv-data]
+    paths: ['.github/workflows/tmp-weather-uv-fix.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/weather-uv-data
+
+      - name: Apply UV data fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count=text.count(old)
+              if count!=1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, got {count}')
+              return text.replace(old,new,1)
+
+          main_path=Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          main=main_path.read_text()
+
+          old='''    private void refreshWeather(boolean force){\n        long age=System.currentTimeMillis()-prefs.getLong(PREF_WEATHER_UPDATED,0L);\n        if(weatherLoading||(!force&&!prefs.getString(PREF_WEATHER_CACHE,\"\").isBlank()&&age<30*60000L))return;\n        weatherLoading=true;\n        new Thread(()->{\n            try{\n                String base=\"https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8\";\n                String raw;\n                String source;\n                try{raw=httpGet(base+\"&models=meteoswiss_icon_seamless\");source=\"MeteoSwiss ICON via Open-Meteo\";}\n                catch(Exception first){raw=httpGet(base);source=\"Open-Meteo Best Match\";}\n                new JSONObject(raw).getJSONObject(\"hourly\");\n                prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,source).apply();\n            }catch(Exception ignored){}\n            finally{\n                weatherLoading=false;\n                runOnUiThread(this::refreshHomeLiveViews);\n            }\n        }).start();\n    }\n'''
+          new='''    private void refreshWeather(boolean force){\n        long age=System.currentTimeMillis()-prefs.getLong(PREF_WEATHER_UPDATED,0L);\n        if(weatherLoading||(!force&&!prefs.getString(PREF_WEATHER_CACHE,\"\").isBlank()&&age<30*60000L))return;\n        weatherLoading=true;\n        new Thread(()->{\n            try{\n                String base=\"https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index&timezone=Europe%2FZurich&forecast_days=8\";\n                String raw;\n                String source;\n                try{raw=httpGet(base+\"&models=meteoswiss_icon_seamless\");source=\"MeteoSwiss ICON via Open-Meteo\";}\n                catch(Exception first){raw=httpGet(base);source=\"Open-Meteo Best Match\";}\n                new JSONObject(raw).getJSONObject(\"hourly\");\n                if(!weatherHasFiniteUv(raw)){\n                    String supplemented=supplementWeatherUv(raw);\n                    if(weatherHasFiniteUv(supplemented)){\n                        raw=supplemented;\n                        source+=\" · UV Open-Meteo Best Match\";\n                    }\n                }\n                prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,source).apply();\n            }catch(Exception ignored){}\n            finally{\n                weatherLoading=false;\n                runOnUiThread(this::refreshHomeLiveViews);\n            }\n        }).start();\n    }\n\n    private boolean weatherHasFiniteUv(String raw){\n        if(raw==null||raw.isBlank())return false;\n        try{\n            JSONArray uv=new JSONObject(raw).getJSONObject(\"hourly\").optJSONArray(\"uv_index\");\n            if(uv==null)return false;\n            for(int index=0;index<uv.length();index++){\n                double value=uv.optDouble(index,Double.NaN);\n                if(Double.isFinite(value))return true;\n            }\n        }catch(Exception ignored){}\n        return false;\n    }\n\n    private String supplementWeatherUv(String raw){\n        if(raw==null||raw.isBlank())return raw;\n        try{\n            JSONObject weather=new JSONObject(raw);\n            JSONObject hourly=weather.getJSONObject(\"hourly\");\n            JSONArray times=hourly.getJSONArray(\"time\");\n            String uvUrl=\"https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=uv_index&timezone=Europe%2FZurich&forecast_days=8\";\n            JSONObject uvResponse=new JSONObject(httpGet(uvUrl));\n            JSONObject uvHourly=uvResponse.getJSONObject(\"hourly\");\n            JSONArray uvTimes=uvHourly.getJSONArray(\"time\");\n            JSONArray uvValues=uvHourly.getJSONArray(\"uv_index\");\n            Map<String,Double> uvByTime=new HashMap<>();\n            for(int index=0;index<Math.min(uvTimes.length(),uvValues.length());index++){\n                double value=uvValues.optDouble(index,Double.NaN);\n                if(Double.isFinite(value))uvByTime.put(uvTimes.optString(index,\"\"),value);\n            }\n            if(uvByTime.isEmpty())return raw;\n            JSONArray merged=new JSONArray();\n            for(int index=0;index<times.length();index++){\n                Double value=uvByTime.get(times.optString(index,\"\"));\n                merged.put(value==null?JSONObject.NULL:value);\n            }\n            hourly.put(\"uv_index\",merged);\n            JSONObject units=weather.optJSONObject(\"hourly_units\");\n            JSONObject uvUnits=uvResponse.optJSONObject(\"hourly_units\");\n            if(units!=null&&uvUnits!=null&&uvUnits.has(\"uv_index\"))units.put(\"uv_index\",uvUnits.optString(\"uv_index\",\"\"));\n            return weather.toString();\n        }catch(Exception ignored){return raw;}\n    }\n'''
+          main=replace_once(main,old,new,'weather UV supplementation')
+
+          old='''            if(Double.isFinite(uvMax))details+=\"\\nUV \"+String.format(Locale.GERMAN,\"%.1f\",uvMax)+\" · \"+uvLabel(uvMax);'''
+          new='''            details+=\"\\nUV \"+(Double.isFinite(uvMax)?String.format(Locale.GERMAN,\"%.1f\",uvMax)+\" · \"+uvLabel(uvMax):\"–\");'''
+          main=replace_once(main,old,new,'training UV always visible')
+
+          old='''            details.append(\"\\n\").append(ui(\"Wind\")).append(' ')\n                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \").append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");\n        }\n        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));'''
+          if old not in main:
+              old='''            details.append(\"\\n\").append(ui(\"Wind\")).append(' ')\n                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \" ).append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");\n        }\n        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));'''
+          # whitespace-safe targeted replacements for the actual source
+          main=main.replace('''                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \" ).append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");''','''                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(\" km/h\")\n                    .append(\" · \" ).append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");''')
+          main=main.replace('''                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \").append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");''','''                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(\" km/h\")\n                    .append(\" · \").append(ui(\"Böen\")).append(' ')\n                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(\" km/h\");''')
+          main=main.replace('''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));''','''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''')
+          main=main.replace('''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));''','''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''')
+          main=main.replace('''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));''','''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''')
+          # exact actual variant without spaces around append arguments
+          main=main.replace('''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));''','''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''')
+          # generic actual line replacement
+          main=main.replace('''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \" ).append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));''','''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''')
+          # normalize the precise source via direct simple fragments
+          main=main.replace('.append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \" ).append(ui(\"Böen\"))','.append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(\" km/h\")\n                    .append(\" · \" ).append(ui(\"Böen\"))')
+          main=main.replace('.append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)\n                    .append(\" · \").append(ui(\"Böen\"))','.append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(\" km/h\")\n                    .append(\" · \").append(ui(\"Böen\"))')
+          target='''        if(Double.isFinite(summary.uvMax))\n            details.append(\"\\nUV \"+String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)+\" · \"+uvLabel(summary.uvMax));'''
+          if target in main:
+              main=main.replace(target,'''        details.append(\"\\nUV \" );\n        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,\"%.1f\",summary.uvMax)).append(\" · \" ).append(uvLabel(summary.uvMax));\n        else details.append(\"–\");''',1)
+          main_path.write_text(main)
+
+          gradle_path=Path('Android/app/build.gradle')
+          gradle=gradle_path.read_text()
+          gradle=replace_once(gradle,"versionCode 53","versionCode 54","version code")
+          gradle=replace_once(gradle,"versionName '0.11.6'","versionName '0.11.7'","version name")
+          gradle_path.write_text(gradle)
+
+          test_path=Path('Android/app/src/test/java/ch/pfvr/internapp/WeatherForecastSourceTest.java')
+          test=test_path.read_text()
+          test=replace_once(test,'assertEquals(1,count(activity,"https://api.open-meteo.com/v1/forecast?"));','assertEquals(2,count(activity,"https://api.open-meteo.com/v1/forecast?"));\n        assertTrue(activity.contains("supplementWeatherUv(raw)"));\n        assertTrue(activity.contains("UV Open-Meteo Best Match"));','UV request regression')
+          test_path.write_text(test)
+
+          status_path=Path('STATUS.md')
+          status=status_path.read_text()
+          marker='Stand: Testversion `0.11.6`'
+          status=status.replace(marker,'Stand: Testversion `0.11.7`',1)
+          anchor='## Aktueller Teststand\n\n'
+          addition='- `0.11.7` ergänzt den UV-Index robust: Der MeteoSwiss-ICON-Abruf über Open-Meteo liefert für `uv_index` derzeit keine nutzbaren Werte. Die App ergänzt deshalb nur bei fehlenden UV-Werten einen kleinen Open-Meteo-Best-Match-UV-Abruf und führt ihn zeitstempelgenau in denselben Wettercache ein. Trainingswetter und 3-Tage-Wetter zeigen UV damit aus derselben konsolidierten Datenbasis; bei fehlendem UV-Feed bleibt die UV-Zeile sichtbar als `–`. In der 3-Tage-Kachel tragen Wind und Böen jeweils explizit `km/h`.\n'
+          if addition not in status:
+              status=status.replace(anchor,anchor+addition,1)
+          status_path.write_text(status)
+          PY
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Unit tests and compile
+        working-directory: Android
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+
+      - name: Commit tested source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/WeatherForecastSourceTest.java \
+                  Android/app/build.gradle STATUS.md
+          git diff --cached --check
+          git commit -m 'Fix missing UV data in weather cards'
+          git push origin HEAD:fix/weather-uv-data
