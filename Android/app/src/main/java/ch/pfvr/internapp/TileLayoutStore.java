@@ -66,6 +66,7 @@ final class TileLayoutStore {
     static {
         CATALOG.put(Area.HOME, List.of(
                 spec(Area.HOME, "home_weather", "Trainingswetter", Width.WIDE, false),
+                spec(Area.HOME, "home_weather_3day", "3-Tage-Wetter", Width.WIDE, false),
                 spec(Area.HOME, "home_river_summary", "Rhein aktuell", Width.WIDE, false),
                 spec(Area.HOME, "home_river_charts", "Rhein-Grafiken", Width.WIDE, false),
                 spec(Area.HOME, "home_events", "Nächste Termine", Width.WIDE, false),
@@ -150,12 +151,19 @@ final class TileLayoutStore {
 
     static List<String> normalizeOrder(Area area, List<String> requested) {
         Map<String, Spec> known = specsById(area);
+        Set<String> requestedIds = requested == null ? Set.of() : new LinkedHashSet<>(requested);
         LinkedHashSet<String> result = new LinkedHashSet<>();
         for (Spec spec : specs(area)) if (spec.pinned) result.add(spec.id);
         if (requested != null) {
             for (String id : requested) {
                 Spec spec = known.get(id);
-                if (spec != null && !spec.pinned) result.add(id);
+                if (spec != null && !spec.pinned) {
+                    result.add(id);
+                    if (area == Area.HOME && "home_weather".equals(id) && !requestedIds.contains("home_weather_3day")) {
+                        Spec threeDay = known.get("home_weather_3day");
+                        if (threeDay != null) result.add(threeDay.id);
+                    }
+                }
             }
         }
         for (Spec spec : specs(area)) if (!spec.pinned) result.add(spec.id);
