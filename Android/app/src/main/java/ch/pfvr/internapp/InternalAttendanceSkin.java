@@ -782,7 +782,7 @@ final class InternalAttendanceSkin {
                   var tryRestoreMissingPerson=function(select,currentNames,state){
                     if(!select||!state||!state.desired.length)return false;
                     var missing=state.desired.find(function(name){
-                      return !isHiddenPerson(state,name)&&!currentNames.some(function(current){return samePersonName(current,name);});
+                      return state.restoreValues&&state.restoreValues[personKey(name)]&&!isHiddenPerson(state,name)&&!currentNames.some(function(current){return samePersonName(current,name);});
                     });
                     if(!missing)return false;
                     var optionIndex=findOptionForPerson(select,missing,state);
@@ -1155,7 +1155,7 @@ final class InternalAttendanceSkin {
                       body.appendChild(unavailable);
                     }
 
-                    var missingDesired=(state.desired||[]).filter(function(name){return !isHiddenPerson(state,name)&&!(currentNames||[]).some(function(current){return samePersonName(current,name);});});
+                    var missingDesired=(state.desired||[]).filter(function(name){return state.restoreValues&&state.restoreValues[personKey(name)]&&!isHiddenPerson(state,name)&&!(currentNames||[]).some(function(current){return samePersonName(current,name);});});
                     if(select&&missingDesired.length){
                       var restoreSaved=element('button');restoreSaved.type='button';restoreSaved.textContent=I18N.restoreSaved+' ('+missingDesired.length+')';
                       restoreSaved.addEventListener('click',function(){
@@ -1176,7 +1176,7 @@ final class InternalAttendanceSkin {
                     var listTitle=element('div','pfvr-managed-people-title');
                     listTitle.textContent=I18N.currentPeople;
                     list.appendChild(listTitle);
-                    (currentNames||state.desired).forEach(function(personName){
+                    dedupePeople((currentNames||[]).concat(state.desired||[])).forEach(function(personName){
                       appendManagedPerson(list,state,personName);
                     });
                     body.appendChild(list);
@@ -1267,7 +1267,7 @@ final class InternalAttendanceSkin {
                     var peopleState=loadPeopleState(allNames,seedState);
 
                     var restoreRequested=false;try{restoreRequested=sessionStorage.getItem(RESTORE_REQUEST_KEY)==='1';}catch(ignore){}
-                    if(toolInfo&&restoreRequested&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;
+                    if(toolInfo&&(restoreRequested||Object.keys(peopleState.restoreValues||{}).length)&&tryRestoreMissingPerson(toolInfo.select,allNames,peopleState))return false;
                     if(restoreRequested){try{sessionStorage.removeItem(RESTORE_REQUEST_KEY);sessionStorage.removeItem(RESTORE_KEY);}catch(ignore){}}
 
                     var participantRows=[],names=[];
