@@ -1,0 +1,129 @@
+name: Temporary pre-unlock join-link cleanup
+
+on:
+  push:
+    branches: [fix/join-link-preunlock-only]
+    paths: ['.github/workflows/tmp-preunlock-join-cleanup.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/join-link-preunlock-only
+
+      - name: Apply scoped UI cleanup
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, got {count}')
+              return text.replace(old, new, 1)
+
+          # 1) Keep the public pre-unlock landing link, remove unlocked duplicates.
+          main_path = Path('Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java')
+          main = main_path.read_text()
+
+          home_join = '''    TextView joinInfo=txt("Schnuppertraining & Mitglied werden  →",12,Color.WHITE,true);\n    joinInfo.setGravity(Gravity.END);\n    joinInfo.setPadding(dp(4),dp(12),dp(2),0);\n    joinInfo.setOnClickListener(v->external(PublicLinks.JOIN));\n    hero.addView(joinInfo);\n'''
+          main = replace_once(main, home_join, '', 'unlocked home join link')
+
+          club_case = '''        case "club_join":return clubActionTile("Schnuppertraining & Mitglied werden","Schnuppertraining auch vor der Mitgliedschaft · Infos und Formulare",v->external(PublicLinks.JOIN));\n'''
+          main = replace_once(main, club_case, '', 'unlocked club join tile')
+          main_path.write_text(main)
+
+          # 2) Retire club_join from the tile catalog. Existing saved layouts are normalized
+          #    against the catalog and therefore drop the now-unknown id automatically.
+          tile_path = Path('Android/app/src/main/java/ch/pfvr/internapp/TileLayoutStore.java')
+          tile = tile_path.read_text()
+          join_spec = '''                spec(Area.CLUB, "club_join", "Schnuppertraining & Mitglied werden", Width.WIDE, false),\n'''
+          tile = replace_once(tile, join_spec, '', 'club_join catalog entry')
+          tile_path.write_text(tile)
+
+          # 3) Regression: old saved layouts containing club_join are cleaned automatically.
+          test_path = Path('Android/app/src/test/java/ch/pfvr/internapp/TileLayoutStoreTest.java')
+          test = test_path.read_text()
+          old_test = '''    @Test public void clubCatalogAddsPublicDiscoveryAndSocialTilesToOlderLayouts(){\n        List<String> normalized=TileLayoutStore.normalizeOrder(\n                TileLayoutStore.Area.CLUB,\n                List.of("club_about","club_news","club_contact")\n        );\n        assertTrue(normalized.contains("club_join"));\n        assertTrue(normalized.contains("club_instagram"));\n        assertTrue(normalized.contains("club_facebook"));\n        assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());\n    }\n'''
+          new_test = '''    @Test public void clubCatalogDropsRetiredJoinTileAndKeepsSocialTiles(){\n        List<String> normalized=TileLayoutStore.normalizeOrder(\n                TileLayoutStore.Area.CLUB,\n                List.of("club_about","club_join","club_news","club_contact")\n        );\n        assertFalse(normalized.contains("club_join"));\n        assertTrue(normalized.contains("club_instagram"));\n        assertTrue(normalized.contains("club_facebook"));\n        assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());\n    }\n'''
+          test = replace_once(test, old_test, new_test, 'tile migration regression')
+          test_path.write_text(test)
+
+          # 4) Explicit source regression: discovery link remains in the locked landing page only.
+          gate_test_path = Path('Android/app/src/test/java/ch/pfvr/internapp/FirstUseGateSourceTest.java')
+          gate_test = gate_test_path.read_text()
+          gate_test = replace_once(
+              gate_test,
+              'import static org.junit.Assert.assertTrue;\n',
+              'import static org.junit.Assert.assertFalse;\nimport static org.junit.Assert.assertTrue;\n',
+              'assertFalse import'
+          )
+          anchor = '''    @Test public void publicLandingOffersDiscoveryAndSocialLinksBeforeUnlock() throws Exception {\n        String source = source();\n        String gate = gate(source);\n        assertTrue(PublicLinks.JOIN.startsWith("https://www.pfvr.ch/"));\n        assertTrue(PublicLinks.FACEBOOK.startsWith("https://www.facebook.com/"));\n        assertTrue(PublicLinks.INSTAGRAM.startsWith("https://www.instagram.com/"));\n        assertTrue(gate.contains("Schnuppertraining & Mitglied werden"));\n        assertTrue(gate.contains("external(PublicLinks.JOIN)"));\n        assertTrue(gate.contains("external(PublicLinks.INSTAGRAM)"));\n        assertTrue(gate.contains("external(PublicLinks.FACEBOOK)"));\n        assertTrue(gate.contains("setUiLanguage(UiLanguage.SWISS_GERMAN)"));\n    }\n'''
+          replacement = anchor + '''\n    @Test public void discoveryJoinLinkExistsOnlyBeforeUnlock() throws Exception {\n        String source = source();\n        int start = source.indexOf("private void showFirstUseGate()");\n        int end = source.indexOf("private void scheduleBackgroundRefresh()", start);\n        assertTrue(start >= 0 && end > start);\n        String gate = source.substring(start, end);\n        String unlockedSource = source.substring(0, start) + source.substring(end);\n        assertTrue(gate.contains("Schnuppertraining & Mitglied werden"));\n        assertTrue(gate.contains("external(PublicLinks.JOIN)"));\n        assertFalse(unlockedSource.contains("Schnuppertraining & Mitglied werden"));\n        assertFalse(unlockedSource.contains("club_join"));\n    }\n'''
+          gate_test = replace_once(gate_test, anchor, replacement, 'pre-unlock-only source regression')
+          gate_test_path.write_text(gate_test)
+
+          # 5) Keep project/status documentation aligned with real UI behaviour.
+          project_path = Path('PROJECT.md')
+          project = project_path.read_text()
+          project = replace_once(
+              project,
+              '- Verein und Kontakt mit nativen News, Jahresprogramm, Vorstand, Geschichte, Schnuppertraining-/Mitgliedschaftsinformationen, offiziellen Social-Media-Links und direkten Kontaktaktionen.\n',
+              '- Verein und Kontakt mit nativen News, Jahresprogramm, Vorstand, Geschichte, offiziellen Social-Media-Links und direkten Kontaktaktionen. Schnuppertraining-/Mitgliedschaftsinformationen werden ausschließlich auf der öffentlichen Landingpage vor der Erstfreigabe angeboten.\n',
+              'PROJECT join-link scope'
+          )
+          project_path.write_text(project)
+
+          status_path = Path('STATUS.md')
+          status = status_path.read_text()
+          status = replace_once(
+              status,
+              '- Home verweist direkt auf `Schnuppertraining & Mitglied werden`. Im Bereich Verein gibt es zusätzlich anordenbare Kacheln für die PFVR-Einstiegs-/Formularseite, Instagram und Facebook; neue Tile-IDs werden in bestehenden Benutzerlayouts wie gewohnt automatisch ergänzt.\n',
+              '- `Schnuppertraining & Mitglied werden` bleibt bewusst ausschließlich auf der öffentlichen Landingpage vor der Erstfreigabe. Nach erfolgreichem Code wird der Link weder auf Home noch als Vereins-Kachel angeboten; bestehende Layouts mit der früheren `club_join`-ID werden durch die Tile-Normalisierung automatisch bereinigt. Instagram und Facebook bleiben im Vereinsbereich anordenbar.\n',
+              'STATUS join-link scope'
+          )
+          status_path.write_text(status)
+          PY
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Run unit tests
+        working-directory: Android
+        run: gradle --no-daemon --stacktrace testDebugUnitTest
+
+      - name: Commit tested change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
+                  Android/app/src/main/java/ch/pfvr/internapp/TileLayoutStore.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/TileLayoutStoreTest.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/FirstUseGateSourceTest.java \
+                  PROJECT.md STATUS.md
+          git diff --cached --check
+          git commit -m 'Show join link only before first-use unlock'
+          git push origin HEAD:fix/join-link-preunlock-only
