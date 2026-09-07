@@ -3487,7 +3487,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private void revealInternalAppViewWhenReady(WebView web,int attempt){
         if(web==null)return;
         if(!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){showInternalWeb(web);return;}
-        web.evaluateJavascript("(function(){return !!document.querySelector('.pfvr-attendance-mobile');})()",result->{
+        web.evaluateJavascript("(function(){return !!document.querySelector('.pfvr-attendance-mobile .pfvr-attendance-matrix');})()",result->{
             if(!prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){showInternalWeb(web);return;}
             if("true".equalsIgnoreCase(String.valueOf(result))){web.animate().cancel();web.setAlpha(0f);web.setVisibility(View.VISIBLE);web.animate().alpha(1f).setDuration(80L).start();return;}
             if(attempt>=24){showInternalWeb(web);return;}

@@ -26,7 +26,7 @@ public class InternalAppViewSourceTest {
         assertTrue(section.contains("if(appView)hideInternalWebForAppView(web)"));
         assertTrue(section.contains("onPageStarted(WebView v,String u,Bitmap icon)"));
         assertTrue(section.contains("internalSkin(v);revealInternalAppViewWhenReady(v,0)"));
-        assertTrue(section.contains("document.querySelector('.pfvr-attendance-mobile')"));
+        assertTrue(section.contains("document.querySelector('.pfvr-attendance-mobile .pfvr-attendance-matrix')"));
     }
     @Test public void revealIsBoundedAndOriginalModeShowsImmediately() throws Exception {
         String section=internalSection(source());
