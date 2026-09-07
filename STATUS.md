@@ -1,9 +1,10 @@
 # Status
 
-Stand: Testversion `0.11.6` · aktualisiert 2026-09-07.
+Stand: Testversion `0.11.7` · aktualisiert 2026-09-07.
 
 ## Aktueller Teststand
 
+- `0.11.7` ergänzt den UV-Index robust: Der MeteoSwiss-ICON-Abruf über Open-Meteo liefert für `uv_index` derzeit keine nutzbaren Werte. Die App ergänzt deshalb nur bei fehlenden UV-Werten einen kleinen Open-Meteo-Best-Match-UV-Abruf und führt ihn zeitstempelgenau in denselben Wettercache ein. Trainingswetter und 3-Tage-Wetter zeigen UV damit aus derselben konsolidierten Datenbasis; bei fehlendem UV-Feed bleibt die UV-Zeile sichtbar als `–`. In der 3-Tage-Kachel tragen Wind und Böen jeweils explizit `km/h`.
 - `0.11.6` ergänzt Home um eine standardmässig sichtbare, anordenbare `3-Tage-Wetter`-Kachel direkt unter dem Trainingswetter. Sie fasst für heute und die nächsten zwei Kalendertage Temperatur-Min/Max, maximale Regenwahrscheinlichkeit und Tagesmenge, Wind/Böen sowie UV-Maximum zusammen. Die Wetterbedingung/Ikone verwendet den Stundenwert am nächsten zu 14:00 Uhr als kompakte Tagesrepräsentation. Die Kachel nutzt ausschließlich den bereits vorhandenen 8-Tage-Stundencache von MeteoSwiss ICON via Open-Meteo; es entsteht kein zusätzlicher Wetterabruf. Auf schmalen Geräten werden die Tage untereinander, auf breiteren Ansichten nebeneinander dargestellt. Bestehende Home-Layouts erhalten die neue Kachel einmalig direkt hinter `Trainingswetter`; danach bleibt sie normal verschieb- und ausblendbar.
 - `0.11.5` setzt das Sicherheitsreview der Opus-Analyse um. Die zwei materiellen Befunde waren belastbar: eine aktuelle Schifffahrtslage durfte bislang aus beliebig altem Basel-Cache entstehen, und lokal gewünschte Zusatzpersonen konnten ohne neuen Nutzerklick über echte Website-Controls wiederhergestellt werden.
 - Für die aktuelle Basel-Schifffahrtslage gelten jetzt maximal 60 Minuten Datenalter für Messwert **und** Live-Cache. Danach wird `Lage unklar` angezeigt. Der Messstand enthält Datum/Uhrzeit; ein sichtbarer Hinweis erklärt die BAFU-Aktuellwerte als ungeprüfte Rohdaten und verlinkt auf die Schweizerischen Rheinhäfen als massgebende Stelle. Rheinfelden bleibt ohne eigene erfundene Normal-/Sperrstufe neutral.
