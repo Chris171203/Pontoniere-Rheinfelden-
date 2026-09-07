@@ -1,5 +1,6 @@
 name: Temporary attendance layout patch
 
+# rerun: preserve existing two-column line-clamp while polishing labels
 on:
   push:
     branches:
