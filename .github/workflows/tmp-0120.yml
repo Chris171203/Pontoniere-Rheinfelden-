@@ -19,7 +19,7 @@ jobs:
         with:
           ref: release/0.12.0-internal-polish
 
-      - name: Apply staged source patch
+      - name: Apply reduced staged source patch
         run: python3 .github/tmp-0120.py
 
       - uses: actions/setup-java@v5
