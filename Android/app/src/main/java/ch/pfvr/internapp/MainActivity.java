@@ -605,6 +605,7 @@ private void populateHomeTileStack(LinearLayout stack){
 private View homeTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
         case "home_weather":return homeWeatherTile();
+        case "home_weather_3day":return homeThreeDayWeatherTile();
         case "home_river_summary":return homeRiverSummaryTile();
         case "home_river_charts":return homeRiverChartsTile();
         case "home_events":return homeEventsTile();
@@ -616,6 +617,12 @@ private View homeTileView(TileLayoutStore.Spec spec){
 private View homeWeatherTile(){
     LinearLayout group=tileGroup("Trainingswetter","Prognose für den nächsten relevanten Termin");
     group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
+    return group;
+}
+
+private View homeThreeDayWeatherTile(){
+    LinearLayout group=tileGroup("3-Tage-Wetter","Heute und die nächsten zwei Tage · Rheinfelden");
+    group.addView(threeDayWeatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
@@ -718,6 +725,165 @@ private void rebuildHomePreservingScroll(){
         TextView details=txtRaw(x[3],13,MUTED,false); details.setPadding(0,dp(5),0,0); c.addView(details);
         TextView src=txtRaw(x[4],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(8),0,0); c.addView(src);
         return c;
+    }
+
+    private LinearLayout threeDayWeatherCard(){
+        LinearLayout c=card();
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(dp(12),dp(12),dp(12),dp(12));
+        String raw=prefs.getString(PREF_WEATHER_CACHE,"");
+        long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
+        String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
+
+        if(raw.trim().isEmpty()){
+            c.addView(txt("Wetter wird geladen …",14,MUTED,false));
+            TextView src=txtRaw(weatherAge(source,updated),10,Color.rgb(126,140,150),false);
+            src.setPadding(0,dp(8),0,0);
+            c.addView(src);
+            return c;
+        }
+
+        List<WeatherDaily.Summary> days=WeatherDaily.summarize(weatherHours(raw),LocalDate.now(ZoneId.of("Europe/Zurich")),3);
+        boolean hasAny=false;
+        for(WeatherDaily.Summary day:days)if(day.hasData()){hasAny=true;break;}
+        if(!hasAny){
+            c.addView(txt("Gespeicherte Wetterdaten nicht lesbar",14,MUTED,false));
+            TextView src=txtRaw(weatherAge(source,updated),10,Color.rgb(126,140,150),false);
+            src.setPadding(0,dp(8),0,0);
+            c.addView(src);
+            return c;
+        }
+
+        boolean horizontal=getResources().getConfiguration().screenWidthDp>=520;
+        LinearLayout dayStack=new LinearLayout(this);
+        dayStack.setOrientation(horizontal?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);
+        dayStack.setBaselineAligned(false);
+        c.addView(dayStack,new LinearLayout.LayoutParams(-1,-2));
+
+        for(int index=0;index<days.size();index++){
+            View dayView=weatherDaySummaryView(days.get(index),index,horizontal);
+            LinearLayout.LayoutParams params=horizontal
+                    ?new LinearLayout.LayoutParams(0,-2,1)
+                    :new LinearLayout.LayoutParams(-1,-2);
+            if(index>0){
+                if(horizontal)params.setMargins(dp(7),0,0,0);
+                else params.setMargins(0,dp(7),0,0);
+            }
+            dayStack.addView(dayView,params);
+        }
+
+        TextView src=txtRaw(weatherAge(source,updated),10,Color.rgb(126,140,150),false);
+        src.setPadding(dp(2),dp(9),dp(2),0);
+        c.addView(src);
+        return c;
+    }
+
+    private View weatherDaySummaryView(WeatherDaily.Summary summary,int index,boolean horizontal){
+        LinearLayout day=new LinearLayout(this);
+        day.setOrientation(horizontal?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);
+        day.setGravity(horizontal?Gravity.TOP:Gravity.CENTER_VERTICAL);
+        day.setPadding(dp(11),dp(10),dp(11),dp(10));
+        day.setBackground(round(Color.rgb(238,243,246),14));
+        String label=weatherDayLabel(summary.date,index);
+
+        if(horizontal){
+            day.addView(txtRaw(label,11,WATER,true));
+            TextView icon=txtRaw(weatherIcon(summary.weatherCode),30,TEXT,false);
+            icon.setGravity(Gravity.CENTER);
+            icon.setPadding(0,dp(4),0,dp(2));
+            day.addView(icon,new LinearLayout.LayoutParams(-1,dp(42)));
+            day.addView(txtRaw(weatherDayMain(summary),14,TEXT,true));
+            TextView details=txtRaw(weatherDayDetails(summary),10,MUTED,false);
+            details.setPadding(0,dp(5),0,0);
+            day.addView(details);
+        }else{
+            LinearLayout lead=new LinearLayout(this);
+            lead.setOrientation(LinearLayout.VERTICAL);
+            lead.setGravity(Gravity.CENTER_HORIZONTAL);
+            lead.addView(txtRaw(label,11,WATER,true));
+            TextView icon=txtRaw(weatherIcon(summary.weatherCode),30,TEXT,false);
+            icon.setGravity(Gravity.CENTER);
+            lead.addView(icon,new LinearLayout.LayoutParams(-1,dp(40)));
+            day.addView(lead,new LinearLayout.LayoutParams(dp(92),-2));
+
+            LinearLayout info=new LinearLayout(this);
+            info.setOrientation(LinearLayout.VERTICAL);
+            info.setPadding(dp(8),0,0,0);
+            info.addView(txtRaw(weatherDayMain(summary),16,TEXT,true));
+            TextView details=txtRaw(weatherDayDetails(summary),11,MUTED,false);
+            details.setPadding(0,dp(4),0,0);
+            info.addView(details);
+            day.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+        }
+        return day;
+    }
+
+    private String weatherDayLabel(LocalDate date,int index){
+        String label;
+        if(index==0)label=ui("Heute");
+        else if(index==1)label=ui("Morgen");
+        else label=localizedDateWords(cap(date.format(DateTimeFormatter.ofPattern("EEEE",Locale.GERMAN))));
+        return label+" · "+date.format(DateTimeFormatter.ofPattern("dd.MM."));
+    }
+
+    private String weatherDayMain(WeatherDaily.Summary summary){
+        if(!summary.hasData())return ui("Noch keine Prognose");
+        String temperature="";
+        if(Double.isFinite(summary.minTemperature)&&Double.isFinite(summary.maxTemperature))
+            temperature=String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature);
+        String condition=summary.weatherCode>=0?weatherCode(summary.weatherCode):"";
+        if(temperature.isEmpty())return condition.isEmpty()?ui("Wetter"):condition;
+        return condition.isEmpty()?temperature:temperature+" · "+condition;
+    }
+
+    private String weatherDayDetails(WeatherDaily.Summary summary){
+        if(!summary.hasData())return ui("Für diesen Tag liegen noch keine Stundenwerte vor.");
+        StringBuilder details=new StringBuilder();
+        details.append(ui("Regen")).append(' ').append(summary.precipitationProbabilityMax).append(" % · ")
+                .append(String.format(Locale.GERMAN,"%.1f mm",summary.precipitationSum));
+        if(Double.isFinite(summary.windMax)||Double.isFinite(summary.gustMax)){
+            details.append("\n").append(ui("Wind")).append(' ')
+                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)
+                    .append(" · ").append(ui("Böen")).append(' ')
+                    .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(" km/h");
+        }
+        if(Double.isFinite(summary.uvMax))
+            details.append("\nUV ").append(String.format(Locale.GERMAN,"%.1f",summary.uvMax)).append(" · ").append(uvLabel(summary.uvMax));
+        return details.toString();
+    }
+
+    private List<WeatherDaily.Hour> weatherHours(String raw){
+        List<WeatherDaily.Hour> out=new ArrayList<>();
+        if(raw==null||raw.isBlank())return out;
+        try{
+            JSONObject hourly=new JSONObject(raw).getJSONObject("hourly");
+            JSONArray times=hourly.optJSONArray("time");
+            JSONArray temperatures=hourly.optJSONArray("temperature_2m");
+            JSONArray probabilities=hourly.optJSONArray("precipitation_probability");
+            JSONArray precipitation=hourly.optJSONArray("precipitation");
+            JSONArray codes=hourly.optJSONArray("weather_code");
+            JSONArray wind=hourly.optJSONArray("wind_speed_10m");
+            JSONArray gusts=hourly.optJSONArray("wind_gusts_10m");
+            JSONArray uv=hourly.optJSONArray("uv_index");
+            if(times==null)return out;
+            for(int index=0;index<times.length();index++){
+                String timestamp=times.optString(index,"");
+                if(timestamp.isBlank())continue;
+                LocalDateTime time;
+                try{time=LocalDateTime.parse(timestamp);}catch(Exception ignored){continue;}
+                out.add(new WeatherDaily.Hour(
+                        time,
+                        temperatures==null?Double.NaN:temperatures.optDouble(index,Double.NaN),
+                        probabilities==null?0:probabilities.optInt(index,0),
+                        precipitation==null?Double.NaN:precipitation.optDouble(index,Double.NaN),
+                        wind==null?Double.NaN:wind.optDouble(index,Double.NaN),
+                        gusts==null?Double.NaN:gusts.optDouble(index,Double.NaN),
+                        uv==null?Double.NaN:uv.optDouble(index,Double.NaN),
+                        codes==null?-1:codes.optInt(index,-1)
+                ));
+            }
+        }catch(Exception ignored){}
+        return out;
     }
 
     private View riverSummaryRow(){

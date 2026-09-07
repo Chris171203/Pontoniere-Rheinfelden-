@@ -48,6 +48,9 @@ final class UiLanguage {
         put("Bezahlen", "Zahle");
         put("Trainingswetter", "Trainingswätter");
         put("Prognose für den nächsten relevanten Termin", "Prognose für de nöchscht relevant Termin");
+        put("3-Tage-Wetter", "3-Täg-Wätter");
+        put("Heute und die nächsten zwei Tage · Rheinfelden", "Hüt und die nöchschte zwei Täg · Rheinfelde");
+        put("Für diesen Tag liegen noch keine Stundenwerte vor.", "Für dä Tag git s no kei Stundewärt.");
         put("Rhein", "Rhy");
         put("Rhein aktuell", "Rhy aktuell");
         put("Rhein-Grafiken", "Rhy-Grafike");
