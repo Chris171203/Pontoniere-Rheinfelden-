@@ -19,10 +19,21 @@ public class TileLayoutStoreTest {
         assertEquals(List.of(
                 "home_news",
                 "home_weather",
+                "home_weather_3day",
                 "home_river_summary",
                 "home_river_charts",
                 "home_events"
         ),normalized);
+    }
+
+    @Test public void oldHomeLayoutPlacesNewThreeDayWeatherDirectlyAfterTrainingWeather(){
+        List<String> normalized=TileLayoutStore.normalizeOrder(
+                TileLayoutStore.Area.HOME,
+                List.of("home_weather","home_river_summary","home_events","home_news")
+        );
+        assertEquals("home_weather",normalized.get(0));
+        assertEquals("home_weather_3day",normalized.get(1));
+        assertEquals("home_river_summary",normalized.get(2));
     }
 
     @Test public void cartRemainsPinnedAndCannotBeHidden(){
