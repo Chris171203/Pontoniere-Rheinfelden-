@@ -10,6 +10,7 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 - Home mit nächstem Training und Wetter für den tatsächlichen Zeitraum.
   - Bevorzugt wird ein passender Termin aus dem öffentlichen Vereinskalender.
   - Der saisonale Trainingsplan dient als Fallback, wenn kein Kalendereintrag vorhanden ist.
+  - Zusätzlich gibt es eine anordenbare 3-Tage-Wetterkachel für Rheinfelden mit Tages-Min/Max-Temperatur, Regenwahrscheinlichkeit/-menge, Wind/Böen und UV-Maximum. Sie nutzt denselben lokal gecachten Wetterabruf wie das Trainingswetter und erzeugt keinen zusätzlichen API-Request.
 - Rhein: zwei Stationskacheln, davon die zweite optional. Aktuelle Abflüsse stehen kompakt nebeneinander; Rheinfelden zeigt oben zusätzlich die Wassertemperatur. Pro aktiver Station kombiniert ein `1h`/`24h`/`7d`-Diagramm Abfluss und Pegel mit zwei dynamischen Y-Achsen; vorhandene Temperaturdaten werden darunter separat dargestellt.
 - Termine aus dem öffentlichen PFVR-Google-Kalender mit persistentem Cache, Detailansicht, Teilen, Route und Übergabe an die persönliche Kalender-App.
 - Verein und Kontakt mit nativen News, Jahresprogramm, Vorstand, Geschichte, offiziellen Social-Media-Links und direkten Kontaktaktionen. Schnuppertraining-/Mitgliedschaftsinformationen werden ausschließlich auf der öffentlichen Landingpage vor der Erstfreigabe angeboten.
