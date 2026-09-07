@@ -2,6 +2,7 @@ package ch.pfvr.internapp;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class InternalAttendanceUiRegressionTest {
@@ -40,8 +41,14 @@ public class InternalAttendanceUiRegressionTest {
         assertTrue(script.contains("-webkit-line-clamp:2"));
         assertTrue(script.contains("el.classList.remove('pfvr-name-small','pfvr-name-tiny')"));
         assertTrue(script.contains("el.classList.contains('pfvr-person-header')"));
+        assertTrue(script.contains("family+',\\n'+given"));
+        assertFalse(script.contains("family+',\n'+given"));
         assertTrue(script.contains("formatAttendanceChoiceLabel"));
-        assertTrue(script.contains("formatted=label.replace"));
-        assertTrue(script.contains("matched!==statusDefs[0]&&matched!==statusDefs[1]"));
+        assertTrue(script.contains("',\\n$1'"));
+        assertFalse(script.contains("',\n$1'"));
+        assertTrue(script.contains("data-pfvr-display-label"));
+        assertTrue(script.contains("pfvr-attendance-display-label::after"));
+        assertFalse(script.contains("el.value=formatted"));
+        assertFalse(script.contains("else el.textContent=formatted"));
     }
 }

@@ -235,6 +235,8 @@ final class InternalAttendanceSkin {
                   .pfvr-person-control{display:flex!important;flex-direction:column!important;justify-content:flex-end!important;gap:6px!important;margin-top:auto!important;min-width:0!important;min-height:64px!important;width:100%!important;}
                   .pfvr-person-control>*{max-width:100%!important;box-sizing:border-box!important;}
                   .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{width:100%!important;min-height:60px!important;padding:10px 8px!important;font-size:13px!important;border-radius:10px!important;white-space:pre-line!important;text-align:center!important;}
+                  .pfvr-person-control button.pfvr-attendance-display-label,.pfvr-person-control a.pfvr-attendance-display-label,.pfvr-person-control .btn.pfvr-attendance-display-label{font-size:0!important;}
+                  .pfvr-person-control button.pfvr-attendance-display-label::after,.pfvr-person-control a.pfvr-attendance-display-label::after,.pfvr-person-control .btn.pfvr-attendance-display-label::after{content:attr(data-pfvr-display-label)!important;white-space:pre-line!important;font-size:13px!important;font-weight:700!important;line-height:1.25!important;color:inherit!important;}
                   .pfvr-empty-status{font-size:11px!important;color:${COLORS.muted}!important;}
                   .pfvr-attendance-status{display:block!important;width:max-content!important;max-width:100%!important;padding:4px 6px!important;margin:0 0 4px!important;font-size:11px!important;border-radius:8px!important;font-weight:700!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
                   .pfvr-attendance-detail{display:block!important;margin:0 0 3px!important;font-size:11px!important;line-height:1.3!important;color:${COLORS.text}!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
@@ -248,6 +250,7 @@ final class InternalAttendanceSkin {
                     .pfvr-name-tiny{font-size:8.5px!important;}
                     .pfvr-person-control{min-height:58px!important;}
                     .pfvr-person-control button,.pfvr-person-control input[type=submit],.pfvr-person-control input[type=button],.pfvr-person-control a.btn,.pfvr-person-control .btn,.pfvr-person-control select{min-height:54px!important;font-size:12px!important;padding:8px 5px!important;}
+                    .pfvr-person-control button.pfvr-attendance-display-label::after,.pfvr-person-control a.pfvr-attendance-display-label::after,.pfvr-person-control .btn.pfvr-attendance-display-label::after{font-size:12px!important;}
                   }
                   `;
                   var style=document.getElementById('pfvr-internal-style');
@@ -291,10 +294,12 @@ final class InternalAttendanceSkin {
                     if(matched!==statusDefs[0]&&matched!==statusDefs[1])return;
                     var label=controlValue(el);
                     if(norm(label).indexOf('komme')<0)return;
-                    var formatted=label.replace(/,\s*(mit\s+essen|ohne\s+essen)/i,',\n$1');
+                    var formatted=label.replace(/,\s*(mit\s+essen|ohne\s+essen)/i,',\\n$1');
                     if(formatted===label)return;
-                    if(el.tagName==='INPUT')el.value=formatted;
-                    else el.textContent=formatted;
+                    if(el.tagName==='BUTTON'||el.tagName==='A'||(el.classList&&el.classList.contains('btn'))){
+                      el.classList.add('pfvr-attendance-display-label');
+                      el.setAttribute('data-pfvr-display-label',formatted);
+                    }
                   };
                   var styleInteractive=function(root){
                     (root||document).querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn,select').forEach(function(el){
@@ -517,7 +522,7 @@ final class InternalAttendanceSkin {
                       var comma=clean.indexOf(',');
                       if(comma>=0){
                         var family=clean.slice(0,comma).trim(),given=clean.slice(comma+1).trim();
-                        el.textContent=given?family+',\n'+given:family;
+                        el.textContent=given?family+',\\n'+given:family;
                       }else el.textContent=clean;
                       return;
                     }
