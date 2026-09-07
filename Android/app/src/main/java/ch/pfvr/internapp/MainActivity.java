@@ -847,8 +847,9 @@ private void rebuildHomePreservingScroll(){
                     .append(" · ").append(ui("Böen")).append(' ')
                     .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(" km/h");
         }
-        if(Double.isFinite(summary.uvMax))
-            details.append("\nUV ").append(String.format(Locale.GERMAN,"%.1f",summary.uvMax)).append(" · ").append(uvLabel(summary.uvMax));
+        details.append("\nUV ");
+        if(Double.isFinite(summary.uvMax))details.append(String.format(Locale.GERMAN,"%.1f",summary.uvMax)).append(" · ").append(uvLabel(summary.uvMax));
+        else details.append("–");
         return details.toString();
     }
 
