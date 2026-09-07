@@ -131,7 +131,9 @@ public class InternalAttendanceSkinTest {
         assertTrue(script.contains("resetRecoveryConfirm"));
         assertTrue(script.contains("restoreSaved"));
         assertTrue(script.contains("RESTORE_REQUEST_KEY"));
-        assertTrue(script.contains("restoreRequested&&tryRestoreMissingPerson"));
+        assertTrue(script.contains("state.restoreValues&&state.restoreValues[personKey(name)]"));
+        assertTrue(script.contains("restoreRequested||Object.keys(peopleState.restoreValues||{}).length"));
+        assertTrue(script.contains("dedupePeople((currentNames||[]).concat(state.desired||[]))"));
         assertFalse(script.contains("if(toolInfo&&tryRestoreMissingPerson"));
         assertFalse(script.contains("window.__pfvrBaseInternalUrl"));
         assertTrue(script.contains("localStorage.removeItem(PEOPLE_KEY)"));

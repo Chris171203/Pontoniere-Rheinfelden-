@@ -50,7 +50,7 @@ Die tatsächliche serverseitige Wirkung hängt vom Verhalten von `intern.pfvr.ch
 
 ### Entscheidung
 
-Automatisches Lesen/Skinning bleibt erlaubt; schreibende Aktionen sollen eine klare Nutzeraktion erfordern. Issue #15 verfolgt die Entfernung des automatischen Restore-Pfads. Eine fehlende lokal gemerkte Person soll nur angezeigt werden; Wiederhinzufügen erfolgt über `Personen` nach expliziter Auswahl.
+Automatisches Lesen/Skinning bleibt erlaubt; schreibende Aktionen brauchen eine klare Nutzerentscheidung. Der frühere Restore aus der allgemeinen lokalen `desired`-Liste bleibt entfernt. Ab `0.12.1` gilt eine engere Persistenzregel: Wählt der Nutzer eine Zusatzperson ausdrücklich über `Personen`, speichert die App dafür den konkreten Website-Optionswert in `restoreValues`. Nur solche ausdrücklich gewählten Personen dürfen bei späteren Seitenaufrufen automatisch wiederhergestellt werden, und nur solange die Person im Original-Auswahlfeld weiterhin vorhanden ist. Allgemein aus der Website gelesene Personen erhalten keinen Restore-Marker und werden niemals aufgrund des lokalen Zustands automatisch zurückgeschrieben.
 
 ---
 
