@@ -1187,6 +1187,7 @@ final class InternalAttendanceSkin {
                       if(!reset)resetRecoveryConfirm(panel);
                     },true);
                     if(anchor&&scope&&anchor!==scope)anchor.style.display='none';
+                    if(scope)scope.querySelectorAll('label,p,span,strong,small,div').forEach(function(el){var v=norm(text(el));if(v.length<140&&v.indexOf('person')>=0&&v.indexOf('hinzuf')>=0&&!el.querySelector('select,button,input,a'))el.style.display='none';});
                     return panel;
                   };
 

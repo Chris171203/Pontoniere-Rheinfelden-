@@ -1,9 +1,10 @@
 # Status
 
-Stand: Testversion `0.11.9` · aktualisiert 2026-09-07.
+Stand: Testversion `0.12.0` · aktualisiert 2026-09-07.
 
 ## Aktueller Teststand
 
+- `0.12.0` poliert den internen App-Modus: Textreste des originalen Personen-hinzufügen-Bereichs werden in der App-Ansicht ausgeblendet, die von der App benötigten echten Website-Controls bleiben erhalten. Ist die App-Ansicht gespeichert, bleibt die Originalseite beim Laden unsichtbar und wird erst nach erfolgreichem Aufbau der mobilen Matrix eingeblendet; ein begrenzter Timeout erhält die Originalseite als Fehler-Fallback. Umschalten auf `Original` bleibt direkt möglich.
 - `0.11.9` behebt einen Laufzeitfehler der in `0.11.8` injizierten App-Ansicht: Die neu eingefügten Zeilenumbrüche wurden im erzeugten JavaScript als echte Zeilenumbrüche innerhalb einfacher String-Literale ausgegeben und machten das komplette Skin-Skript syntaktisch ungültig. Die Escape-Sequenzen werden nun explizit erhalten und per Regressionstest geprüft. Statusbeschriftungen werden ausserdem nur noch visuell über ein CSS-Pseudoelement dargestellt; die echten Website-Buttons/-Inputs und deren Werte bleiben unverändert.
 - `0.11.8` glättet die mobile An-/Abmeldung: Personenspalten verwenden in der Kopfzeile eine einheitliche Schriftgrösse und brechen Namen bevorzugt nach dem Komma auf zwei Zeilen um. Die Statusschaltflächen `Ich komme, mit Essen` und `Ich komme, ohne Essen` erhalten einen festen Umbruch direkt nach dem Komma; `Ich komme nicht` bleibt bewusst einzeilig.
 - `0.11.7` ergänzt den UV-Index robust: Der MeteoSwiss-ICON-Abruf über Open-Meteo liefert für `uv_index` derzeit keine nutzbaren Werte. Die App ergänzt deshalb nur bei fehlenden UV-Werten einen kleinen Open-Meteo-Best-Match-UV-Abruf und führt ihn zeitstempelgenau in denselben Wettercache ein. Trainingswetter und 3-Tage-Wetter zeigen UV damit aus derselben konsolidierten Datenbasis; bei fehlendem UV-Feed bleibt die UV-Zeile sichtbar als `–`. In der 3-Tage-Kachel tragen Wind und Böen jeweils explizit `km/h`.
