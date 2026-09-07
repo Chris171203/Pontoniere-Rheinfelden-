@@ -30,6 +30,18 @@ final class WeatherDaily {
         }
     }
 
+    static final class Slot {
+        final LocalTime targetTime;
+        final Hour hour;
+
+        Slot(LocalTime targetTime,Hour hour){
+            this.targetTime=targetTime;
+            this.hour=hour;
+        }
+
+        boolean hasData(){return hour!=null;}
+    }
+
     static final class Summary {
         final LocalDate date;
         final double minTemperature;
@@ -61,6 +73,26 @@ final class WeatherDaily {
     private static final LocalTime REPRESENTATIVE_TIME=LocalTime.of(14,0);
 
     private WeatherDaily() {}
+
+    static List<Slot> slots(List<Hour> hours,LocalDate day,int... targetHours){
+        List<Slot> out=new ArrayList<>();
+        if(day==null||targetHours==null)return out;
+        List<Hour> safe=hours==null?List.of():hours;
+        for(int targetHour:targetHours){
+            if(targetHour<0||targetHour>23)continue;
+            LocalTime target=LocalTime.of(targetHour,0);
+            Hour best=null;
+            int bestDistance=Integer.MAX_VALUE;
+            for(Hour hour:safe){
+                if(hour==null||hour.time==null||!day.equals(hour.time.toLocalDate()))continue;
+                int distance=Math.abs(hour.time.toLocalTime().toSecondOfDay()-target.toSecondOfDay());
+                if(distance<bestDistance){best=hour;bestDistance=distance;}
+            }
+            if(bestDistance>90*60)best=null;
+            out.add(new Slot(target,best));
+        }
+        return out;
+    }
 
     static List<Summary> summarize(List<Hour> hours,LocalDate firstDay,int dayCount){
         List<Summary> out=new ArrayList<>();
