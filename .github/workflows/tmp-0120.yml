@@ -19,7 +19,7 @@ jobs:
         with:
           ref: release/0.12.0-internal-polish
 
-      - name: Apply reduced staged source patch
+      - name: Tighten App-Ansicht readiness check
         run: python3 .github/tmp-0120.py
 
       - uses: actions/setup-java@v5
@@ -49,12 +49,8 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Android/app/build.gradle \
-                  Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
-                  Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java \
-                  Android/app/src/test/java/ch/pfvr/internapp/InternalAttendanceUiRegressionTest.java \
-                  Android/app/src/test/java/ch/pfvr/internapp/InternalAppViewSourceTest.java \
-                  STATUS.md
+          git add Android/app/src/main/java/ch/pfvr/internapp/MainActivity.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/InternalAppViewSourceTest.java
           git diff --cached --check
-          git commit -m 'Polish internal App-Ansicht for 0.12.0'
+          git commit -m 'Wait for completed attendance matrix before reveal'
           git push origin HEAD:release/0.12.0-internal-polish
