@@ -23,7 +23,9 @@ public class WeatherForecastSourceTest {
         assertTrue(activity.contains("case \"home_weather_3day\":return homeThreeDayWeatherTile();"));
         assertTrue(activity.contains("WeatherDaily.summarize(weatherHours(raw)"));
         assertTrue(activity.contains("PREF_WEATHER_CACHE"));
-        assertEquals(1,count(activity,"https://api.open-meteo.com/v1/forecast?"));
+        assertEquals(2,count(activity,"https://api.open-meteo.com/v1/forecast?"));
+        assertTrue(activity.contains("supplementWeatherUv(raw)"));
+        assertTrue(activity.contains("UV Open-Meteo Best Match"));
         for(String field:new String[]{"temperature_2m","precipitation_probability","precipitation","weather_code","wind_speed_10m","wind_gusts_10m","uv_index"}){
             assertTrue("missing weather field "+field,activity.contains(field));
         }

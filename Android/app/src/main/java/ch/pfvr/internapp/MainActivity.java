@@ -843,7 +843,7 @@ private void rebuildHomePreservingScroll(){
                 .append(String.format(Locale.GERMAN,"%.1f mm",summary.precipitationSum));
         if(Double.isFinite(summary.windMax)||Double.isFinite(summary.gustMax)){
             details.append("\n").append(ui("Wind")).append(' ')
-                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0)
+                    .append(Double.isFinite(summary.windMax)?Math.round(summary.windMax):0).append(" km/h")
                     .append(" · ").append(ui("Böen")).append(' ')
                     .append(Double.isFinite(summary.gustMax)?Math.round(summary.gustMax):0).append(" km/h");
         }
@@ -1519,7 +1519,7 @@ private void rebuildHomePreservingScroll(){
             if(Double.isFinite(lastTemperature)&&Double.isFinite(firstTemperature)&&Math.abs(lastTemperature-firstTemperature)>=1.0)temperatureText+=String.format(Locale.GERMAN," → %.0f °C",lastTemperature);
             String main=temperatureText+(temperatureText.isEmpty()?"":" · ")+weatherCode(codeValue);
             String details=ui("Regen")+" "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\n"+ui("Wind")+" "+Math.round(windMax)+" km/h · "+ui("Böen")+" "+Math.round(gustMax)+" km/h";
-            if(Double.isFinite(uvMax))details+="\nUV "+String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax);
+            details+="\nUV "+(Double.isFinite(uvMax)?String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax):"–");
             return new String[]{ui("NÄCHSTES TRAINING"),date,main,details,provenance,weatherIcon(codeValue)};
         }catch(Exception e){
             return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Gespeicherte Wetterdaten nicht lesbar"),ui("Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen."),provenance,"◌"};
@@ -1685,6 +1685,13 @@ private void rebuildHomePreservingScroll(){
                 try{raw=httpGet(base+"&models=meteoswiss_icon_seamless");source="MeteoSwiss ICON via Open-Meteo";}
                 catch(Exception first){raw=httpGet(base);source="Open-Meteo Best Match";}
                 new JSONObject(raw).getJSONObject("hourly");
+                if(!weatherHasFiniteUv(raw)){
+                    String supplemented=supplementWeatherUv(raw);
+                    if(weatherHasFiniteUv(supplemented)){
+                        raw=supplemented;
+                        source+=" · UV Open-Meteo Best Match";
+                    }
+                }
                 prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,source).apply();
             }catch(Exception ignored){}
             finally{
@@ -1692,6 +1699,49 @@ private void rebuildHomePreservingScroll(){
                 runOnUiThread(this::refreshHomeLiveViews);
             }
         }).start();
+    }
+
+    private boolean weatherHasFiniteUv(String raw){
+        if(raw==null||raw.isBlank())return false;
+        try{
+            JSONArray uv=new JSONObject(raw).getJSONObject("hourly").optJSONArray("uv_index");
+            if(uv==null)return false;
+            for(int index=0;index<uv.length();index++){
+                double value=uv.optDouble(index,Double.NaN);
+                if(Double.isFinite(value))return true;
+            }
+        }catch(Exception ignored){}
+        return false;
+    }
+
+    private String supplementWeatherUv(String raw){
+        if(raw==null||raw.isBlank())return raw;
+        try{
+            JSONObject weather=new JSONObject(raw);
+            JSONObject hourly=weather.getJSONObject("hourly");
+            JSONArray times=hourly.getJSONArray("time");
+            String uvUrl="https://api.open-meteo.com/v1/forecast?latitude=47.5544&longitude=7.7940&hourly=uv_index&timezone=Europe%2FZurich&forecast_days=8";
+            JSONObject uvResponse=new JSONObject(httpGet(uvUrl));
+            JSONObject uvHourly=uvResponse.getJSONObject("hourly");
+            JSONArray uvTimes=uvHourly.getJSONArray("time");
+            JSONArray uvValues=uvHourly.getJSONArray("uv_index");
+            Map<String,Double> uvByTime=new HashMap<>();
+            for(int index=0;index<Math.min(uvTimes.length(),uvValues.length());index++){
+                double value=uvValues.optDouble(index,Double.NaN);
+                if(Double.isFinite(value))uvByTime.put(uvTimes.optString(index,""),value);
+            }
+            if(uvByTime.isEmpty())return raw;
+            JSONArray merged=new JSONArray();
+            for(int index=0;index<times.length();index++){
+                Double value=uvByTime.get(times.optString(index,""));
+                merged.put(value==null?JSONObject.NULL:value);
+            }
+            hourly.put("uv_index",merged);
+            JSONObject units=weather.optJSONObject("hourly_units");
+            JSONObject uvUnits=uvResponse.optJSONObject("hourly_units");
+            if(units!=null&&uvUnits!=null&&uvUnits.has("uv_index"))units.put("uv_index",uvUnits.optString("uv_index",""));
+            return weather.toString();
+        }catch(Exception ignored){return raw;}
     }
 
     private void refreshHydro(boolean force){
