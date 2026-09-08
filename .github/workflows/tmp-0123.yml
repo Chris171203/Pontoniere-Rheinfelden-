@@ -19,7 +19,7 @@ jobs:
         with:
           ref: feature/weather-6-12-18-0.12.3
 
-      - name: Apply final staged source patch
+      - name: Apply verified staged source patch
         run: python3 .github/tmp-0123.py
 
       - uses: actions/setup-java@v5
