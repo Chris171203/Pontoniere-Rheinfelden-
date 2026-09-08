@@ -24,15 +24,17 @@ s=replace_once(
 )
 path.write_text(s)
 
-# Unit test: representative daypart slots
+# Weather slot unit tests
 path=Path("Android/app/src/test/java/ch/pfvr/internapp/WeatherDailyTest.java")
 s=path.read_text()
-s=replace_once(
-    s,
-    '''        List<WeatherDaily.Hour> hours=List.of(\n                hour(day,10,15,10,0,0,0,0,1),\n                hour(day,14,22,25,0,0,0,0,2),\n                hour(day,18,19,70,0,0,0,0,61)\n        );\n        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,10,14,18);\n        assertEquals(3,slots.size());\n        assertTrue(slots.get(0).hasData());\n        assertEquals(10,slots.get(0).hour.time.getHour());\n        assertEquals(15.0,slots.get(0).hour.temperature,0.001);\n        assertEquals(25,slots.get(1).hour.precipitationProbability);\n        assertEquals(61,slots.get(2).hour.weatherCode);\n''',
-    '''        List<WeatherDaily.Hour> hours=List.of(\n                hour(day,6,12,10,0,0,0,0,1),\n                hour(day,12,22,25,0,0,0,0,2),\n                hour(day,18,19,70,0,0,0,0,61)\n        );\n        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,6,12,18);\n        assertEquals(3,slots.size());\n        assertTrue(slots.get(0).hasData());\n        assertEquals(6,slots.get(0).hour.time.getHour());\n        assertEquals(12.0,slots.get(0).hour.temperature,0.001);\n        assertEquals(25,slots.get(1).hour.precipitationProbability);\n        assertEquals(61,slots.get(2).hour.weatherCode);\n''',
-    'weather daily slot test'
-)
+s=replace_once(s,'hour(day,9,14,5,0.0,4,7,1.0,1),','hour(day,5,11,5,0.0,4,7,1.0,1),','weather slot early neighbor')
+s=replace_once(s,'hour(day,10,15,10,0.0,5,8,2.0,2),','hour(day,6,12,10,0.0,5,8,2.0,2),','weather slot morning')
+s=replace_once(s,'hour(day,14,23,35,0.3,10,18,6.0,2),','hour(day,12,23,35,0.3,10,18,6.0,2),','weather slot noon')
+s=replace_once(s,'List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,10,14,18);','List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,6,12,18);','first slot call')
+s=replace_once(s,'assertEquals(10,slots.get(0).targetTime.getHour());','assertEquals(6,slots.get(0).targetTime.getHour());','target hour assertion')
+s=replace_once(s,'assertEquals(15.0,slots.get(0).hour.temperature,0.001);','assertEquals(12.0,slots.get(0).hour.temperature,0.001);','morning temperature assertion')
+s=replace_once(s,'List<WeatherDaily.Hour> hours=List.of(hour(day,11,16,20,0.0,5,8,2.0,2));','List<WeatherDaily.Hour> hours=List.of(hour(day,7,16,20,0.0,5,8,2.0,2));','nearby-hour test data')
+s=replace_once(s,'List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,10,14,18);','List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,6,12,18);','second slot call')
 path.write_text(s)
 
 # Source regression test
