@@ -788,7 +788,7 @@ private void rebuildHomePreservingScroll(){
         LinearLayout slots=new LinearLayout(this);
         slots.setGravity(Gravity.TOP);
         slots.setBaselineAligned(false);
-        List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,summary.date,10,14,18);
+        List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,summary.date,6,12,18);
         for(int slotIndex=0;slotIndex<values.size();slotIndex++){
             if(slotIndex>0){
                 View divider=new View(this);
@@ -813,8 +813,13 @@ private void rebuildHomePreservingScroll(){
         box.setGravity(Gravity.CENTER_HORIZONTAL);
         box.setPadding(dp(3),0,dp(3),0);
 
-        String time=String.format(Locale.GERMAN,"%02d Uhr",slot.targetTime.getHour());
-        TextView timeView=txtRaw(time,10,WATER,true);
+        int targetHour=slot.targetTime.getHour();
+        String daypart=targetHour==6?ui("Morgen"):targetHour==12?ui("Mittag"):targetHour==18?ui("Abend"):ui("Prognose");
+        TextView daypartView=txtRaw(daypart,10,WATER,true);
+        daypartView.setGravity(Gravity.CENTER);
+        box.addView(daypartView,new LinearLayout.LayoutParams(-1,-2));
+        String time=String.format(Locale.GERMAN,"%02d Uhr",targetHour);
+        TextView timeView=txtRaw(time,9,MUTED,false);
         timeView.setGravity(Gravity.CENTER);
         box.addView(timeView,new LinearLayout.LayoutParams(-1,-2));
 

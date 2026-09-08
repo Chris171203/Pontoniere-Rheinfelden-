@@ -22,9 +22,10 @@ public class WeatherForecastSourceTest {
         String activity=source();
         assertTrue(activity.contains("case \"home_weather_3day\":return homeThreeDayWeatherTile();"));
         assertTrue(activity.contains("List<WeatherDaily.Hour> hours=weatherHours(raw)"));
-        assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,10,14,18)"));
+        assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,6,12,18)"));
         assertTrue(activity.contains("%02d Uhr"));
         assertTrue(activity.contains("hour.precipitationProbability"));
+        assertTrue(activity.contains("targetHour==6?ui(\"Morgen\"):targetHour==12?ui(\"Mittag\"):targetHour==18?ui(\"Abend\")"));
         assertTrue(activity.contains("PREF_WEATHER_CACHE"));
         assertEquals(2,count(activity,"https://api.open-meteo.com/v1/forecast?"));
         assertTrue(activity.contains("supplementWeatherUv(raw)"));

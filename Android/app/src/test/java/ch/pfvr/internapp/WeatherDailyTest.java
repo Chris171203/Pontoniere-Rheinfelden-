@@ -52,23 +52,23 @@ public class WeatherDailyTest {
     @Test public void selectsMorningNoonAndEveningForecastSlots(){
         LocalDate day=LocalDate.of(2026,9,7);
         List<WeatherDaily.Hour> hours=List.of(
-                hour(day,9,14,5,0.0,4,7,1.0,1),
-                hour(day,10,15,10,0.0,5,8,2.0,2),
-                hour(day,14,23,35,0.3,10,18,6.0,2),
+                hour(day,5,11,5,0.0,4,7,1.0,1),
+                hour(day,6,12,10,0.0,5,8,2.0,2),
+                hour(day,12,23,35,0.3,10,18,6.0,2),
                 hour(day,18,19,70,1.1,8,16,1.0,61)
         );
-        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,10,14,18);
+        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,6,12,18);
         assertEquals(3,slots.size());
-        assertEquals(10,slots.get(0).targetTime.getHour());
-        assertEquals(15.0,slots.get(0).hour.temperature,0.001);
+        assertEquals(6,slots.get(0).targetTime.getHour());
+        assertEquals(12.0,slots.get(0).hour.temperature,0.001);
         assertEquals(35,slots.get(1).hour.precipitationProbability);
         assertEquals(61,slots.get(2).hour.weatherCode);
     }
 
     @Test public void usesOnlyNearbyHourAndKeepsMissingSlotVisible(){
         LocalDate day=LocalDate.of(2026,9,7);
-        List<WeatherDaily.Hour> hours=List.of(hour(day,11,16,20,0.0,5,8,2.0,2));
-        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,10,14,18);
+        List<WeatherDaily.Hour> hours=List.of(hour(day,7,16,20,0.0,5,8,2.0,2));
+        List<WeatherDaily.Slot> slots=WeatherDaily.slots(hours,day,6,12,18);
         assertTrue(slots.get(0).hasData());
         assertFalse(slots.get(1).hasData());
         assertFalse(slots.get(2).hasData());
