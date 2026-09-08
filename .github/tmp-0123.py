@@ -13,7 +13,7 @@ s=path.read_text()
 s=replace_once(s,'List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,summary.date,10,14,18);','List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,summary.date,6,12,18);','weather slots 6/12/18')
 s=replace_once(s,
 '''        String time=String.format(Locale.GERMAN,"%02d Uhr",slot.targetTime.getHour());\n        TextView timeView=txtRaw(time,10,WATER,true);\n        timeView.setGravity(Gravity.CENTER);\n        box.addView(timeView,new LinearLayout.LayoutParams(-1,-2));\n''',
-'''        int hour=slot.targetTime.getHour();\n        String daypart=hour==6?ui("Morgen"):hour==12?ui("Mittag"):hour==18?ui("Abend"):ui("Prognose");\n        TextView daypartView=txtRaw(daypart,10,WATER,true);\n        daypartView.setGravity(Gravity.CENTER);\n        box.addView(daypartView,new LinearLayout.LayoutParams(-1,-2));\n        String time=String.format(Locale.GERMAN,"%02d Uhr",hour);\n        TextView timeView=txtRaw(time,9,MUTED,false);\n        timeView.setGravity(Gravity.CENTER);\n        box.addView(timeView,new LinearLayout.LayoutParams(-1,-2));\n''','daypart labels')
+'''        int targetHour=slot.targetTime.getHour();\n        String daypart=targetHour==6?ui("Morgen"):targetHour==12?ui("Mittag"):targetHour==18?ui("Abend"):ui("Prognose");\n        TextView daypartView=txtRaw(daypart,10,WATER,true);\n        daypartView.setGravity(Gravity.CENTER);\n        box.addView(daypartView,new LinearLayout.LayoutParams(-1,-2));\n        String time=String.format(Locale.GERMAN,"%02d Uhr",targetHour);\n        TextView timeView=txtRaw(time,9,MUTED,false);\n        timeView.setGravity(Gravity.CENTER);\n        box.addView(timeView,new LinearLayout.LayoutParams(-1,-2));\n''','daypart labels')
 path.write_text(s)
 
 # Weather slot unit tests
@@ -35,7 +35,7 @@ path=Path("Android/app/src/test/java/ch/pfvr/internapp/WeatherForecastSourceTest
 s=path.read_text()
 s=replace_once(s,'assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,10,14,18)"));','assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,6,12,18)"));','source slot assertion')
 insert='''        assertTrue(activity.contains("hour.precipitationProbability"));\n'''
-replacement='''        assertTrue(activity.contains("hour.precipitationProbability"));\n        assertTrue(activity.contains("hour==6?ui(\\\"Morgen\\\"):hour==12?ui(\\\"Mittag\\\"):hour==18?ui(\\\"Abend\\\")"));\n'''
+replacement='''        assertTrue(activity.contains("hour.precipitationProbability"));\n        assertTrue(activity.contains("targetHour==6?ui(\\\"Morgen\\\"):targetHour==12?ui(\\\"Mittag\\\"):targetHour==18?ui(\\\"Abend\\\")"));\n'''
 s=replace_once(s,insert,replacement,'daypart source assertion')
 path.write_text(s)
 
