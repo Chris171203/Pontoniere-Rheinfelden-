@@ -20,7 +20,9 @@ jobs:
           ref: feature/general-event-weather-0.12.4
 
       - name: Apply staged source patch
-        run: python3 .github/tmp-0124.py
+        run: |
+          python3 .github/tmp-0124.py
+          python3 .github/tmp-0124-fix.py
 
       - uses: actions/setup-java@v5
         with:
@@ -54,6 +56,8 @@ jobs:
                   Android/app/src/main/java/ch/pfvr/internapp/WeatherEventPolicy.java \
                   Android/app/src/test/java/ch/pfvr/internapp/WeatherEventPolicyTest.java \
                   Android/app/src/test/java/ch/pfvr/internapp/WeatherEventSourceTest.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/ExternalContentLocalizationSourceTest.java \
+                  Android/app/src/test/java/ch/pfvr/internapp/WeatherForecastSourceTest.java \
                   PROJECT.md STATUS.md
           git diff --cached --check
           git commit -m 'Use next relevant club event for weather'
