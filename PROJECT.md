@@ -7,9 +7,10 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 ## Kernfunktionen
 
 - Personalisierbare Kachelbereiche auf Home, in der Kasse und im Verein. Reihenfolge und Sichtbarkeit werden lokal gespeichert; zentrale Funktionen können als fixierte Kacheln vor Ausblenden geschützt werden.
-- Home mit nächstem Training und Wetter für den tatsächlichen Zeitraum.
-  - Bevorzugt wird ein passender Termin aus dem öffentlichen Vereinskalender.
-  - Der saisonale Trainingsplan dient als Fallback, wenn kein Kalendereintrag vorhanden ist.
+- Home mit Wetter zum nächsten relevanten Vereinsanlass.
+  - Der nächste laufende oder kommende, nicht abgesagte Termin aus dem öffentlichen Vereinskalender wird unabhängig vom Termin-Titel berücksichtigt, damit z. B. Wettfahren, JP-Prüfungen, Endfahren, Wanderungen und weitere gemeinsame Anlässe Wetter erhalten.
+  - Ein früher liegendes reguläres Training aus dem saisonalen Trainingsplan bleibt als Fallback/Ergänzung berücksichtigt, wenn es im Kalender nicht explizit geführt wird.
+  - Kurze Termine zeigen weiterhin die Prognose über den tatsächlichen Terminzeitraum. Ganztägige oder mindestens fünfstündige Termine zeigen drei Prognosepunkte; ganztägig/multitägig `06/12/18 Uhr`, lange eintägige Termine anhand Start/Mitte/Ende.
   - Zusätzlich gibt es eine anordenbare 3-Tage-Wetterkachel für Rheinfelden. Pro Tag zeigt sie die gleichmässig verteilten Prognosepunkte `Morgen · 06 Uhr`, `Mittag · 12 Uhr` und `Abend · 18 Uhr` mit Wetter-Symbol, Temperatur und Regenwahrscheinlichkeit; Tages-Min/Max, Regenmenge, Wind/Böen und UV-Maximum bleiben als kompakte Tageszusammenfassung erhalten. Sie nutzt denselben lokal gecachten Wetterabruf wie das Trainingswetter und erzeugt keinen zusätzlichen API-Request.
 - Rhein: zwei Stationskacheln, davon die zweite optional. Aktuelle Abflüsse stehen kompakt nebeneinander; Rheinfelden zeigt oben zusätzlich die Wassertemperatur. Pro aktiver Station kombiniert ein `1h`/`24h`/`7d`-Diagramm Abfluss und Pegel mit zwei dynamischen Y-Achsen; vorhandene Temperaturdaten werden darunter separat dargestellt.
 - Termine aus dem öffentlichen PFVR-Google-Kalender mit persistentem Cache, Detailansicht, Teilen, Route und Übergabe an die persönliche Kalender-App.

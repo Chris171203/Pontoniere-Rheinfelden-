@@ -25,7 +25,10 @@ public class WeatherForecastSourceTest {
         assertTrue(activity.contains("WeatherDaily.slots(hours,summary.date,6,12,18)"));
         assertTrue(activity.contains("%02d Uhr"));
         assertTrue(activity.contains("hour.precipitationProbability"));
-        assertTrue(activity.contains("targetHour==6?ui(\"Morgen\"):targetHour==12?ui(\"Mittag\"):targetHour==18?ui(\"Abend\")"));
+        assertTrue(activity.contains("weatherDaypartLabel(targetHour)"));
+        assertTrue(activity.contains("if(hour<11)return ui(\"Morgen\")"));
+        assertTrue(activity.contains("if(hour<17)return ui(\"Mittag\")"));
+        assertTrue(activity.contains("return ui(\"Abend\")"));
         assertTrue(activity.contains("PREF_WEATHER_CACHE"));
         assertEquals(2,count(activity,"https://api.open-meteo.com/v1/forecast?"));
         assertTrue(activity.contains("supplementWeatherUv(raw)"));
