@@ -41,7 +41,7 @@ public class ExternalContentLocalizationSourceTest {
     }
     @Test public void appOwnedWeatherFallbacksAreLocalizedBeforeRawRendering() throws Exception {
         String source = source();
-        assertTrue(source.contains("ui(\"NÄCHSTES TRAINING\")"));
+        assertTrue(source.contains("ui(\"NÄCHSTER TERMIN\")"));
         assertTrue(source.contains("ui(\"Wetter wird geladen …\")"));
         assertTrue(source.contains("ui(\"Noch keine Prognose\")"));
         assertTrue(source.contains("ui(\"Gespeicherte Wetterdaten nicht lesbar\")"));

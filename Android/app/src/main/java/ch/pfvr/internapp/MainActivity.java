@@ -617,7 +617,7 @@ private View homeTileView(TileLayoutStore.Spec spec){
 }
 
 private View homeWeatherTile(){
-    LinearLayout group=tileGroup("Trainingswetter","Prognose für den nächsten relevanten Termin");
+    LinearLayout group=tileGroup("Wetter zum nächsten Termin","Prognose für den nächsten relevanten Vereinsanlass");
     group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
@@ -716,8 +716,10 @@ private void rebuildHomePreservingScroll(){
 }
 
     private LinearLayout weatherCard(){
+        TrainingSlot slot=nextWeatherSlot();
+        if(WeatherEventPolicy.usesThreePoints(slot.allDay,slot.start,slot.end))return weatherMultiPointCard(slot);
         LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
-        String[] x=weatherSummary();
+        String[] x=weatherSummary(slot);
         c.addView(txt(x[0],11,WATER,true));
         LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(5),0,dp(5)); c.addView(row);
         TextView icon=txtRaw(x[5],38,themeText(TEXT),false); icon.setGravity(Gravity.CENTER); row.addView(icon,new LinearLayout.LayoutParams(dp(58),dp(58)));
@@ -726,6 +728,65 @@ private void rebuildHomePreservingScroll(){
         TextView main=txtRaw(x[2],21,TEXT,true); main.setPadding(0,dp(2),0,0); info.addView(main);
         TextView details=txtRaw(x[3],13,MUTED,false); details.setPadding(0,dp(5),0,0); c.addView(details);
         TextView src=txtRaw(x[4],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(8),0,0); c.addView(src);
+        return c;
+    }
+
+    private LinearLayout weatherMultiPointCard(TrainingSlot slot){
+        LinearLayout c=card();
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(dp(14),dp(14),dp(14),dp(13));
+        c.addView(txt("NÄCHSTER TERMIN",11,WATER,true));
+        TextView title=txtRaw(slot.title==null||slot.title.isBlank()?ui("Vereinstermin"):slot.title,16,TEXT,true);
+        title.setPadding(0,dp(5),0,dp(2));
+        c.addView(title);
+        c.addView(txtRaw(weatherSlotDateLabel(slot),12,MUTED,false));
+
+        String raw=prefs.getString(PREF_WEATHER_CACHE,"");
+        long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
+        String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
+        String provenance=ui(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
+        if(raw.trim().isEmpty()){
+            TextView loading=txt("Wetter wird geladen …",14,MUTED,false);
+            loading.setPadding(0,dp(11),0,0);
+            c.addView(loading);
+            TextView src=txtRaw(provenance,10,Color.rgb(126,140,150),false);
+            src.setPadding(0,dp(8),0,0);
+            c.addView(src);
+            return c;
+        }
+
+        List<WeatherDaily.Hour> hours=weatherHours(raw);
+        int[] targets=WeatherEventPolicy.targetHours(slot.allDay,slot.start,slot.end);
+        List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,slot.start.toLocalDate(),targets);
+        LinearLayout slots=new LinearLayout(this);
+        slots.setGravity(Gravity.TOP);
+        slots.setBaselineAligned(false);
+        slots.setPadding(0,dp(10),0,0);
+        for(int index=0;index<values.size();index++){
+            if(index>0){
+                View divider=new View(this);
+                divider.setBackgroundColor(darkMode?Color.rgb(63,76,85):Color.rgb(216,226,232));
+                LinearLayout.LayoutParams dividerParams=new LinearLayout.LayoutParams(dp(1),dp(94));
+                dividerParams.setMargins(dp(3),dp(4),dp(3),0);
+                slots.addView(divider,dividerParams);
+            }
+            slots.addView(weatherDaySlotView(values.get(index)),new LinearLayout.LayoutParams(0,-2,1));
+        }
+        c.addView(slots,new LinearLayout.LayoutParams(-1,-2));
+
+        List<WeatherDaily.Summary> summaries=WeatherDaily.summarize(hours,slot.start.toLocalDate(),1);
+        if(!summaries.isEmpty()&&summaries.get(0).hasData()){
+            TextView details=txtRaw(weatherDayDetails(summaries.get(0)),10,MUTED,false);
+            details.setPadding(0,dp(8),0,0);
+            c.addView(details);
+        }else{
+            TextView missing=txt("Für diesen Veranstaltungstag liegen noch keine Stundenwerte vor.",11,MUTED,false);
+            missing.setPadding(0,dp(8),0,0);
+            c.addView(missing);
+        }
+        TextView src=txtRaw(provenance,10,Color.rgb(126,140,150),false);
+        src.setPadding(0,dp(8),0,0);
+        c.addView(src);
         return c;
     }
 
@@ -814,7 +875,7 @@ private void rebuildHomePreservingScroll(){
         box.setPadding(dp(3),0,dp(3),0);
 
         int targetHour=slot.targetTime.getHour();
-        String daypart=targetHour==6?ui("Morgen"):targetHour==12?ui("Mittag"):targetHour==18?ui("Abend"):ui("Prognose");
+        String daypart=weatherDaypartLabel(targetHour);
         TextView daypartView=txtRaw(daypart,10,WATER,true);
         daypartView.setGravity(Gravity.CENTER);
         box.addView(daypartView,new LinearLayout.LayoutParams(-1,-2));
@@ -849,6 +910,12 @@ private void rebuildHomePreservingScroll(){
         box.addView(rain);
         box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" Prozent");
         return box;
+    }
+
+    private String weatherDaypartLabel(int hour){
+        if(hour<11)return ui("Morgen");
+        if(hour<17)return ui("Mittag");
+        return ui("Abend");
     }
 
     private String weatherDayLabel(LocalDate date,int index){
@@ -1438,6 +1505,34 @@ private void rebuildHomePreservingScroll(){
     private LocalTime regularTrainingStart(LocalDate day){return summerTraining(day)?LocalTime.of(18,30):LocalTime.of(19,30);}
     private LocalTime regularTrainingEnd(LocalDate day){return summerTraining(day)?LocalTime.of(20,0):LocalTime.of(21,0);}
 
+    private TrainingSlot nextWeatherSlot(){
+        ZoneId zone=ZoneId.of("Europe/Zurich");
+        ZonedDateTime now=ZonedDateTime.now(zone);
+        TrainingSlot calendar=nextCalendarWeatherSlot(now);
+        TrainingSlot regular=nextRegularTraining(now,zone);
+        if(calendar==null)return regular;
+        if(regular==null)return calendar;
+        return !calendar.start.isAfter(regular.start)?calendar:regular;
+    }
+
+    private TrainingSlot nextCalendarWeatherSlot(ZonedDateTime now){
+        Event best=null;
+        ZonedDateTime limit=now.plusDays(21);
+        for(Event event:events){
+            if(event.start==null||event.start.isAfter(limit)||isCancelledEvent(event))continue;
+            if(!eventEnd(event).isAfter(now))continue;
+            if(best==null||event.start.isBefore(best.start))best=event;
+        }
+        return best==null?null:weatherSlotFromEvent(best);
+    }
+
+    private TrainingSlot weatherSlotFromEvent(Event event){
+        ZonedDateTime start=event.start;
+        ZonedDateTime end=eventEnd(event);
+        if(!end.isAfter(start))end=event.allDay?start.plusDays(1):start.plusHours(1);
+        return new TrainingSlot(start,end,true,event.title,event.allDay);
+    }
+
     private TrainingSlot nextTrainingSlot(){
         ZoneId zone=ZoneId.of("Europe/Zurich");
         ZonedDateTime now=ZonedDateTime.now(zone);
@@ -1518,6 +1613,11 @@ private void rebuildHomePreservingScroll(){
         return slot.start.format(format)+"–"+slot.end.format(format)+" Uhr";
     }
 
+    private String weatherSlotDateLabel(TrainingSlot slot){
+        String date=localizedDateWords(cap(slot.start.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN))));
+        return slot.allDay?date+" · "+ui("ganztägig"):date+" · "+trainingTimeLabel(slot);
+    }
+
     private boolean weatherHourMatches(String timestamp,TrainingSlot slot){
         try{
             ZonedDateTime hour=LocalDateTime.parse(timestamp).atZone(ZoneId.of("Europe/Zurich"));
@@ -1526,15 +1626,14 @@ private void rebuildHomePreservingScroll(){
         }catch(Exception ignored){return false;}
     }
 
-    private String[] weatherSummary(){
-        TrainingSlot slot=nextTrainingSlot();
-        String date=localizedDateWords(cap(slot.start.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.",Locale.GERMAN))))+" · "+trainingTimeLabel(slot);
-        if(slot.fromCalendar&&slot.title!=null&&!slot.title.isBlank())date+="\n"+slot.title;
+    private String[] weatherSummary(TrainingSlot slot){
+        String date=weatherSlotDateLabel(slot);
+        if(slot.title!=null&&!slot.title.isBlank())date+="\n"+slot.title;
         String raw=prefs.getString(PREF_WEATHER_CACHE,"");
         long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
         String source=prefs.getString(PREF_WEATHER_SOURCE,"MeteoSwiss ICON via Open-Meteo");
         String provenance=ui(slot.fromCalendar?"Vereinskalender":"Regelplan")+" · "+weatherAge(source,updated);
-        if(raw.trim().isEmpty())return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Wetter wird geladen …"),ui("Prognose wird im Hintergrund aktualisiert."),provenance,"◌"};
+        if(raw.trim().isEmpty())return new String[]{ui("NÄCHSTER TERMIN"),date,ui("Wetter wird geladen …"),ui("Prognose wird im Hintergrund aktualisiert."),provenance,"◌"};
         try{
             JSONObject hourly=new JSONObject(raw).getJSONObject("hourly");
             JSONArray times=hourly.getJSONArray("time"),temperatures=hourly.getJSONArray("temperature_2m"),probabilities=hourly.getJSONArray("precipitation_probability"),precipitation=hourly.getJSONArray("precipitation"),codes=hourly.getJSONArray("weather_code"),wind=hourly.getJSONArray("wind_speed_10m"),gusts=hourly.getJSONArray("wind_gusts_10m");
@@ -1553,15 +1652,15 @@ private void rebuildHomePreservingScroll(){
                 if(uv!=null){double value=uv.optDouble(i,Double.NaN);if(Double.isFinite(value)&&(Double.isNaN(uvMax)||value>uvMax))uvMax=value;}
                 count++;
             }
-            if(count==0)return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Noch keine Prognose"),ui("Für diesen Trainingszeitraum liegen noch keine Stundenwerte vor."),provenance,"◌"};
+            if(count==0)return new String[]{ui("NÄCHSTER TERMIN"),date,ui("Noch keine Prognose"),ui("Für diesen Terminzeitraum liegen noch keine Stundenwerte vor."),provenance,"◌"};
             String temperatureText=Double.isNaN(firstTemperature)?"":String.format(Locale.GERMAN,"%.0f °C",firstTemperature);
             if(Double.isFinite(lastTemperature)&&Double.isFinite(firstTemperature)&&Math.abs(lastTemperature-firstTemperature)>=1.0)temperatureText+=String.format(Locale.GERMAN," → %.0f °C",lastTemperature);
             String main=temperatureText+(temperatureText.isEmpty()?"":" · ")+weatherCode(codeValue);
             String details=ui("Regen")+" "+probabilityMax+" % · "+String.format(Locale.GERMAN,"%.1f mm",precipitationSum)+"\n"+ui("Wind")+" "+Math.round(windMax)+" km/h · "+ui("Böen")+" "+Math.round(gustMax)+" km/h";
             details+="\nUV "+(Double.isFinite(uvMax)?String.format(Locale.GERMAN,"%.1f",uvMax)+" · "+uvLabel(uvMax):"–");
-            return new String[]{ui("NÄCHSTES TRAINING"),date,main,details,provenance,weatherIcon(codeValue)};
+            return new String[]{ui("NÄCHSTER TERMIN"),date,main,details,provenance,weatherIcon(codeValue)};
         }catch(Exception e){
-            return new String[]{ui("NÄCHSTES TRAINING"),date,ui("Gespeicherte Wetterdaten nicht lesbar"),ui("Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen."),provenance,"◌"};
+            return new String[]{ui("NÄCHSTER TERMIN"),date,ui("Gespeicherte Wetterdaten nicht lesbar"),ui("Letzter Stand bleibt erhalten, sobald wieder gültige Daten vorliegen."),provenance,"◌"};
         }
     }
 
@@ -4055,8 +4154,9 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     private static class AppChoice {final String label,pkg;final boolean directShare,documented;final BankingAppRegistry.Capability capability;AppChoice(String l,String p,boolean d,BankingAppRegistry.Capability c,boolean doc){label=l;pkg=p;directShare=d;capability=c;documented=doc;}}
     private static class ParsedDate {final ZonedDateTime z;final boolean allDay;ParsedDate(ZonedDateTime z,boolean a){this.z=z;allDay=a;}}
     private static class TrainingSlot {
-        final ZonedDateTime start,end;final boolean fromCalendar;final String title;
-        TrainingSlot(ZonedDateTime start,ZonedDateTime end,boolean fromCalendar,String title){this.start=start;this.end=end;this.fromCalendar=fromCalendar;this.title=title;}
+        final ZonedDateTime start,end;final boolean fromCalendar,allDay;final String title;
+        TrainingSlot(ZonedDateTime start,ZonedDateTime end,boolean fromCalendar,String title){this(start,end,fromCalendar,title,false);}
+        TrainingSlot(ZonedDateTime start,ZonedDateTime end,boolean fromCalendar,String title,boolean allDay){this.start=start;this.end=end;this.fromCalendar=fromCalendar;this.title=title;this.allDay=allDay;}
     }
     private static class Event {
         String title,location,rule,description,status,uid;
