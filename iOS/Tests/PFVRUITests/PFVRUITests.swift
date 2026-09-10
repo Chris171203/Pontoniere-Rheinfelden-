@@ -13,7 +13,7 @@ final class PFVRUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if let run = testRun, run.hasSucceeded == false, app.state == .runningForeground {
+        if let run = testRun, run.totalFailureCount > 0, app.state == .runningForeground {
             capture("failure")
         }
         app.terminate()
@@ -54,6 +54,18 @@ final class PFVRUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    // UIKit exposes the real alert title/buttons while discarding SwiftUI's
+    // button identifiers. Scope answers to this alert, including persisted gsw.
+    private var paymentAlert: XCUIElement {
+        let titles = ["War die Zahlung erfolgreich?", "Isch d Zahlig erfolgreich gsi?"]
+        return app.alerts.matching(NSPredicate(format: "label IN %@", titles)).firstMatch
+    }
+
+    private func paymentAnswer(_ successful: Bool) -> XCUIElement {
+        let labels = successful ? ["Ja"] : ["Nein", "Nei"]
+        return paymentAlert.buttons.matching(NSPredicate(format: "label IN %@", labels)).firstMatch
     }
 
     private func cashTotal() -> String {
@@ -139,20 +151,24 @@ final class PFVRUITests: XCTestCase {
         let savedTotal = cashTotal()
         app.terminate()
         launch(reset: false, pending: true)
-        XCTAssertTrue(app.buttons["payment.confirm.no"].waitForExistence(timeout: 10))
+        XCTAssertTrue(paymentAlert.waitForExistence(timeout: 10))
         capture("payment-confirmation")
-        tap("payment.confirm.no")
+        XCTAssertTrue(paymentAnswer(false).isHittable)
+        paymentAnswer(false).tap()
+        waitUntilGone(paymentAlert)
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal, "An unsuccessful/unconfirmed payment must preserve the cart")
         app.terminate()
         launch(reset: false, unlocked: false)
-        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists, "No must consume the pending question")
+        XCTAssertFalse(paymentAlert.exists, "No must consume the pending question")
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal)
         app.terminate()
         launch(reset: false, pending: true)
-        XCTAssertTrue(app.buttons["payment.confirm.yes"].waitForExistence(timeout: 10))
-        tap("payment.confirm.yes")
+        XCTAssertTrue(paymentAlert.waitForExistence(timeout: 10))
+        XCTAssertTrue(paymentAnswer(true).isHittable)
+        paymentAnswer(true).tap()
+        waitUntilGone(paymentAlert)
         tap("tab.cash")
         XCTAssertTrue(cashTotal().contains("0.00"), "Only explicit successful confirmation clears the cart")
     }
@@ -168,7 +184,7 @@ final class PFVRUITests: XCTestCase {
         XCTAssertEqual(cashTotal(), savedTotal)
         app.terminate()
         launch(reset: false, unlocked: false)
-        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+        XCTAssertFalse(paymentAlert.exists)
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal)
     }
@@ -204,7 +220,7 @@ final class PFVRUITests: XCTestCase {
         XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
         tap("payment.done")
         XCTAssertEqual(cashTotal(), savedTotal)
-        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists, "Cancelling share must not arm a payment question")
+        XCTAssertFalse(paymentAlert.exists, "Cancelling share must not arm a payment question")
 
         tap("tab.events")
         tap("event.ui-training")
@@ -228,7 +244,7 @@ final class PFVRUITests: XCTestCase {
         launch(reset: false, unlocked: false)
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal)
-        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+        XCTAssertFalse(paymentAlert.exists)
     }
 
     private func waitUntilGone(_ nativeElement: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
@@ -315,7 +331,7 @@ final class PFVRUITests: XCTestCase {
         launch(reset: false, unlocked: false)
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal)
-        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+        XCTAssertFalse(paymentAlert.exists)
         XCTAssertFalse(app.buttons["tab.events"].label.contains("Termine"))
     }
 

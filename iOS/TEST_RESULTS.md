@@ -58,6 +58,29 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 - Die drei Simulatorjobs schlugen fehl. Der kompakte Log belegt einen erfolgreichen Debug-Testbuild und danach einen Fehler im zusätzlichen Signaturvalidator: Er suchte Simulator-Rechte in der macOS-Codesign-Plist. Xcode 16.4 bindet diese separat in den Mach-O-Abschnitt `__TEXT,__entitlements` ein; die normale Codesign-Plist darf leer sein. In diesem Job begannen weder Release-Build noch Laufzeittests.
 - Der Validator wurde daraufhin gezielt korrigiert: echte Ad-hoc-Signatur weiterhin prüfen und die Simulator-Rechte aus dem tatsächlich gebauten Executable lesen. Der SecItem-Roundtrip bleibt als unabhängiger harter Laufzeitnachweis erhalten. Dies ist kein Gerätezertifikat und keine Produktionssignierung.
 
+## Signaturnachweis und erkannter Scheinerfolg
+
+- Commit: `533aee2e98ecda6534806aff6fd631c232a67d56`; [Lauf 34509075123](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34509075123).
+- Die tatsächlich gebauten Simulator-Executables bestanden die Ad-hoc-Signaturprüfung und enthielten die benötigten Simulator-Keychain-Rechte im Mach-O. Debug-Builds sowie der kompakte Release-Build waren erfolgreich.
+- Die iPhone-Jobs meldeten nominal Erfolg, hatten jedoch **keinen einzigen Laufzeittest ausgeführt**: Bash 3.2 brach bei einem leeren optionalen Array unter `set -u` ab, der EXIT-Trap lieferte irrtümlich Status 0. Diese Jobs zählen ausdrücklich nicht als bestandene Tests.
+- Der Folgecommit beseitigt das leere Array und erzwingt einen abgeschlossenen Testaufruf, ein echtes `tests.xcresult` und erfolgreich abgeschlossene Core-/App-/UI-Testbundles mit tatsächlich bestandenen Fällen. Auf iPad muss der gezielt ausgewählte Systemeditor-Test selbst bestanden sein.
+- Der iPad-Test lief tatsächlich und scheiterte an der nicht exponierten Container-ID `system.share`. Original-Screenshot und UIKit-Accessibility-Baum belegen einen korrekt geöffneten nativen Teilen-Popover mit PNG `PFVR_3.00CHF`, Kopieren und Schließen. Die Prüfung wurde auf diese tatsächlichen nativen Controls umgestellt.
+
+## Tatsächlicher Lauf nach den App-/Simulator-Korrekturen
+
+- Commit: `e57a286558d7edfcf5bf6b64b856c129e1c7d709`; [Lauf 34510327390](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34510327390).
+- iPhone SE (3. Generation), iOS 18.5, hell, Job `102982567649`: Debug-Testbuild und Release-Build bestanden. 49 Core-Tests bestanden, vier Live-Fälle bewusst ausgelassen; **alle 19 Hosted-App-Tests bestanden**; neun von elf UI-Tests bestanden.
+- Damit tatsächlich nachgewiesen: alle acht Hintergrund-Lifecycle-Fälle; alle sechs internen WKWebView-Fälle einschließlich Wiederherstellung von Personen, Original-/App-Modus und echten Formular-Controls; beide Sicherheits-/Keychain-Fälle; alle drei Zahlungsfälle einschließlich vollständigem Swiss-QR-PNG-Roundtrip über Vision für offenen Betrag, CHF 0.01, 12.50 und 99999.99 sowie unabhängigem Reader-Kontrollbild.
+- UI tatsächlich bestanden: Freigabefehler, sechs Tabs/Mindest-Tapflächen, beide Rhein-Diagramme, Termindetails, persistente Sprache, Warenkorb-Neustart/manuelles Leeren, Kachelanordnung/-sichtbarkeit, Cache-Löschen ohne Warenkorbverlust und QR-Ansehen ohne Zahlungsbestätigung.
+- Zwei UI-Adapterfehler blieben: die bekannte Teilen-Container-ID und die von UIKit nicht exponierten Ja-/Nein-Button-IDs. Der originale Zahlungs-Screenshot samt AX-Baum zeigt die echte Frage „War die Zahlung erfolgreich?“ mit Nein/Ja. Der folgende Testadapter fragt deshalb genau diesen Alert und dessen native Antworten ab; auch sämtliche negativen Prüfungen wurden auf das echte Alert-Element umgestellt. Warenkorb- und Neustartassertions wurden beibehalten.
+
+## Native Systemdialoge auf iPad
+
+- Commit: `c04d95a9778dc45c527946b901a48f930f48540f`; [Lauf 34511181146](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34511181146).
+- Foundation-Job `102986088657`: 49 deterministische Tests und anschließend **alle vier tatsächlichen Live-Quellentests** bestanden; Live-Dauer 24,678 Sekunden.
+- iPad Air 11 Zoll (M2), iOS 18.5, hell, Job `102986088728`: Debug-Testbuild und gezielter UI-Test bestanden (61,980 Sekunden). Apples echter Teilen-Dialog mit bedienbarer Kopieren-Aktion wurde geöffnet und geschlossen, anschließend der echte EventKit-Editor mit editierbarem Quelltitel geöffnet und abgebrochen. Warenkorb blieb nach Prozessneustart erhalten; keine Zahlungsfrage durch Abbruch.
+- Dieser einzelne gezielte iPad-Test ersetzt keine vollständige iPad-Testmatrix. Die iPhone-Gesamtläufe und der korrigierte Zahlungsalert-Test werden separat ausgewertet.
+
 ## Lokal ausgeführte Prüfungen
 
 - Der aktuelle Android-Referenzbaum wurde mit GitHub verglichen; Baumhash identisch.
@@ -67,4 +90,4 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 
 ## Noch ausstehend
 
-Vollständiger integrierter Simulatorlauf einschließlich App-/WebKit-/UI-Tests, Release-Build, QR-PNG-Decodierung und Sichtprüfung der exportierten Screenshots. Reale Bankzahlungen, produktive Intern-Aktionen, physische Geräte und signierte Verteilung sind separate Nachweise.
+Vollständig erfolgreicher integrierter iPhone-UI-Lauf mit den korrigierten nativen Dialogabfragen und abschließende Sichtprüfung. Release-Build, alle Hosted-App-Tests und QR-PNG-Decodierung sind inzwischen tatsächlich bestanden. Reale Bankzahlungen, produktive Intern-Aktionen, physische Geräte und signierte Verteilung sind separate Nachweise.
