@@ -12,11 +12,13 @@ Abnahme erfolgt getrennt nach implementierter Funktion, ausgeführtem automatisc
 
 | Paket | Umfang | Verantwortlich | Stand |
 |---|---|---|---|
-| AP1 | Warenkorb, Zahlungszustand, Swiss-QR, Pegelregeln, Kacheln, Freigabe, Sprache | Core-Agent | In Umsetzung |
-| AP2 | Wetter, Rhein, Kalender, News, Cache und Fehlerfälle | Data-Agent | In Umsetzung |
-| AP3 | Native Screens, Navigation, Einstellungen und iOS-Zahlungsübergabe | UI-Agent | In Umsetzung |
-| AP4 | Interne App-/Originalansicht, lokale Zugangsdaten, Website-Controls | Internal-Agent | In Umsetzung |
-| AP5 | Xcode-Projekt, CI, Unit-/WebKit-/Simulator-Tests, Screenshots | Build/Test-Agent | In Umsetzung |
+| AP1 | Warenkorb, Zahlungszustand, Swiss-QR, Pegelregeln, Kacheln, Freigabe, Sprache | Core-Agent | Implementiert; Fachtests bestanden |
+| AP2 | Wetter, Rhein, Kalender, News, Cache und Fehlerfälle | Data-Agent | Implementiert; Fachtests und reale Quellen bestanden |
+| AP3 | Native Screens, Navigation, Einstellungen und iOS-Zahlungsübergabe | UI-Agent | Implementiert; Simulator-Abnahme läuft |
+| AP4 | Interne App-/Originalansicht, lokale Zugangsdaten, Website-Controls | Internal-Agent | Implementiert; Generator-/Syntaxprüfung bestanden, WebKit-Abnahme läuft |
+| AP5 | Xcode-Projekt, CI, Unit-/WebKit-/Simulator-Tests, Screenshots | Build/Test-Agent | Implementiert; Buildfehler korrigiert, erneute Ausführung läuft |
+| AP6 | Unabhängiger Android-Abgleich und Review | Review-Agent | Sieben materielle Befunde korrigiert und im Quellcode nachgeprüft |
+| AP1b | iOS-Hintergrundaktualisierung, Ablaufabbruch und Cache-Löschbarriere | Core-Agent + UI/Build | Implementiert; native Testausführung läuft |
 | Integration | API-Abgleich, Review, Fehlerbehebung, Testnachweise, Übergabe | Hauptagent | In Bearbeitung |
 
 ## Verbindliche fachliche Prüfungen
@@ -37,9 +39,19 @@ Abnahme erfolgt getrennt nach implementierter Funktion, ausgeführtem automatisc
 - Der lokale rekonstruierte Quellbaum wurde per `git write-tree` mit dem GitHub-Commitbaum verglichen: identisch (`6e9808b2357a0e584a1ecc63f706176632cdf0e8`).
 - Lokale Ausführungsumgebung: Linux, kein `swift`, `swiftc` oder `xcodebuild` gefunden. Apple-Build/Simulator werden über macOS-CI ausgeführt; Resultate stehen erst nach tatsächlicher Ausführung fest.
 
-## Externe Abhängigkeiten
+## Testergebnisse
+
+Die konkreten Commit-/Laufzuordnungen stehen in [`TEST_RESULTS.md`](TEST_RESULTS.md). Bislang sind 49 Fachtests, vier tatsächliche öffentliche API-Prüfungen sowie der Java-Generatorvergleich und JavaScript-Syntaxprüfung auf macOS bestanden. Die ersten Simulator-Builds deckten Konfigurationsfehler auf; diese wurden korrigiert und erneut zur Ausführung gegeben. Vor einem erfolgreichen neuen Lauf gilt die App nicht als im Simulator abgenommen.
+
+## Plattformunterschiede und externe Abhängigkeiten
 
 Remote-Konfiguration und native Intern-API bleiben wie im Android-Stand geplant, da kein freigegebener Betriebsendpunkt vorliegt. Geräteinstallation/TestFlight benötigt später Apple-Signierung; für Simulator-Tests ist diese nicht erforderlich.
+
+- iOS-Zahlungsübergabe nutzt die System-Teilen-Funktion statt Android-Paketwahl. Ein erfolgreicher Bildimport ist keine automatische Bestätigung einer Zahlung.
+- Hintergrundaktualisierung ist vorhanden und standardmäßig eingeschaltet. Die 30 Minuten sind nur eine früheste Anforderung; Ausführungszeit und Verfügbarkeit bestimmt iOS. Die Tests prüfen Bedingungen, Abbruch und Zustand, nicht eine garantierte OS-Zustellung.
+- Die interne WebView erlaubt ausschließlich denselben HTTPS-Host. Auch im Originalmodus werden externe Navigation und `mailto`/`tel`/`geo` nicht weitergegeben. Der Inhalt und die echten internen Website-Controls bleiben erhalten. Diese Begrenzung ist keine Kontrolle der internen Serverlogik oder beliebiger Requests des vertrauenswürdigen Website-Skripts.
+- Ein Store-taugliches AppIcon-Set und Produktionssignierung fehlen noch. Das vorhandene 96×96-Vereinslogo wird in der App verwendet; der Simulator-Testbuild fordert kein fehlendes Icon-Set an.
+- Tests laufen auf tatsächlich vorhandenen, zum Xcode-SDK passenden iPhone-Simulatoren. Mindestversion iOS 17, iPad und echte Geräte sind damit nicht automatisch zur Laufzeit geprüft.
 
 ## Fortsetzung
 

@@ -128,11 +128,25 @@ struct WeatherSummary: View {
     let summary: WeatherDay
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(state.ui("Regen") + " " + (summary.precipitationProbabilityMax.map(String.init) ?? "–") + " % · " + AppDates.number(summary.precipitationSum, digits: 1) + " mm")
-            Text(state.ui("Wind") + " " + AppDates.number(summary.windMax) + " km/h · " + state.ui("Böen") + " " + AppDates.number(summary.gustMax) + " km/h")
-            Text("UV " + AppDates.number(summary.uvMax, digits: 1))
+            Text(rainText)
+            Text(windText)
+            Text(uvText)
         }.font(.caption).foregroundStyle(.secondary)
     }
+    private var rainText: String {
+        let label: String = state.ui("Regen")
+        let probability: String = summary.precipitationProbabilityMax.map { String($0) } ?? "–"
+        let amount: String = AppDates.number(summary.precipitationSum, digits: 1)
+        return "\(label) \(probability) % · \(amount) mm"
+    }
+    private var windText: String {
+        let windLabel: String = state.ui("Wind")
+        let gustLabel: String = state.ui("Böen")
+        let wind: String = AppDates.number(summary.windMax)
+        let gust: String = AppDates.number(summary.gustMax)
+        return "\(windLabel) \(wind) km/h · \(gustLabel) \(gust) km/h"
+    }
+    private var uvText: String { "UV \(AppDates.number(summary.uvMax, digits: 1))" }
 }
 
 enum WeatherSymbols {

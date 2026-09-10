@@ -186,8 +186,18 @@ final class AppState: ObservableObject {
     #if DEBUG
     private func seedFixtures() {
         let start = AppDates.zurich.startOfDay(for: now)
-        let weatherHours = (0..<192).map { index in
-            WeatherHour(time: start.addingTimeInterval(Double(index) * 3600), temperature: 17 + 5 * sin(Double(index % 24) / 24 * .pi), precipitationProbability: index % 8 == 0 ? 40 : 10, precipitation: index % 8 == 0 ? 0.4 : 0, wind: 9, gust: 18, uv: 4, weatherCode: index % 8 == 0 ? 61 : 2)
+        var weatherHours: [WeatherHour] = []
+        for index in 0..<192 {
+            let time: Date = start.addingTimeInterval(Double(index) * 3600.0)
+            let phase: Double = Double(index % 24) / 24.0 * Double.pi
+            let temperature: Double = 17.0 + 5.0 * sin(phase)
+            let rainy: Bool = index % 8 == 0
+            let probability: Int = rainy ? 40 : 10
+            let precipitation: Double = rainy ? 0.4 : 0.0
+            let code: Int = rainy ? 61 : 2
+            let hour = WeatherHour(time: time, temperature: temperature, precipitationProbability: probability,
+                                   precipitation: precipitation, wind: 9.0, gust: 18.0, uv: 4.0, weatherCode: code)
+            weatherHours.append(hour)
         }
         weather = Loaded(value: weatherHours, metadata: CacheMetadata(source: "MeteoSwiss/Open-Meteo · Testdaten", updatedAt: now))
         events = Loaded(value: [
