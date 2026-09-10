@@ -23,16 +23,24 @@ final class SecureInternalStore {
         return SecureInternalStore()
     }()
     private let service: String
+    /// Numeric diagnostic only; never include Keychain values, URLs or account names.
+    private(set) var lastFailureStatus: OSStatus?
 
     init(service: String = "ch.pfvr.app.internal") { self.service = service }
 
-    enum StoreError: LocalizedError {
+    enum StoreError: LocalizedError, CustomDebugStringConvertible {
         case invalidURL
-        case unavailable
+        case unavailable(status: OSStatus)
         var errorDescription: String? {
             switch self {
             case .invalidURL: return "Bitte den persönlichen HTTPS-An-/Abmelde-Link (what=abmeldung) verwenden."
             case .unavailable: return "Der lokale Zugang konnte nicht sicher gespeichert werden."
+            }
+        }
+        var debugDescription: String {
+            switch self {
+            case .invalidURL: return "SecureInternalStore.invalidURL"
+            case .unavailable(let status): return "SecureInternalStore.unavailable(OSStatus: \(status))"
             }
         }
     }
@@ -82,7 +90,11 @@ final class SecureInternalStore {
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess else {
+            if status != errSecItemNotFound { lastFailureStatus = status }
+            return nil
+        }
         return result as? Data
     }
 
@@ -94,14 +106,22 @@ final class SecureInternalStore {
         if status == errSecItemNotFound {
             var item = query
             attributes.forEach { item[$0.key] = $0.value }
-            guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw StoreError.unavailable }
+            let addStatus = SecItemAdd(item as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                lastFailureStatus = addStatus
+                throw StoreError.unavailable(status: addStatus)
+            }
         } else if status != errSecSuccess {
-            throw StoreError.unavailable
+            lastFailureStatus = status
+            throw StoreError.unavailable(status: status)
         }
     }
 
     private func delete(account: String) throws {
         let status = SecItemDelete(query(account: account) as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { throw StoreError.unavailable }
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            lastFailureStatus = status
+            throw StoreError.unavailable(status: status)
+        }
     }
 }

@@ -52,8 +52,12 @@ struct CashView: View {
             HStack {
                 Text(state.ui("Total")).font(.headline)
                 Spacer()
-                Text(state.total.formatted).font(.title2.bold()).monospacedDigit().accessibilityIdentifier("cart.total")
+                Text(state.total.formatted).font(.title2.bold()).monospacedDigit()
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(state.ui("Total"))
+            .accessibilityValue(state.total.formatted)
+            .accessibilityIdentifier("cart.total")
             HStack {
                 Button { showCartQR() } label: {
                     Label(state.ui("Swiss QR"), systemImage: "qrcode").frame(maxWidth: .infinity, minHeight: 34)
@@ -64,7 +68,7 @@ struct CashView: View {
             }
             Button(state.ui("Warenkorb leeren"), role: .destructive) { confirmClear = true }
                 .font(.caption).disabled(state.cart.isEmpty).accessibilityIdentifier("cart.clear")
-        }.accessibilityIdentifier("cash.cart")
+        }
     }
     private var freeAmountTile: some View {
         PFVRCard(state.ui("Freier Betrag")) {

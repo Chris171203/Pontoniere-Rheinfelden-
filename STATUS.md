@@ -6,7 +6,7 @@ Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 
 - Native Umsetzung des Android-Stands `0.12.6` auf dem Arbeitsbranch `codex/ios-port-0.12.6` gestartet. Referenzcommit: `c617bae7c1f00fbb1136621166387ed814652794`.
 - SwiftUI ab iOS 17, getrennte testbare Fachlogik und lokale Daten-Caches; Arbeitspakete, Abnahmekriterien und laufende Nachweise: [`iOS/PORTING_STATUS.md`](iOS/PORTING_STATUS.md).
-- Apple-Build und iOS-Simulator-Tests werden über macOS-CI vorbereitet. Ein vollständiger Paritäts- oder Gerätetestnachweis liegt zu Beginn der Portierung noch nicht vor.
+- macOS-CI führt Apple-Builds und iOS-Simulator-Tests aus. Debug- und Release-Build, 49 Fachtests und vier echte öffentliche Quellenprüfungen sind bestanden. Erste Hosted-/Bedienungstests fanden konkrete Fehler; deren Korrektur und vollständige Simulator-Abnahme laufen. Commitgenaue Ergebnisse: [`iOS/TEST_RESULTS.md`](iOS/TEST_RESULTS.md).
 
 ## Aktueller Teststand
 
@@ -102,4 +102,4 @@ Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 - Für die private An-/Abmeldeseite langfristig einen klaren Adapter beziehungsweise dokumentierten Backend-Endpunkt verwenden, sobald Zugriff darauf besteht. Weitere DOM-Sonderfälle nicht unkontrolliert in die Hauptlogik einbauen.
 - Remote-Katalog mit Server-JSON, lokalem Cache und eingebautem Fallback vorbereiten, sobald ein pflegbarer Website-Endpunkt verfügbar ist.
 - Optionaler Upload-Portal-Zugang für Vereinsbilder und Videos.
-- Optionale Trainingsbenachrichtigungen, Homescreen-Widget und spätere iOS-Implementierung.
+- Optionale Trainingsbenachrichtigungen und Homescreen-Widget; laufende iOS-Portierung einschließlich eigener Testabnahme siehe oben.

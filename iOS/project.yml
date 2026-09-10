@@ -31,6 +31,7 @@ targets:
         SUPPORTS_MACCATALYST: NO
         SWIFT_EMIT_LOC_STRINGS: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": App/Simulator.entitlements
     dependencies:
       - package: PFVRCore
         product: PFVRCore

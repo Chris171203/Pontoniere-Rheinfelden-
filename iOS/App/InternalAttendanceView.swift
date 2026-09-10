@@ -109,6 +109,7 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
     #if DEBUG
     private var fixtureHTML: String?
     private var fixtureLoadPending = false
+    private(set) var acceptedPeopleMessages = 0
     #endif
 
     init(store: SecureInternalStore = .shared) { self.store = store; super.init() }
@@ -306,6 +307,9 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
               message.frameInfo.securityOrigin.host.lowercased() == "intern.pfvr.ch",
               [0, 443].contains(message.frameInfo.securityOrigin.port),
               let body = message.body as? [String: Any], let value = body["value"] else { return }
+        #if DEBUG
+        acceptedPeopleMessages += 1
+        #endif
         do {
             if value is NSNull { try store.savePeopleState(nil) }
             else if let raw = value as? String { try store.savePeopleState(raw) }

@@ -14,11 +14,11 @@ Abnahme erfolgt getrennt nach implementierter Funktion, ausgeführtem automatisc
 |---|---|---|---|
 | AP1 | Warenkorb, Zahlungszustand, Swiss-QR, Pegelregeln, Kacheln, Freigabe, Sprache | Core-Agent | Implementiert; Fachtests bestanden |
 | AP2 | Wetter, Rhein, Kalender, News, Cache und Fehlerfälle | Data-Agent | Implementiert; Fachtests und reale Quellen bestanden |
-| AP3 | Native Screens, Navigation, Einstellungen und iOS-Zahlungsübergabe | UI-Agent | Implementiert; Simulator-Abnahme läuft |
-| AP4 | Interne App-/Originalansicht, lokale Zugangsdaten, Website-Controls | Internal-Agent | Implementiert; Generator-/Syntaxprüfung bestanden, WebKit-Abnahme läuft |
-| AP5 | Xcode-Projekt, CI, Unit-/WebKit-/Simulator-Tests, Screenshots | Build/Test-Agent | Implementiert; Buildfehler korrigiert, erneute Ausführung läuft |
+| AP3 | Native Screens, Navigation, Einstellungen und iOS-Zahlungsübergabe | UI-Agent | Implementiert; fünf von zehn ersten UI-Abläufen bestanden, Accessibility-Korrekturen in Arbeit |
+| AP4 | Interne App-/Originalansicht, lokale Zugangsdaten, Website-Controls | Internal-Agent | Vier WebKit- und ein Navigationstest bestanden; Fixture-/Keychain-Korrektur in Arbeit |
+| AP5 | Xcode-Projekt, CI, Unit-/WebKit-/Simulator-Tests, Screenshots | Build/Test-Agent | Debug- und Release-Build bestanden; tatsächliche Simulatorfehler werden korrigiert |
 | AP6 | Unabhängiger Android-Abgleich und Review | Review-Agent | Sieben materielle Befunde korrigiert und im Quellcode nachgeprüft |
-| AP1b | iOS-Hintergrundaktualisierung, Ablaufabbruch und Cache-Löschbarriere | Core-Agent + UI/Build | Implementiert; native Testausführung läuft |
+| AP1b | iOS-Hintergrundaktualisierung, Ablaufabbruch und Cache-Löschbarriere | Core-Agent + UI/Build | Acht native Lifecycle-Tests auf beiden Simulatoren bestanden |
 | Integration | API-Abgleich, Review, Fehlerbehebung, Testnachweise, Übergabe | Hauptagent | In Bearbeitung |
 
 ## Verbindliche fachliche Prüfungen
@@ -41,7 +41,7 @@ Abnahme erfolgt getrennt nach implementierter Funktion, ausgeführtem automatisc
 
 ## Testergebnisse
 
-Die konkreten Commit-/Laufzuordnungen stehen in [`TEST_RESULTS.md`](TEST_RESULTS.md). Bislang sind 49 Fachtests, vier tatsächliche öffentliche API-Prüfungen sowie der Java-Generatorvergleich und JavaScript-Syntaxprüfung auf macOS bestanden. Die ersten Simulator-Builds deckten Konfigurationsfehler auf; diese wurden korrigiert und erneut zur Ausführung gegeben. Vor einem erfolgreichen neuen Lauf gilt die App nicht als im Simulator abgenommen.
+Die konkreten Commit-/Laufzuordnungen stehen in [`TEST_RESULTS.md`](TEST_RESULTS.md). Bislang sind 49 Fachtests, vier tatsächliche öffentliche API-Prüfungen sowie der Java-Generatorvergleich und JavaScript-Syntaxprüfung auf macOS bestanden. Debug-Testbuilds auf iPhone SE (3. Generation) und iPhone 16 Pro Max mit iOS 18.5 sowie der Release-Build sind erfolgreich. Die erste echte Simulator-Ausführung bestand je Gerät 14/18 Hosted- und 5/10 UI-Testfälle. Ihre konkreten Fehler werden korrigiert; bis zum erfolgreichen Folgelauf liegt keine vollständige Simulator-Abnahme vor.
 
 ## Plattformunterschiede und externe Abhängigkeiten
 

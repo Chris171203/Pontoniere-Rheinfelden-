@@ -76,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [compact, large]
+        profile: [compact, large, tablet]
     steps:
       - uses: actions/checkout@v4
       - name: Install project generator
@@ -86,7 +86,7 @@ jobs:
           xcodebuild -version
       - name: Compile and run simulator tests
         run: bash tools/ios-test.sh '${{ matrix.profile }}'
-      - name: Upload simulator evidence and unsigned simulator app
+      - name: Upload simulator evidence and ad-hoc-signed simulator app
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -97,6 +97,7 @@ struct CalendarEventEditor: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator { dismiss() } }
     func makeUIViewController(context: Context) -> EKEventEditViewController {
         let controller = EKEventEditViewController()
+        controller.view.accessibilityIdentifier = "system.calendar"
         controller.eventStore = context.coordinator.store
         let item = EKEvent(eventStore: context.coordinator.store)
         item.title = event.title

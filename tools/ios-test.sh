@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Reproducible unsigned simulator build + Core/App/UI tests. Run from any directory.
+# Reproducible ad-hoc-signed simulator build + Core/App/UI tests. Run from any directory.
 set -euo pipefail
 
 PFVR_REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PFVR_PROFILE=${1:-compact}
-case "$PFVR_PROFILE" in compact|large) ;; *) echo 'Usage: ios-test.sh [compact|large]' >&2; exit 2;; esac
+case "$PFVR_PROFILE" in compact|large|tablet) ;; *) echo 'Usage: ios-test.sh [compact|large|tablet]' >&2; exit 2;; esac
 if [[ $(uname -s) != Darwin ]]; then
   echo 'iOS simulator tests require macOS and Xcode. No iOS build was performed.' >&2
   exit 2
@@ -35,9 +35,11 @@ collect_evidence() {
   if [[ -d "$PFVR_OUT/tests.xcresult" ]]; then
     xcrun xcresulttool get test-results summary --path "$PFVR_OUT/tests.xcresult" > "$PFVR_OUT/test-summary.json" 2> "$PFVR_OUT/summary-export.log"
     xcrun xcresulttool export attachments --path "$PFVR_OUT/tests.xcresult" --output-path "$PFVR_OUT/screenshots" > "$PFVR_OUT/attachment-export.log" 2>&1
+    swift tools/ios-visual-evidence.swift "$PFVR_OUT/screenshots" "$PFVR_OUT/visual-contact.jpg" "$PFVR_PROFILE" 2>&1
     xcrun xccov view --report --json "$PFVR_OUT/tests.xcresult" > "$PFVR_OUT/coverage.json" 2> "$PFVR_OUT/coverage-export.log"
   fi
   if [[ -d "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" ]]; then
+    codesign -d --entitlements :- "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" > "$PFVR_OUT/simulator-entitlements.plist" 2> "$PFVR_OUT/simulator-signature.log"
     ditto -c -k --sequesterRsrc --keepParent "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" "$PFVR_OUT/PFVR-simulator.app.zip"
   fi
   if [[ -d "$PFVR_REPO/iOS/PFVR.xcodeproj" ]]; then
@@ -62,15 +64,20 @@ else
 fi
 PFVR_ARGS=(-project iOS/PFVR.xcodeproj -scheme PFVR -configuration Debug
   -destination "platform=iOS Simulator,id=$PFVR_DEVICE"
-  -derivedDataPath "$PFVR_DERIVED" CODE_SIGNING_ALLOWED=NO)
+  -derivedDataPath "$PFVR_DERIVED" CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual)
 xcodebuild "${PFVR_ARGS[@]}" build-for-testing -resultBundlePath "$PFVR_OUT/build.xcresult" 2>&1 | tee "$PFVR_OUT/build.log"
+python3 tools/ios-verify-simulator-signing.py "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app"
 if [[ "$PFVR_PROFILE" == compact ]]; then
   xcodebuild -project iOS/PFVR.xcodeproj -scheme PFVR -configuration Release \
     -destination "platform=iOS Simulator,id=$PFVR_DEVICE" -derivedDataPath "$PFVR_DERIVED-release" \
-    CODE_SIGNING_ALLOWED=NO build -resultBundlePath "$PFVR_OUT/release.xcresult" \
+    CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual build -resultBundlePath "$PFVR_OUT/release.xcresult" \
     2>&1 | tee "$PFVR_OUT/release-build.log"
 fi
-xcodebuild "${PFVR_ARGS[@]}" test-without-building -resultBundlePath "$PFVR_OUT/tests.xcresult" \
+PFVR_TEST_SELECTION=()
+if [[ "$PFVR_PROFILE" == tablet ]]; then
+  PFVR_TEST_SELECTION=(-only-testing:PFVRUITests/PFVRUITests/testSystemShareAndCalendarEditorsCanBeCancelled)
+fi
+xcodebuild "${PFVR_ARGS[@]}" test-without-building "${PFVR_TEST_SELECTION[@]}" -resultBundlePath "$PFVR_OUT/tests.xcresult" \
   -parallel-testing-enabled NO -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 \
   2>&1 | tee "$PFVR_OUT/test.log"

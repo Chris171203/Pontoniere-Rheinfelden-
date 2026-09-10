@@ -45,13 +45,15 @@ final class InternalAttendanceTests: XCTestCase {
         model.loadFixture(fixture)
     }
 
-    private func waitFor(_ predicate: @escaping () async throws -> Bool, timeout: TimeInterval = 8) async throws {
+    private func waitFor(_ predicate: @escaping () async throws -> Bool, timeout: TimeInterval = 8,
+                         file: StaticString = #filePath, line: UInt = #line) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if try await predicate() { return }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
-        XCTFail("Local WebKit fixture condition timed out")
+        let keychain = testStore.lastFailureStatus.map { " (Keychain OSStatus: \($0))" } ?? ""
+        XCTFail("Local WebKit fixture condition timed out\(keychain)", file: file, line: line)
         throw NSError(domain: "PFVRFixture", code: 1)
     }
 
@@ -104,6 +106,7 @@ final class InternalAttendanceTests: XCTestCase {
         try await waitFor { try await self.bool("document.querySelectorAll('.pfvr-attendance-mobile .pfvr-person-header').length===4") }
         let forwarded = try await bool("fixture.personInputs[0]==='fixture-dora' && fixture.personChanges[0]==='fixture-dora' && JSON.parse(localStorage.getItem('pfvr-attendance-people-v4')).restoreValues['probe dora']==='fixture-dora'")
         XCTAssertTrue(forwarded)
+        try await waitFor { self.model.acceptedPeopleMessages > 0 }
         try await waitFor { self.testStore.loadPeopleState()?.contains("fixture-dora") == true }
         // Reload the initial fixture: only an explicitly saved website option may be restored.
         model.reload()
@@ -129,7 +132,7 @@ final class InternalAttendanceTests: XCTestCase {
         XCTAssertTrue(headerInert)
         let policy = try await bool("!!document.head.querySelector('meta[name=referrer][content=no-referrer]')")
         XCTAssertTrue(policy)
-        _ = try await webView.evaluateJavaScript("var meta=document.createElement('meta');meta.name='referrer';meta.content='unsafe-url';document.head.appendChild(meta)")
+        _ = try await webView.evaluateJavaScript("var meta=document.createElement('meta');meta.name='referrer';meta.content='unsafe-url';document.head.appendChild(meta);null;")
         try await waitFor { try await self.bool("Array.from(document.querySelectorAll('meta[name=referrer]')).every(n=>n.content==='no-referrer')") }
     }
 

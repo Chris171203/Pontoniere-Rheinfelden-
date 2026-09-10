@@ -4,13 +4,14 @@ Stand 2026-09-10. Die erste iOS-Portierung bleibt Testversion `0.12.6`, Bundle-I
 
 ## Ausführung
 
-Voraussetzungen: macOS, vollständiges Xcode mit installierten iPhone-Simulatoren und XcodeGen ≥ 2.42. Ein Apple-Entwicklerkonto oder Signierschlüssel ist für diese Simulatorprüfungen nicht erforderlich.
+Voraussetzungen: macOS, vollständiges Xcode mit installierten iPhone-Simulatoren und XcodeGen ≥ 2.42. Ein Apple-Entwicklerkonto oder Signierschlüssel ist für diese Simulatorprüfungen nicht erforderlich. Die Simulator-App erhält eine lokale Ad-hoc-Signatur (`codesign -`) mit einem ausschließlich für Simulator-SDKs eingebundenen eigenen Keychain-Zugriffsbereich. So wird die echte Keychain geprüft; sie wird nicht durch einen Mock ersetzt.
 
 ```bash
 swift test --package-path iOS --enable-code-coverage
 xcodegen generate --spec iOS/project.yml
 bash tools/ios-test.sh compact
 bash tools/ios-test.sh large
+bash tools/ios-test.sh tablet # gezielt: System-Teilen und Kalender öffnen/abbrechen
 ```
 
 Alternativ `iOS/PFVR.xcodeproj` nach der Generierung in Xcode öffnen, Scheme `PFVR`, iPhone-Simulator und Test wählen. Für Gerät/TestFlight sind ein eigenes Team, passende Bundle-ID, Signierung und ein gesonderter Freigabeprozess erforderlich; die CI erzeugt eine Simulator-App, keine installierbare iPhone-IPA.
@@ -23,19 +24,19 @@ Alternativ `iOS/PFVR.xcodeproj` nach der Generierung in Xcode öffnen, Scheme `P
 |---|---|---|
 | PFVRCoreTests | SwiftPM/macOS und iOS-Simulator | Fachlogik, Beträge/Swiss-QR, persistenter Warenkorb, Hydrologie, Kalender/Wetter, Parser/Cache und URL-Regeln |
 | PFVRAppTests | Gehostet in der echten Simulator-App | WKWebView/JavaScript, Navigation und sichere Speicherung mit lokalen Prüfdaten |
-| PFVRUITests | XCUITest auf zwei iPhone-Größen | Freigabe, Navigation, Warenkorb-Neustart, Zahlungsbestätigung, QR-Anzeige, Termine und Sprache |
+| PFVRUITests | XCUITest auf zwei iPhone-Größen; gezielter Systemdialogtest zusätzlich auf iPad | Freigabe, Navigation, Warenkorb-Neustart, Zahlungsbestätigung, QR-Anzeige, Termine, Sprache sowie System-Teilen/Kalender öffnen und abbrechen |
 
 Vor den Swift-Tests prüft die CI den JavaScript-Export bytegenau gegen den echten Android-Java-Generator und lässt V8 beide Sprachvarianten sowie das WebKit-Fixtureskript parsen. Das prüft Exportdrift und JavaScript-Syntax; DOM-Verhalten bleibt Aufgabe der WebKit-Tests.
 
 Der Workflow `iOS CI` läuft auf `main`, `codex/ios-port-*`, Pull Requests nach `main` und manuell. PR-/Push-Läufe derselben Branch teilen eine Concurrency-Gruppe. Tests laufen ohne automatische Wiederholung fehlgeschlagener Fälle. Beide Simulatorgrößen werden auch dann unabhängig geprüft, wenn eine fehlschlägt. Compact kompiliert zusätzlich die Release-Konfiguration, damit auch die Grenzen der Debug-Testhilfen durch den Compiler geprüft werden.
 
-Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact läuft hell, large dunkel. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
+Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact und tablet laufen hell, large dunkel. `tablet` wählt ein passendes iPad und führt ausschließlich den Test der echten Systemdialoge aus. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
 
 Ein separater Core-Schritt führt mit `PFVR_LIVE_SMOKE=1` den `LiveSourceSmokeTests`-Vertragstest gegen die öffentlichen Datenquellen aus. Er prüft echte Antworten und verwendet keinen persönlichen Serverzugang. Ein externer Ausfall blockiert die deterministische Prüfung nicht (`continue-on-error`); das eigene Log `live-source-smoke.log` muss deshalb ausdrücklich bewertet werden.
 
 ## Nachweise und Grenzen
 
-Jeder Simulatorlauf lädt `.xcresult`, Build-/Testlogs, Coverage-Bericht, exportierte Screenshot-PNGs sowie die unsignierte Simulator-App und das erzeugte Xcode-Projekt als GitHub-Artefakte hoch. Screenshots werden für alle Tabs, Terminansicht, Sprachwahl, QR und Zahlungsbestätigung aufbewahrt. Die Bilder benötigen eine tatsächliche Sichtprüfung; vorhandene Screenshots allein sind kein visueller Qualitätsnachweis.
+Jeder Simulatorlauf lädt `.xcresult`, Build-/Testlogs, Coverage-Bericht, exportierte Screenshot-PNGs sowie die lokal ad-hoc-signierte Simulator-App und das erzeugte Xcode-Projekt als GitHub-Artefakte hoch. Screenshots werden für alle Tabs, Terminansicht, Sprachwahl, QR und Zahlungsbestätigung aufbewahrt. Ein begrenzter Kontaktbogen ausschließlich benannter synthetischer UI-Prüfbilder wird zusätzlich als Base64 im Joblog ausgegeben, damit die Sichtprüfung auch bei blockiertem Artefaktdownload möglich bleibt. Die echte Simulator-Signatur und die enthaltenen Keychain-Entitlements werden vor den Tests geprüft und protokolliert. Die Bilder benötigen eine tatsächliche Sichtprüfung; vorhandene Screenshots allein sind kein visueller Qualitätsnachweis.
 
 UI-Tests verwenden `-ui-testing` mit eigener Preferences-Domain und deterministischen öffentlichen Beispieldaten. `-ui-test-reset`, `-ui-test-unlocked` und `-ui-test-pending-payment` sind ausschließlich im Debug-Build wirksam. Die Tests geben keine echte Zahlung frei und verwenden keinen persönlichen Intern-Link. Die QR-Anzeige darf weder Warenkorb noch Zahlungsbestätigungsstatus verändern. Ein extern gestarteter Zahlungsversuch wird für die Bestätigungsprüfung explizit nachgebildet.
 

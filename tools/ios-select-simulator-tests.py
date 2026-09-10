@@ -12,6 +12,7 @@ DEVICES = {
     'com.apple.CoreSimulator.SimRuntime.iOS-18-5': [
         {'name': 'iPhone SE (3rd generation)', 'udid': 'SE-18', 'isAvailable': True},
         {'name': 'iPhone 16 Pro Max', 'udid': 'MAX-18', 'isAvailable': True},
+        {'name': 'iPad Pro 11-inch (M4)', 'udid': 'PAD-18', 'isAvailable': True},
     ],
     'com.apple.CoreSimulator.SimRuntime.iOS-26-2': [
         {'name': 'iPhone 17', 'udid': 'BASE-26', 'isAvailable': True},
@@ -24,6 +25,9 @@ class SimulatorSelectionTests(unittest.TestCase):
     def test_xcode_16_sdk_never_selects_installed_ios_26(self):
         self.assertEqual(selector.select(DEVICES, 'compact', '18.5')[1]['udid'], 'SE-18')
         self.assertEqual(selector.select(DEVICES, 'large', '18.5')[1]['udid'], 'MAX-18')
+
+    def test_tablet_selects_a_supported_ipad(self):
+        self.assertEqual(selector.select(DEVICES, 'tablet', '18.5')[1]['udid'], 'PAD-18')
 
     def test_new_xcode_can_use_its_matching_runtime(self):
         self.assertEqual(selector.select(DEVICES, 'large', '26.2')[1]['udid'], 'MAX-26')

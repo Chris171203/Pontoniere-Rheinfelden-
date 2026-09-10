@@ -35,7 +35,7 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 - Keine persönlichen Zugangsparameter, Schlüssel oder Personen-IDs im Repository oder in Diagnosedaten.
 - Test-APK reproduzierbar aus dem eingecheckten Quellstand bauen; keine verdeckten Build-Patches.
 - Dauerhafte Android-Updates setzen eine unveränderte Paket-ID und dieselbe geschützte Signatur voraus.
-- Android und spätere iOS-App sollen dieselben fachlichen Kernfunktionen bieten.
+- Android und die native SwiftUI-App unter `iOS/` sollen dieselben fachlichen Kernfunktionen bieten. Der laufende Portierungs- und Abnahmestand ist in `iOS/PORTING_STATUS.md` dokumentiert.
 
 ## Release
 

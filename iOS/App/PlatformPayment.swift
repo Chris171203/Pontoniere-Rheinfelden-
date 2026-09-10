@@ -54,6 +54,7 @@ struct ActivitySheet: UIViewControllerRepresentable {
     var completed: ((UIActivity.ActivityType?, Bool) -> Void)?
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        controller.view.accessibilityIdentifier = "system.share"
         controller.completionWithItemsHandler = { activity, success, _, _ in completed?(activity, success) }
         return controller
     }

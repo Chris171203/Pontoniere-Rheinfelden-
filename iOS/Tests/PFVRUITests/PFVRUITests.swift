@@ -59,7 +59,7 @@ final class PFVRUITests: XCTestCase {
     private func cashTotal() -> String {
         let total = element("cart.total")
         XCTAssertTrue(total.waitForExistence(timeout: 5))
-        return total.label
+        return (total.value as? String) ?? total.label
     }
 
     private func addDrink() {
@@ -171,6 +171,56 @@ final class PFVRUITests: XCTestCase {
         XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
         tap("tab.cash")
         XCTAssertEqual(cashTotal(), savedTotal)
+    }
+
+
+    /// Opens Apple's real controllers and cancels them without sharing or saving.
+    /// This also runs alone on iPad to exercise native modal/popover presentation.
+    func testSystemShareAndCalendarEditorsCanBeCancelled() {
+        launch()
+        addDrink()
+        let savedTotal = cashTotal()
+        tap("payment.qr")
+        XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
+        tap("payment.share")
+        XCTAssertTrue(element("system.share").waitForExistence(timeout: 10))
+        capture("system-share-ui")
+        cancelSystemEditor("system.share", allowSwipe: true)
+        XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
+        tap("payment.done")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists, "Cancelling share must not arm a payment question")
+
+        tap("tab.events")
+        tap("event.ui-training")
+        tap("event.calendar")
+        XCTAssertTrue(element("system.calendar").waitForExistence(timeout: 10))
+        capture("system-calendar-ui")
+        cancelSystemEditor("system.calendar", allowSwipe: false)
+        XCTAssertTrue(element("event.detail").waitForExistence(timeout: 5))
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+    }
+
+    private func cancelSystemEditor(_ id: String, allowSwipe: Bool, file: StaticString = #filePath, line: UInt = #line) {
+        let controller = element(id)
+        let labels = ["Abbrechen", "Cancel", "Schließen", "Schliessen", "Close"]
+        let cancelButtons = controller.buttons.matching(NSPredicate(format: "label IN %@", labels)).allElementsBoundByIndex
+        if let cancel = cancelButtons.first(where: { $0.isHittable }) {
+            cancel.tap()
+        } else if allowSwipe {
+            // Native activity sheets also support dragging their top edge down.
+            let top = controller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            let bottom = controller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+            top.press(forDuration: 0.1, thenDragTo: bottom)
+        } else {
+            XCTFail("The native calendar Cancel button is unavailable", file: file, line: line)
+        }
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: controller)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed, "The system editor must actually close", file: file, line: line)
     }
 
     func testEventDetailPreservesSourceTextAndExposesActions() {

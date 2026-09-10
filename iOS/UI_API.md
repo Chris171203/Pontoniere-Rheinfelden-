@@ -50,7 +50,7 @@ Stable accessibility identifiers:
 | Internal config | `settings.internal.url`, `settings.internal.save`, `settings.internal.result` |
 | Weather/River | `home.weather`, `home.weather.threeDays`, `river.refresh`, `river.range`, `river.basel.unit`, `river.station.{stationID}`, `river.graph.{stationID}` |
 | Events | `event.{id}`, `event.detail`, `event.share`, `event.calendar`, `event.route` |
-| Cart | `cart.add.{itemId}`, `cart.remove.{itemId}`, `cart.total`, `cart.clear`, `cart.clear.confirm`, `cash.cart` |
+| Cart | `cart.add.{itemId}`, `cart.remove.{itemId}`, `cart.total` (label Total, value CHF amount), `cart.clear`, `cart.clear.confirm` |
 | Payment | `payment.qr`, `payment.twint`, `payment.qr.image`, `payment.share`, `payment.done`, `payment.free.amount`, `payment.confirm.yes`, `payment.confirm.no` |
 
 ## Deliberate platform differences / remaining device checks

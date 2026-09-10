@@ -120,8 +120,10 @@ struct TileSettingsView: View {
                             Spacer()
                             Text(state.ui("Fixiert")).font(.caption).foregroundStyle(.secondary)
                         } else {
+                            Text(state.ui(tile.label)).font(.subheadline).frame(maxWidth: .infinity, alignment: .leading)
                             Toggle(state.ui(tile.label), isOn: Binding(get: { state.tileVisible(tile) }, set: { state.setTileVisible($0, tile: tile) }))
-                                .font(.subheadline).accessibilityIdentifier("tiles.toggle.\(tile.id)")
+                                .toggleStyle(.switch).labelsHidden().fixedSize()
+                                .accessibilityLabel(state.ui(tile.label)).accessibilityIdentifier("tiles.toggle.\(tile.id)")
                             Button { state.moveTile(tile, by: -1) } label: { Image(systemName: "arrow.up").frame(width: 32, height: 44) }
                                 .buttonStyle(.borderless).accessibilityLabel(state.ui("Nach oben")).accessibilityIdentifier("tiles.up.\(tile.id)")
                             Button { state.moveTile(tile, by: 1) } label: { Image(systemName: "arrow.down").frame(width: 32, height: 44) }
