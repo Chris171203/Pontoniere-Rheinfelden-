@@ -7,7 +7,7 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 ## Kernfunktionen
 
 - Personalisierbare Kachelbereiche auf Home, in der Kasse und im Verein. Reihenfolge und Sichtbarkeit werden lokal gespeichert; zentrale Funktionen können als fixierte Kacheln vor Ausblenden geschützt werden.
-- Home mit Wetter zum nächsten relevanten Vereinsanlass.
+- Home mit Wetter zum nächsten relevanten Vereinsanlass. Ein dezenter Refresh-Tap direkt bei `Rhein aktuell` erzwingt bei Bedarf einen neuen Abruf der Live-Wetter- und Rheindaten, ohne den Umweg über Einstellungen.
   - Der nächste laufende oder kommende, nicht abgesagte Termin aus dem öffentlichen Vereinskalender wird unabhängig vom Termin-Titel berücksichtigt, damit z. B. Wettfahren, JP-Prüfungen, Endfahren, Wanderungen und weitere gemeinsame Anlässe Wetter erhalten.
   - Ein früher liegendes reguläres Training aus dem saisonalen Trainingsplan bleibt als Fallback/Ergänzung berücksichtigt, wenn es im Kalender nicht explizit geführt wird.
   - Kurze Termine zeigen weiterhin die Prognose über den tatsächlichen Terminzeitraum. Ganztägige oder mindestens fünfstündige Termine zeigen drei Prognosepunkte; ganztägig/multitägig `06/12/18 Uhr`, lange eintägige Termine anhand Start/Mitte/Ende.

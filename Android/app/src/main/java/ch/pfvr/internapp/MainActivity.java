@@ -535,11 +535,10 @@ private View home() {
     body.addView(hero,margin(-1,-2,0,4,0,14));
     hero.addView(txt("RHEINFELDEN  •  SEIT 1896",12,Color.rgb(208,231,239),true));
     TextView heading = txt("Gemeinsam auf dem Rhein.",29,Color.WHITE,true);
-    heading.setPadding(0,dp(8),0,dp(5));
+    heading.setPadding(0,dp(8),0,0);
     hero.addView(heading);
-    hero.addView(txt("Training, Wettfahren und Vereinsleben – alles Wichtige direkt griffbereit.",15,Color.rgb(232,243,247),false));
     LinearLayout actions = new LinearLayout(this);
-    actions.setPadding(0,dp(17),0,0);
+    actions.setPadding(0,dp(14),0,0);
     hero.addView(actions);
     Button internal = btn("An-/Abmelden",Color.WHITE,NAVY);
     internal.setOnClickListener(v->navigate(Screen.INTERNAL));
@@ -620,25 +619,49 @@ private View homeTileView(TileLayoutStore.Spec spec){
 }
 
 private View homeWeatherTile(){
-    LinearLayout group=tileGroup("Wetter zum nächsten Termin","Prognose für den nächsten relevanten Vereinsanlass");
+    LinearLayout group=tileGroup("Wetter zum nächsten Termin",null);
     group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeThreeDayWeatherTile(){
-    LinearLayout group=tileGroup("3-Tage-Wetter","Heute und die nächsten zwei Tage · Rheinfelden");
+    LinearLayout group=tileGroup("3-Tage-Wetter",null);
     group.addView(threeDayWeatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeRiverSummaryTile(){
-    LinearLayout group=tileGroup("Rhein aktuell","Abfluss, Pegel, Temperatur und Messdatenstand");
+    LinearLayout group=tileGroup("Rhein aktuell",null);
+    addHomeLiveRefreshAction(group);
     group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));
-    TextView safety=txt("BAFU-Aktuellwerte sind ungeprüfte Rohdaten und können Fehler enthalten. Die angezeigte Schifffahrtslage dient der Orientierung und ist keine amtliche Freigabe. Massgebend sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);
+    TextView safety=txt("BAFU-Rohdaten, ungeprüft. Schifffahrtslage nur zur Orientierung – verbindlich sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);
     safety.setPadding(dp(2),dp(7),dp(2),dp(3));
     safety.setOnClickListener(v->external(RIVER_NAVIGATION_SOURCE));
     group.addView(safety);
     return group;
+}
+
+private void addHomeLiveRefreshAction(LinearLayout group){
+    if(group==null||group.getChildCount()==0)return;
+    View heading=group.getChildAt(0);
+    group.removeViewAt(0);
+    LinearLayout row=new LinearLayout(this);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+    TextView refresh=txtRaw("↻",22,WATER,true);
+    refresh.setGravity(Gravity.CENTER);
+    refresh.setAlpha(0.82f);
+    refresh.setContentDescription(ui("Aktualisieren"));
+    refresh.setOnClickListener(v->{
+        v.animate().cancel();
+        v.setRotation(0f);
+        v.animate().rotation(360f).setDuration(420L).withEndAction(()->v.setRotation(0f)).start();
+        refreshLive(true);
+    });
+    LinearLayout.LayoutParams refreshParams=new LinearLayout.LayoutParams(dp(44),dp(44));
+    refreshParams.setMargins(dp(6),0,0,dp(3));
+    row.addView(refresh,refreshParams);
+    group.addView(row,0);
 }
 
 private View homeRiverChartsTile(){
@@ -654,7 +677,7 @@ private View homeRiverChartsTile(){
 }
 
 private View homeEventsTile(){
-    LinearLayout group=tileGroup("Als Nächstes","Aus dem öffentlichen Vereinskalender");
+    LinearLayout group=tileGroup("Als Nächstes",null);
     if(events.isEmpty()){
         LinearLayout loading=card();
         loading.setGravity(Gravity.CENTER_VERTICAL);
@@ -673,7 +696,7 @@ private View homeEventsTile(){
 }
 
 private View homeNewsTile(){
-    LinearLayout group=tileGroup("Aktuell vom Verein",ui("News von pfvr.ch")+" · "+newsStatus());
+    LinearLayout group=tileGroup("Aktuell vom Verein",newsStatus());
     if(news.isEmpty()){
         LinearLayout loading=card();
         loading.setGravity(Gravity.CENTER_VERTICAL);
@@ -723,7 +746,6 @@ private void rebuildHomePreservingScroll(){
         if(WeatherEventPolicy.usesThreePoints(slot.allDay,slot.start,slot.end))return weatherMultiPointCard(slot);
         LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
         String[] x=weatherSummary(slot);
-        c.addView(txt(x[0],11,WATER,true));
         LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(5),0,dp(5)); c.addView(row);
         TextView icon=txtRaw(x[5],38,themeText(TEXT),false); icon.setGravity(Gravity.CENTER); row.addView(icon,new LinearLayout.LayoutParams(dp(58),dp(58)));
         LinearLayout info=new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL); info.setPadding(dp(7),0,0,0); row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
@@ -738,7 +760,6 @@ private void rebuildHomePreservingScroll(){
         LinearLayout c=card();
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(dp(14),dp(14),dp(14),dp(13));
-        c.addView(txt("NÄCHSTER TERMIN",11,WATER,true));
         TextView title=txtRaw(slot.title==null||slot.title.isBlank()?ui("Vereinstermin"):slot.title,16,TEXT,true);
         title.setPadding(0,dp(5),0,dp(2));
         c.addView(title);
@@ -1671,7 +1692,17 @@ private void rebuildHomePreservingScroll(){
 
     private String weatherIcon(int c){if(c==0)return "☀";if(c<=2)return "⛅";if(c==3)return "☁";if(c==45||c==48)return "🌫";if(c>=51&&c<=67)return "🌧";if(c>=71&&c<=77)return "❄";if(c>=80&&c<=82)return "🌦";if(c>=85&&c<=86)return "🌨";if(c>=95)return "⚡";return "◌";}
 
-    private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?" · Cache "+(min/60)+" h":" · "+ui("vor")+" "+min+" min");}
+    private String compactWeatherSource(String source){
+        if(source!=null&&source.contains("Open-Meteo"))return "MeteoSwiss/Open-Meteo";
+        return source==null||source.isBlank()?"MeteoSwiss/Open-Meteo":source;
+    }
+
+    private String weatherAge(String source,long updated){
+        String label=compactWeatherSource(source);
+        if(updated<=0)return label;
+        long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);
+        return label+(min>90?" · Cache "+(min/60)+" h":" · "+ui("vor")+" "+min+" min");
+    }
     private String weatherCode(int c){if(c==0)return ui("klar");if(c<=2)return ui("leicht bewölkt");if(c==3)return ui("bewölkt");if(c==45||c==48)return ui("Nebel");if(c>=51&&c<=57)return ui("Nieselregen");if(c>=61&&c<=67)return ui("Regen");if(c>=71&&c<=77)return ui("Schnee");if(c>=80&&c<=82)return ui("Schauer");if(c>=85&&c<=86)return ui("Schneeschauer");if(c>=95)return ui("Gewitter");return ui("Wetter");}
 
     private HydroPoint currentHydroPoint(HydroStation station,String parameter){
@@ -2706,9 +2737,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     body.addView(hero,margin(-1,-2,0,4,0,14));
     hero.addView(txt("VEREINSBEIZ",12,Color.rgb(208,231,239),true));
     TextView title=txt("Konsumation bezahlen",27,Color.WHITE,true);
-    title.setPadding(0,dp(5),0,dp(5));
+    title.setPadding(0,dp(5),0,0);
     hero.addView(title);
-    hero.addView(txt("Artikel für dich, Kinder oder die ganze Runde zusammenstellen – oder weiterhin einen freien Betrag verwenden.",14,Color.rgb(232,243,247),false));
     if(!hasPreferredBank()){
         section(body,"Zahlungsweg","Für Direktzahlungen einmalig eine Banking-App festlegen");
         body.addView(cashBankStatusCard(),margin(-1,-2,0,0,0,12));
@@ -2735,7 +2765,7 @@ private View cashTileView(TileLayoutStore.Spec spec){
 }
 
 private View cashCartTile(){
-    LinearLayout group=tileGroup("Warenkorb","Ausgewählte Artikel und Zahlungswege");
+    LinearLayout group=tileGroup("Warenkorb",null);
     LinearLayout cart=card();
     cart.setOrientation(LinearLayout.VERTICAL);
     group.addView(cart,new LinearLayout.LayoutParams(-1,-2));
