@@ -40,7 +40,7 @@ Jeder Simulatorlauf lädt `.xcresult`, Build-/Testlogs, Coverage-Bericht, export
 
 UI-Tests verwenden `-ui-testing` mit eigener Preferences-Domain und deterministischen öffentlichen Beispieldaten. `-ui-test-reset`, `-ui-test-unlocked` und `-ui-test-pending-payment` sind ausschließlich im Debug-Build wirksam. Die Tests geben keine echte Zahlung frei und verwenden keinen persönlichen Intern-Link. Die QR-Anzeige darf weder Warenkorb noch Zahlungsbestätigungsstatus verändern. Ein extern gestarteter Zahlungsversuch wird für die Bestätigungsprüfung explizit nachgebildet.
 
-Der erste Simulatorstand hat noch kein fertiges AppIcon-Set; die Vorgabe eines nicht vorhandenen `AppIcon`-Assets ist im Testprojekt deaktiviert. Ein ausreichend hoch aufgelöstes offizielles Icon und die vollständigen Store-Assets sind vor einer Veröffentlichung zu ergänzen.
+Das AppIcon wird beim Erzeugen des Xcode-Projekts aus dem vorhandenen Vereinslogo aufgebaut (`tools/ios-app-icon.py`, macOS `sips`). Das unveränderte 96×96-JPEG bleibt die einzige Bildquelle; die technische 1024×1024-Konvertierung erfindet keine zusätzlichen Details. Ein höher aufgelöstes Original wäre optisch besser, ist aber keine Voraussetzung für die erste Geräteinstallation. Der Gerätearchiv-Prüfer verlangt das kompilierte AppIcon für iPhone und iPad.
 
 Die vollständige reale Zahlung mit Banking-/TWINT-App, persönliche produktive An-/Abmeldung, Apple-Signierung/TestFlight und physische Geräte sind durch Simulatorprüfungen nicht abgedeckt. Bereits durchgeführte Läufe, Ergebnisse und offene Prüfpunkte werden in `PORTING_STATUS.md` dokumentiert; vorbereitete Tests gelten dort erst nach realer Ausführung als bestanden.
 

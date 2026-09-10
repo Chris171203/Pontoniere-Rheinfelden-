@@ -4,3 +4,4 @@ build/
 PFVR.xcodeproj/
 *.xcuserstate
 xcuserdata/
+App/Assets.xcassets/AppIcon.appiconset/

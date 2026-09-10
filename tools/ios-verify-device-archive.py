@@ -57,6 +57,12 @@ def verify(archive):
             raise ValueError(f'{key}: expected {value!r}, got {info.get(key)!r}')
     if not (app / 'PrivacyInfo.xcprivacy').is_file():
         raise ValueError('Privacy manifest missing from device product')
+    for key in ['CFBundleIcons', 'CFBundleIcons~ipad']:
+        icon = info.get(key, {}).get('CFBundlePrimaryIcon', {})
+        if icon.get('CFBundleIconName') != 'AppIcon' or not icon.get('CFBundleIconFiles'):
+            raise ValueError(f'{key}: compiled AppIcon metadata missing')
+    if not (app / 'Assets.car').is_file():
+        raise ValueError('Compiled asset catalog missing')
     executable = app / info['CFBundleExecutable']
     architectures = subprocess.check_output(['xcrun', 'lipo', '-archs', str(executable)], text=True).strip()
     if architectures != 'arm64':
@@ -76,7 +82,7 @@ def verify(archive):
             'version': info['CFBundleShortVersionString'], 'build': info['CFBundleVersion'],
             'platform': platforms[0], 'architecture': architectures,
             'minimum_ios': info['MinimumOSVersion'], 'device_families': info['UIDeviceFamily'],
-            'signed': False, 'installable_ipa': False, 'store_validation': 'not performed'}
+            'app_icon': 'AppIcon', 'signed': False, 'installable_ipa': False, 'store_validation': 'not performed'}
 
 
 if __name__ == '__main__':

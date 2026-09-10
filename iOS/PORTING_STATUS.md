@@ -41,7 +41,7 @@ Der Android-Ausgangsbaum wurde identisch aus dem Remote-Commit rekonstruiert (`6
 ## Plattformunterschiede und fehlende Release-Nachweise
 
 - Geräteinstallation/TestFlight benötigt Apple-Team, geeignete Bundle-ID und Produktionssignierung. Die CI erzeugt eine ad-hoc-signierte Simulator-App und ein unsigniertes iPhoneOS-Release-Archiv, keine installierbare Geräte-IPA.
-- Ein ausreichend hoch aufgelöstes offizielles AppIcon und vollständige Store-Assets fehlen. Das vorhandene 96×96-Vereinslogo ist in der App enthalten.
+- Das vorhandene 96×96-Vereinslogo wird auf Nutzerwunsch als AppIcon verwendet; XcodeGen erzeugt die benötigte Asset-Größe beim Build. Ein höher aufgelöstes Original ist optional für bessere Schärfe. Diese Icon-Ergänzung wird separat im Gerätearchiv geprüft.
 - Physische Geräte und iOS 17 sind nicht zur Laufzeit geprüft. Das iPad besteht die elf vorhandenen UI-Szenarien im Hochformat; Querformat, Multitasking und reale Geräte sind gesondert offen.
 - Reale Banking-/TWINT-Übernahmen und Zahlungen sowie persönliche produktive Intern-Aktionen sind nicht durch synthetische Simulatorfälle belegt.
 - iOS-Teilen ersetzt Android-Paketwahl. Eine erfolgreiche Übergabe ist keine automatisch verifizierte Zahlung.
@@ -55,7 +55,7 @@ Zuerst Root-`AGENTS.md`, `PROJECT.md`, `STATUS.md`, diese Datei und `iOS/BUILD_T
 
 Nächste konkrete Arbeiten für eine Geräte-/Store-Version:
 
-1. Offizielles hochauflösendes AppIcon und Store-Assets ergänzen.
+1. Vereinslogo als AppIcon im Gerätearchiv abnehmen; Store-Texte/-Screenshots erst für eine entsprechende Veröffentlichung ergänzen.
 2. Apple-Team, Produktions-Bundle-ID und geschützte Signierung/TestFlight-Verteilung einrichten.
 3. Verfügbare physische Geräte/iOS-17-Runtime sowie iPad-Querformat/Multitasking prüfen; tatsächliche Banking-/Intern-Integrationen mit dafür vorgesehenen Zugängen gesondert abnehmen.
 4. Erst danach Verteilungs-/Release-Freigabe behandeln. Der bestehende PR ist nicht gemergt und nichts wurde veröffentlicht.
@@ -74,3 +74,7 @@ Stand 2026-09-10, abgeschlossen. Ausgangspunkt Remote `739d71d`; auch dessen CI-
 | Review | Keine aufgeweichten UI-Assertions, absichtlich übersprungene Core-Live-Tests bleiben zulässig | Bestanden; sechs Regressionstests, abschließendes Review ohne weitere materielle Befunde |
 
 Ein Simulatorlauf oder unsigniertes Archiv ersetzt weiterhin keinen physischen Geräte-/TestFlight-Nachweis. Die vorhandenen Quelllogos werden nicht als hochauflösende Originale ausgegeben.
+
+## AppIcon-Ergänzung
+
+Nutzerentscheidung: vorhandenes Vereinslogo verwenden. Icon-Generator und Geräteprodukt-Prüfung ergänzt; neuer CI-Gerätearchiv-Nachweis ausstehend. Der technische Installationsblocker bleibt Apple-Signierung/Provisionierung, nicht ein neues Logo oder weitere Simulatorfälle.
