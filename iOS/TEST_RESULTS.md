@@ -49,6 +49,15 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 - Konkrete Fehler: `cart.total` war für vier UI-Abläufe nicht als eigenständiges Accessibility-Element auffindbar; der Kachelschalter änderte im Test seinen Wert nicht; ein WebKit-Test gab einen nicht serialisierbaren DOM-Knoten zurück; die Personen-Fixture wartete vergeblich auf einen Zustand; der Keychain-Roundtrip meldete `unavailable`; Vision lieferte nach einem `e5rt ... OPERATION ERROR` keine QR-Erkennung.
 - Diese Ergebnisse sind keine vollständige Abnahme. Die Fachassertions bleiben erhalten; Accessibility/Testbedienung, Fixture und Simulator-Signierung werden gezielt korrigiert. Der QR-Test erhält eine explizite CPU-/Revisionskonfiguration und ein separates Kontrollbild, um Readerfehler von tatsächlich unlesbaren QR-Bildern zu unterscheiden.
 
+## Folgelauf nach Simulator-Korrekturen
+
+- Commit: `99e3dbec1fb4e4466a415b7911ae1a6f24f73fad`.
+- [GitHub Actions 34508226404](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34508226404).
+- Foundation-Job `102975560599`: deterministische Fachtests und die vier separat ausgeführten Live-Quellenprüfungen erneut bestanden. Vier Simulatorauswahl-Regressionsfälle decken jetzt auch iPad und den Ausschluss einer zu neuen Runtime ab.
+- Simulatorjobs: `102975560372` (kompakt), `102975560831` (groß), `102975560662` (iPad). Die iPhone-Läufe enthalten sämtliche Core-/Hosted-/UI-Tests; iPad führt gezielt den echten System-Teilen-/Kalendereditor-Test mit Abbruch aus. Der kompakte Lauf baut zusätzlich Release.
+- Die drei Simulatorjobs schlugen fehl. Der kompakte Log belegt einen erfolgreichen Debug-Testbuild und danach einen Fehler im zusätzlichen Signaturvalidator: Er suchte Simulator-Rechte in der macOS-Codesign-Plist. Xcode 16.4 bindet diese separat in den Mach-O-Abschnitt `__TEXT,__entitlements` ein; die normale Codesign-Plist darf leer sein. In diesem Job begannen weder Release-Build noch Laufzeittests.
+- Der Validator wurde daraufhin gezielt korrigiert: echte Ad-hoc-Signatur weiterhin prüfen und die Simulator-Rechte aus dem tatsächlich gebauten Executable lesen. Der SecItem-Roundtrip bleibt als unabhängiger harter Laufzeitnachweis erhalten. Dies ist kein Gerätezertifikat und keine Produktionssignierung.
+
 ## Lokal ausgeführte Prüfungen
 
 - Der aktuelle Android-Referenzbaum wurde mit GitHub verglichen; Baumhash identisch.

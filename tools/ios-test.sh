@@ -39,7 +39,7 @@ collect_evidence() {
     xcrun xccov view --report --json "$PFVR_OUT/tests.xcresult" > "$PFVR_OUT/coverage.json" 2> "$PFVR_OUT/coverage-export.log"
   fi
   if [[ -d "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" ]]; then
-    codesign -d --entitlements :- "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" > "$PFVR_OUT/simulator-entitlements.plist" 2> "$PFVR_OUT/simulator-signature.log"
+    codesign -d --entitlements :- "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" > "$PFVR_OUT/macos-signature-entitlements.plist" 2> "$PFVR_OUT/simulator-signature.log"
     ditto -c -k --sequesterRsrc --keepParent "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" "$PFVR_OUT/PFVR-simulator.app.zip"
   fi
   if [[ -d "$PFVR_REPO/iOS/PFVR.xcodeproj" ]]; then
@@ -66,7 +66,7 @@ PFVR_ARGS=(-project iOS/PFVR.xcodeproj -scheme PFVR -configuration Debug
   -destination "platform=iOS Simulator,id=$PFVR_DEVICE"
   -derivedDataPath "$PFVR_DERIVED" CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual)
 xcodebuild "${PFVR_ARGS[@]}" build-for-testing -resultBundlePath "$PFVR_OUT/build.xcresult" 2>&1 | tee "$PFVR_OUT/build.log"
-python3 tools/ios-verify-simulator-signing.py "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app"
+python3 tools/ios-verify-simulator-signing.py "$PFVR_DERIVED/Build/Products/Debug-iphonesimulator/PFVR.app" "$PFVR_OUT/simulator-entitlements.plist"
 if [[ "$PFVR_PROFILE" == compact ]]; then
   xcodebuild -project iOS/PFVR.xcodeproj -scheme PFVR -configuration Release \
     -destination "platform=iOS Simulator,id=$PFVR_DEVICE" -derivedDataPath "$PFVR_DERIVED-release" \

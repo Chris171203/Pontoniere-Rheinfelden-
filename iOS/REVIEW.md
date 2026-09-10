@@ -50,3 +50,15 @@ Die tatsächlichen Läufe und ihre Commitzuordnung stehen in `TEST_RESULTS.md` u
 Reale Banking-/TWINT-Übernahme, persönliche produktive Intern-Aktionen, vom Betriebssystem tatsächlich ausgelöste Hintergrundintervalle, physische Geräte, eine gegebenenfalls nicht installierte iOS-17-Runtime sowie Signierung/TestFlight bleiben getrennte Nachweise. Der BG-Lebenszyklus lässt sich mit injiziertem Scheduler/Taskhandle testen; daraus folgt keine bestimmte Zustellhäufigkeit auf einem iPhone.
 
 Der geerbte Android-Grenzwertfehler R1 bleibt dort bewusst unverändert und ist separat korrigierbar. Die strengere externe Navigation im iOS-Internbereich und das native iOS-Teilen anstelle der Android-Bankpaket-Erkennung sind dokumentierte Plattformunterschiede.
+
+## Gezieltes Nachreview der Simulator-Korrekturen
+
+Am 10.09.2026 wurde ausschliesslich der lokale Diff `83d015d` → `95d169d` für die gemeldeten Simulatorprobleme erneut geprüft; zugehöriger Remote-Stand: `99e3dbe`. Dabei wurden keine neuen materiellen Befunde festgestellt. Diese Ergänzung ändert nur die Dokumentation, nicht den laufenden CI-Quellstand.
+
+- **Cash/Toggle-Zugänglichkeit:** Die Gesamtzeile stellt ihren Betrag als Accessibility-Wert bereit; der UI-Test liest diesen Wert und prüft weiterhin die konkreten Beträge sowie den unveränderten Warenkorb. Die Kachelschalter erhalten begrenzte eigene Ziele; ihre Bindung an den persistenten Layoutzustand bleibt bestehen.
+- **Keychain-Diagnostik:** Ausgegeben werden ausschliesslich numerischer `OSStatus` und konstante Fehlernamen. URL, Keychain-Inhalte und Accountnamen werden nicht ergänzt. Der zusätzliche Debug-Zähler für Intern-Nachrichten liegt hinter den bestehenden Ursprungs-/Rahmenprüfungen; die Prüfung des tatsächlich gespeicherten Personenzustands bleibt erforderlich.
+- **Simulator-Signierung:** `Simulator.entitlements` ist allein an `CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]` gebunden. Die Ad-hoc-Flags werden im Testskript zusammen mit dem expliziten Simulatorziel verwendet. Der neue Prüfschritt kontrolliert die tatsächliche Signatur und die eigene Keychain-Gruppe. Daraus entsteht keine Geräte-/Produktionssignierung.
+- **Native Dialoge:** Neue Accessibility-Kennungen identifizieren die echten Share-/EventKit-Controller. Der Test verlangt deren tatsächliches Schliessen; Warenkorb und fehlende Zahlungsbestätigung werden anschliessend und nach Neustart weiter geprüft. Der iPad-Lauf ist gezielt auf diesen Systemdialogtest begrenzt und darf nicht als vollständiger iPad-Test bezeichnet werden.
+- **QR-Nachweis:** CPU-Ausführung und Vision-Revision 2 ändern den verwendeten Leserpfad, nicht die Anforderungen. Vollständiger Payload, Feldanzahl, IBAN, Empfänger, Betrag und Währung werden unverändert geprüft. Ein zusätzlicher Kontroll-QR muss mit demselben Leser ebenfalls dekodierbar sein. Es wurde keine fehlgeschlagene QR-Prüfung in einen Skip oder Erfolg umgewandelt.
+
+Dieses Nachreview ist ein Quellvergleich. Ergebnisse des dazugehörigen neuen Simulatorlaufs und die Sichtprüfung seiner Bilder müssen gesondert in den Testnachweisen festgehalten werden.
