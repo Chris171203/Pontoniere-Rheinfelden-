@@ -77,4 +77,4 @@ Ein Simulatorlauf oder unsigniertes Archiv ersetzt weiterhin keinen physischen G
 
 ## AppIcon-Ergänzung
 
-Nutzerentscheidung: vorhandenes Vereinslogo verwenden. Icon-Generator und Geräteprodukt-Prüfung ergänzt; neuer CI-Gerätearchiv-Nachweis ausstehend. Der technische Installationsblocker bleibt Apple-Signierung/Provisionierung, nicht ein neues Logo oder weitere Simulatorfälle.
+Nutzerentscheidung: vorhandenes Vereinslogo verwenden. Icon-Generator und Geräteprodukt-Prüfung ergänzt. Gerätearchiv auf `f405a48` in CI `34520320085`, Job `103015917220`, bestanden: AppIcon für iPhone/iPad kompiliert und im Produkt geprüft. Die übrigen Simulatorjobs dieses Icon-Stands laufen separat; die vollständige vorherige Funktionsabnahme bleibt oben commitgenau dokumentiert. Der technische Installationsblocker bleibt Apple-Signierung/Provisionierung, nicht ein neues Logo oder weitere Simulatorfälle.
