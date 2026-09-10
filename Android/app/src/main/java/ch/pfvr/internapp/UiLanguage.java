@@ -389,6 +389,7 @@ final class UiLanguage {
         put("Keine News", "Kei News");
         put("Quelle: Schweizerische Rheinhäfen  ↗", "Quelle: Schwiizerischi Rhyhäfe  ↗");
         put("BAFU Live-Daten", "BAFU-Livedate");
+        put("BAFU-Rohdaten, ungeprüft. Schifffahrtslage nur zur Orientierung – verbindlich sind die Schweizerischen Rheinhäfen.  →", "BAFU-Rohdate, ungeprüeft. D Schifffahrtslag isch nume zur Orientierig – verbindlich sind d Schwiizerische Rhyhäfe.  →");
         put("Abfluss links · Pegel rechts", "Abfluss links · Pegel rächts");
         put("Alle Apps", "Alli Apps");
         put("Banking-App öffnen", "Banking-App ufmache");

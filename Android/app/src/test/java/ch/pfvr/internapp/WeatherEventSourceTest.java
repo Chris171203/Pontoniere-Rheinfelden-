@@ -20,7 +20,7 @@ public class WeatherEventSourceTest {
 
     @Test public void weatherUsesNextGeneralClubEventBeforeRegularTraining() throws Exception {
         String activity=source();
-        assertTrue(activity.contains("tileGroup(\"Wetter zum nächsten Termin\",\"Prognose für den nächsten relevanten Vereinsanlass\")"));
+        assertTrue(activity.contains("tileGroup(\"Wetter zum nächsten Termin\",null)"));
         int start=activity.indexOf("private TrainingSlot nextCalendarWeatherSlot");
         int end=activity.indexOf("private TrainingSlot weatherSlotFromEvent",start);
         assertTrue(start>=0&&end>start);
