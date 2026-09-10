@@ -1,0 +1,187 @@
+import XCTest
+
+/// Runs against a real simulator app. Public fixtures are deterministic and all
+/// launch overrides are compiled out of Release. No personal access link is used.
+@MainActor
+final class PFVRUITests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        app = XCUIApplication()
+    }
+
+    override func tearDownWithError() throws {
+        if let run = testRun, run.hasSucceeded == false, app.state == .runningForeground {
+            capture("failure")
+        }
+        app.terminate()
+    }
+
+    private func launch(reset: Bool = true, unlocked: Bool = true, pending: Bool = false) {
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(de)", "-AppleLocale", "de_CH"]
+        if reset { app.launchArguments.append("-ui-test-reset") }
+        if unlocked { app.launchArguments.append("-ui-test-unlocked") }
+        if pending { app.launchArguments.append("-ui-test-pending-payment") }
+        app.launch()
+        if unlocked && !pending {
+            XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 10))
+        }
+    }
+
+    private func element(_ id: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: id).firstMatch
+    }
+
+    private func reveal(_ item: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0..<6 {
+            if item.exists && item.isHittable { return }
+            let scroll = app.scrollViews.firstMatch
+            if scroll.exists { scroll.swipeUp() } else { app.swipeUp() }
+        }
+        XCTAssertTrue(item.exists && item.isHittable, "Missing/unreachable element: \(item)", file: file, line: line)
+    }
+
+    private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let button = app.buttons[id]
+        reveal(button, file: file, line: line)
+        button.tap()
+    }
+
+    private func capture(_ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func cashTotal() -> String {
+        let total = element("cart.total")
+        XCTAssertTrue(total.waitForExistence(timeout: 5))
+        return total.label
+    }
+
+    private func addDrink() {
+        tap("tab.cash")
+        tap("cart.add.soft_5dl")
+        // The cart is pinned before the categories, so return to its visible position.
+        app.scrollViews.firstMatch.swipeDown()
+        XCTAssertTrue(cashTotal().contains("3.00"), "One soft drink must total CHF 3.00")
+    }
+
+    func testFirstLaunchRemainsLockedAfterInvalidCode() {
+        launch(unlocked: false)
+        let code = app.secureTextFields["gate.code"]
+        reveal(code)
+        code.tap()
+        code.typeText("WRONG-CODE\n")
+        XCTAssertTrue(element("gate.error").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["tab.home"].exists)
+        capture("landing-invalid-code")
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        XCTAssertTrue(app.secureTextFields["gate.code"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["tab.home"].exists)
+    }
+
+    func testEveryTabIsReachableAndCapturesScreenshots() {
+        launch()
+        for name in ["home", "river", "events", "internal", "cash", "club"] {
+            let tab = app.buttons["tab.\(name)"]
+            XCTAssertTrue(tab.isHittable, "The \(name) tab must be directly reachable")
+            XCTAssertGreaterThanOrEqual(tab.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
+            tab.tap()
+            XCTAssertTrue(element("screen.\(name)").waitForExistence(timeout: 5))
+            capture("screen-\(name)")
+        }
+    }
+
+    func testCartSurvivesProcessRestartAndCanBeClearedExplicitly() {
+        launch()
+        addDrink()
+        let savedTotal = cashTotal()
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        capture("cart-restored")
+        tap("cart.clear")
+        XCTAssertTrue(cashTotal().contains("0.00"))
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        tap("tab.cash")
+        XCTAssertTrue(cashTotal().contains("0.00"))
+    }
+
+    func testReturnedPaymentRequiresExplicitConfirmation() {
+        launch()
+        addDrink()
+        let savedTotal = cashTotal()
+        app.terminate()
+        launch(reset: false, pending: true)
+        XCTAssertTrue(app.buttons["payment.confirm.no"].waitForExistence(timeout: 10))
+        capture("payment-confirmation")
+        tap("payment.confirm.no")
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal, "An unsuccessful/unconfirmed payment must preserve the cart")
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists, "No must consume the pending question")
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        app.terminate()
+        launch(reset: false, pending: true)
+        XCTAssertTrue(app.buttons["payment.confirm.yes"].waitForExistence(timeout: 10))
+        tap("payment.confirm.yes")
+        tap("tab.cash")
+        XCTAssertTrue(cashTotal().contains("0.00"), "Only explicit successful confirmation clears the cart")
+    }
+
+    func testViewingPaymentQRCodePreservesCart() {
+        launch()
+        addDrink()
+        let savedTotal = cashTotal()
+        tap("payment.qr")
+        XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
+        capture("payment-swiss-qr")
+        tap("payment.done")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal)
+    }
+
+    func testEventDetailPreservesSourceTextAndExposesActions() {
+        launch()
+        tap("tab.events")
+        tap("event.ui-training")
+        XCTAssertTrue(element("event.detail").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        for action in ["event.share", "event.calendar", "event.route"] {
+            XCTAssertTrue(element(action).exists, "Missing event action: \(action)")
+        }
+        capture("event-detail")
+    }
+
+    func testLanguageChoiceSurvivesRestartAndLeavesEventTitleUnchanged() {
+        launch()
+        tap("settings.open")
+        tap("settings.language.gsw")
+        capture("settings-swiss-german")
+        tap("settings.done")
+        let dialectLabel = app.buttons["tab.events"].label
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        XCTAssertEqual(app.buttons["tab.events"].label, dialectLabel)
+        tap("tab.events")
+        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        capture("events-swiss-german")
+        tap("settings.open")
+        let language = app.buttons["settings.language.gsw"]
+        XCTAssertTrue(language.isSelected, "The saved Swiss German choice must remain selected")
+    }
+}

@@ -2,6 +2,12 @@
 
 Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 
+## iOS-Portierung
+
+- Native Umsetzung des Android-Stands `0.12.6` auf dem Arbeitsbranch `codex/ios-port-0.12.6` gestartet. Referenzcommit: `c617bae7c1f00fbb1136621166387ed814652794`.
+- SwiftUI ab iOS 17, getrennte testbare Fachlogik und lokale Daten-Caches; Arbeitspakete, Abnahmekriterien und laufende Nachweise: [`iOS/PORTING_STATUS.md`](iOS/PORTING_STATUS.md).
+- Apple-Build und iOS-Simulator-Tests werden über macOS-CI vorbereitet. Ein vollständiger Paritäts- oder Gerätetestnachweis liegt zu Beginn der Portierung noch nicht vor.
+
 ## Aktueller Teststand
 
 - `0.12.6` reduziert erklärenden Prototyp-Text auf Home und im Warenkorb: Hero-Zusatzsatz sowie redundante Untertitel bei Wetter, 3-Tage-Wetter, Rhein, Terminen und Warenkorb entfallen; News zeigt nur noch den Stand, Wetterquellen werden kompakt als `MeteoSwiss/Open-Meteo` ausgewiesen und der sicherheitsrelevante BAFU-Hinweis bleibt in gekürzter Form erhalten. Rechts bei `Rhein aktuell` sitzt nun ein dezentes `↻` mit 44-dp-Tapfläche; ein Tap dreht das Symbol kurz um 360° und erzwingt über `refreshLive(true)` einen neuen Wetter- und Rheinabruf.
