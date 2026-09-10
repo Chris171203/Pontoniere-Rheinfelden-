@@ -1,4 +1,5 @@
 import SwiftUI
+import PFVRCore
 
 enum PFVRTheme {
     static let navy = Color(red: 12 / 255, green: 45 / 255, blue: 72 / 255)
@@ -69,7 +70,9 @@ enum AppDates {
         return formatter.string(from: date)
     }
     static func stamp(_ date: Date) -> String { format(date, "dd.MM.yyyy HH:mm") }
-    static func day(_ date: Date) -> String { format(date, "EEEE, d. MMMM") }
+    static func day(_ date: Date, language: AppLanguage = .german) -> String {
+        Language.translate(format(date, "EEEE"), mode: language) + ", " + format(date, "d. MMMM")
+    }
     static func time(_ date: Date) -> String { format(date, "HH:mm") }
     static func number(_ value: Double?, digits: Int = 0) -> String {
         guard let value, value.isFinite else { return "–" }

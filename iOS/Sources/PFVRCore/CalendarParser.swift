@@ -110,7 +110,7 @@ public enum CalendarParser {
         return result.values.filter { $0.start <= limit && $0.end >= earliest }.sorted { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }
     }
     private static func parseDate(key: String, value: String) -> (date: Date, allDay: Bool, zone: TimeZone)? {
-        let allDay = key.uppercased().contains("VALUE=DATE") || value.count == 8
+        let allDay = key.uppercased().components(separatedBy: ";").contains("VALUE=DATE") || value.count == 8
         var zone = PFVRDate.timeZone
         for parameter in key.components(separatedBy: ";").dropFirst() where parameter.uppercased().hasPrefix("TZID=") {
             guard let parsed = TimeZone(identifier: String(parameter.dropFirst(5)).replacingOccurrences(of: "\"", with: "")) else { return nil }
@@ -118,6 +118,7 @@ public enum CalendarParser {
         }
         if value.hasSuffix("Z") { zone = TimeZone(secondsFromGMT: 0)! }
         let text = value.hasSuffix("Z") ? String(value.dropLast()) : value
+        guard allDay ? text.count == 8 : [13,15].contains(text.count) else { return nil }
         let format = allDay ? "yyyyMMdd" : text.count == 13 ? "yyyyMMdd'T'HHmm" : "yyyyMMdd'T'HHmmss"
         guard let date = PFVRDate.parseLocal(text, format: format, zone: zone) else { return nil }
         return (date, allDay, zone)
@@ -159,12 +160,12 @@ public enum CalendarParser {
         let byMonth = (rule["BYMONTH"] ?? "").split(separator: ",").compactMap { Int($0) }
         let byMonthDay = (rule["BYMONTHDAY"] ?? "").split(separator: ",").compactMap { Int($0) }
         if let text = rule["BYMONTH"], text.split(separator: ",", omittingEmptySubsequences: false).count != byMonth.count || byMonth.contains(where: { !(1...12).contains($0) }) { throw PFVRDataError.invalidPayload("Kalender: ungültiges BYMONTH") }
-        if let text = rule["BYMONTHDAY"], text.split(separator: ",", omittingEmptySubsequences: false).count != byMonthDay.count || byMonthDay.contains(where: { $0 == 0 || abs($0) > 31 }) { throw PFVRDataError.invalidPayload("Kalender: ungültiges BYMONTHDAY") }
+        if let text = rule["BYMONTHDAY"], text.split(separator: ",", omittingEmptySubsequences: false).count != byMonthDay.count || byMonthDay.contains(where: { $0 == 0 || !(-31...31).contains($0) }) { throw PFVRDataError.invalidPayload("Kalender: ungültiges BYMONTHDAY") }
         for token in byDays {
             guard token.count >= 2, weekdayNames[String(token.suffix(2))] != nil else { throw PFVRDataError.invalidPayload("Kalender: ungültiges BYDAY") }
             let prefix = token.dropLast(2)
             if !prefix.isEmpty {
-                guard let ordinal = Int(prefix), ordinal != 0, abs(ordinal) <= 5, ["MONTHLY","YEARLY"].contains(frequency), frequency != "YEARLY" || !byMonth.isEmpty else { throw PFVRDataError.invalidPayload("Kalender: nicht unterstütztes ordinales BYDAY") }
+                guard let ordinal = Int(prefix), ordinal != 0, (-5...5).contains(ordinal), ["MONTHLY","YEARLY"].contains(frequency), frequency != "YEARLY" || !byMonth.isEmpty else { throw PFVRDataError.invalidPayload("Kalender: nicht unterstütztes ordinales BYDAY") }
             }
         }
         var output: [Date] = [], made = 0, day = anchor, iterations = 0
@@ -179,7 +180,7 @@ public enum CalendarParser {
             case "DAILY": matches = elapsedDays % interval == 0
             case "WEEKLY": matches = elapsedWeeks % interval == 0 && (byDays.isEmpty ? parts.weekday == original.weekday : true)
             case "MONTHLY": matches = elapsedMonths % interval == 0 && (byDays.isEmpty && byMonthDay.isEmpty ? parts.day == original.day : true)
-            default: matches = (parts.year! - original.year!) % interval == 0 && (byMonth.isEmpty ? parts.month == original.month : true) && (byDays.isEmpty && byMonthDay.isEmpty ? parts.day == original.day : true)
+            default: matches = (parts.year! - original.year!) % interval == 0 && (byMonth.isEmpty && byDays.isEmpty && byMonthDay.isEmpty ? parts.month == original.month : true) && (byDays.isEmpty && byMonthDay.isEmpty ? parts.day == original.day : true)
             }
             if !byMonth.isEmpty { matches = matches && byMonth.contains(parts.month!) }
             let daysInMonth = calendar.range(of: .day, in: .month, for: day)!.count

@@ -95,6 +95,13 @@ final class AppState: ObservableObject {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("PFVR/PublicCache", isDirectory: true)
         service = PFVRDataService(cacheDirectory: directory)
+        if let service {
+            weather = await service.cachedWeather()
+            events = await service.cachedEvents()
+            news = await service.cachedNews()
+            rivers[.rheinfelden] = await service.cachedHydro(station: .rheinfelden)
+            rivers[.baselRheinhalle] = await service.cachedHydro(station: .baselRheinhalle)
+        }
         checkPaymentConfirmation()
         await refresh()
     }
@@ -118,7 +125,7 @@ final class AppState: ObservableObject {
 
     func quantity(_ item: CashItem) -> Int { cart.quantities[item.id] ?? 0 }
     func setQuantity(_ amount: Int, for item: CashItem) {
-        cartStore?.setQuantity(max(0, min(999, amount)), for: item.id)
+        cartStore?.setQuantity(max(0, min(99, amount)), for: item.id)
         if let cartStore { cart = cartStore.state }
     }
     func clearCart() {
@@ -155,7 +162,8 @@ final class AppState: ObservableObject {
         weather = Loaded(value: weatherHours, metadata: CacheMetadata(source: "MeteoSwiss/Open-Meteo · Testdaten", updatedAt: now))
         events = Loaded(value: [
             PFVREvent(id: "ui-training", title: "Vereinstraining", location: "Rheinweg 42, 4310 Rheinfelden", details: "Gemeinsames Training auf dem Rhein.", start: PFVRDate.parseLocal("2026-09-10T18:30")!, end: PFVRDate.parseLocal("2026-09-10T20:00")!),
-            PFVREvent(id: "ui-event", title: "Endfahren", location: "Depot PFVR, Rheinfelden", details: "Vereinsanlass am Rhein.", start: PFVRDate.parseLocal("2026-09-12T00:00")!, end: PFVRDate.parseLocal("2026-09-13T00:00")!, allDay: true)
+            PFVREvent(id: "ui-event", title: "Endfahren", location: "Depot PFVR, Rheinfelden", details: "Vereinsanlass am Rhein.", start: PFVRDate.parseLocal("2026-09-12T00:00")!, end: PFVRDate.parseLocal("2026-09-13T00:00")!, allDay: true),
+            PFVREvent(id: "ui-source-text", title: "Warenkorb", details: "Unveränderter externer Quelltext für den Sprachtest.", start: PFVRDate.parseLocal("2026-09-13T18:00")!, end: PFVRDate.parseLocal("2026-09-13T20:00")!)
         ], metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))
         for station in HydroStation.allCases {
             var samples: [HydroObservation] = []

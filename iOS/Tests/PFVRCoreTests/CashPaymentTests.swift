@@ -112,4 +112,16 @@ final class CashPaymentTests: XCTestCase {
         XCTAssertTrue(empty.isEmpty)
         XCTAssertFalse(empty.paymentConfirmationPending)
     }
+
+    func testMalformedPersistenceDoesNotInventPendingPayment() throws {
+        let suite = "PFVR.tests.corruptCash.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(Data("not-json".utf8), forKey: "pfvr.cash.state.v1")
+        let store = CashCartStore(defaults: defaults)
+        XCTAssertTrue(store.state.isEmpty)
+        XCTAssertFalse(store.state.paymentConfirmationPending)
+        store.setQuantity(1, for: "food_other")
+        XCTAssertEqual(CashCartStore(defaults: defaults).state.quantities, ["food_other": 1])
+    }
 }

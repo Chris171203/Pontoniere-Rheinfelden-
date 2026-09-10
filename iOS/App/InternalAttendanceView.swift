@@ -108,6 +108,7 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
     private let store: SecureInternalStore
     #if DEBUG
     private var fixtureHTML: String?
+    private var fixtureLoadPending = false
     #endif
 
     init(store: SecureInternalStore = .shared) { self.store = store; super.init() }
@@ -162,7 +163,11 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
         guard let webView, let initialURL else { return }
         beginLoad(webView)
         #if DEBUG
-        if let fixtureHTML { webView.loadHTMLString(fixtureHTML, baseURL: initialURL); return }
+        if let fixtureHTML {
+            fixtureLoadPending = true
+            webView.loadHTMLString(fixtureHTML, baseURL: initialURL)
+            return
+        }
         #endif
         // Reload the current internal page, except after an error or an invalid navigation.
         let url = webView.url.flatMap { InternalNavigationPolicy.permits($0) ? $0 : nil } ?? initialURL
@@ -247,7 +252,9 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
         #if DEBUG
         if fixtureHTML != nil {
             // loadHTMLString does not fetch its HTTPS base URL. All fixture link/form actions are denied.
-            decisionHandler(action.navigationType == .other && (url.scheme == "about" || url == initialURL) ? .allow : .cancel)
+            let allow = fixtureLoadPending && action.navigationType == .other && (url.scheme == "about" || url == initialURL)
+            fixtureLoadPending = false
+            decisionHandler(allow ? .allow : .cancel)
             return
         }
         #endif
@@ -259,14 +266,27 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        #if DEBUG
+        let isFixture = fixtureHTML != nil
+        #else
+        let isFixture = false
+        #endif
+        guard isFixture || response.response.url.map(InternalNavigationPolicy.permits) == true else {
+            decisionHandler(.cancel)
+            return
+        }
         if let response = response.response as? HTTPURLResponse, response.statusCode >= 400 {
             decisionHandler(.cancel)
             showLoadError(webView)
         } else { decisionHandler(.allow) }
     }
 
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { showLoadError(webView) }
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { showLoadError(webView) }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if (error as NSError).code != NSURLErrorCancelled { showLoadError(webView) }
+    }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if (error as NSError).code != NSURLErrorCancelled { showLoadError(webView) }
+    }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { showLoadError(webView) }
 
     private func showLoadError(_ webView: WKWebView) {
@@ -280,8 +300,11 @@ final class InternalAttendanceModel: NSObject, ObservableObject, WKNavigationDel
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "pfvrPeople", message.frameInfo.isMainFrame,
-              let source = message.frameInfo.request.url, InternalNavigationPolicy.permits(source),
+        guard let webView, userContentController === webView.configuration.userContentController,
+              message.name == "pfvrPeople", message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.protocol == "https",
+              message.frameInfo.securityOrigin.host.lowercased() == "intern.pfvr.ch",
+              [0, 443].contains(message.frameInfo.securityOrigin.port),
               let body = message.body as? [String: Any], let value = body["value"] else { return }
         do {
             if value is NSNull { try store.savePeopleState(nil) }

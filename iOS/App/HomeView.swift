@@ -52,7 +52,7 @@ struct EventWeatherTile: View {
         PFVRCard(state.ui("Wetter zum nächsten Termin")) {
             if let event = state.nextWeatherEvent {
                 let forecast = WeatherForecast.event(hours: state.weather?.value ?? [], event: event)
-                Text(event.title).font(.headline)
+                Text(event.fromCalendar ? event.title : state.ui(event.title)).font(.headline)
                 Text(eventTime(event)).font(.caption).foregroundStyle(.secondary)
                 if forecast.summary.count == 0 {
                     Text(state.ui("Für diesen Termin liegt noch keine Wetterprognose vor.")).font(.subheadline).foregroundStyle(.secondary)
@@ -68,11 +68,11 @@ struct EventWeatherTile: View {
                     WeatherSummary(summary: forecast.summary)
                 }
             } else { Text(state.ui("Kein nächster Termin verfügbar.")).foregroundStyle(.secondary) }
-            SourceStamp(source: "MeteoSwiss/Open-Meteo", updated: state.weather?.metadata.updatedAt, stale: state.weather?.metadata.isStale ?? false)
+            SourceStamp(source: state.weather?.metadata.source ?? "MeteoSwiss/Open-Meteo", updated: state.weather?.metadata.updatedAt, stale: state.weather?.metadata.isStale ?? false)
         }.accessibilityIdentifier("home.weather")
     }
     private func eventTime(_ event: PFVREvent) -> String {
-        AppDates.day(event.start) + " · " + (event.allDay ? state.ui("Ganztägig") : AppDates.time(event.start) + "–" + AppDates.time(event.end))
+        AppDates.day(event.start, language: state.language) + " · " + (event.allDay ? state.ui("Ganztägig") : AppDates.time(event.start) + "–" + AppDates.time(event.end))
     }
 }
 
@@ -84,7 +84,7 @@ struct ThreeDayWeatherTile: View {
             ForEach(days) { day in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text(AppDates.day(day.date)).font(.subheadline.bold())
+                        Text(AppDates.day(day.date, language: state.language)).font(.subheadline.bold())
                         Spacer()
                         Text(AppDates.number(day.minTemperature) + "–" + AppDates.number(day.maxTemperature) + " °C").font(.subheadline.bold())
                     }
@@ -93,7 +93,7 @@ struct ThreeDayWeatherTile: View {
                 }
                 if day.id != days.last?.id { Divider() }
             }
-            SourceStamp(source: "MeteoSwiss/Open-Meteo", updated: state.weather?.metadata.updatedAt, stale: state.weather?.metadata.isStale ?? false)
+            SourceStamp(source: state.weather?.metadata.source ?? "MeteoSwiss/Open-Meteo", updated: state.weather?.metadata.updatedAt, stale: state.weather?.metadata.isStale ?? false)
         }.accessibilityIdentifier("home.weather.threeDays")
     }
 }
@@ -118,7 +118,8 @@ struct WeatherSlots: View {
     private func label(_ date: Date) -> String {
         let hour = AppDates.zurich.component(.hour, from: date)
         let part = hour < 10 ? "Morgen" : hour < 16 ? "Mittag" : "Abend"
-        return (dayparts ? state.ui(part) + " · " : "") + AppDates.time(date)
+        let localizedPart = hour < 10 && state.language == .swissGerman ? "Morge" : state.ui(part)
+        return (dayparts ? localizedPart + " · " : "") + AppDates.time(date)
     }
 }
 

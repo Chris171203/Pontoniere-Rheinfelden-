@@ -66,5 +66,7 @@ final class AccessLanguageTests: XCTestCase {
         XCTAssertEqual(Language.translate("Rhein-Kachel 2", mode: .swissGerman), "Rhy-Kachle 2")
         XCTAssertEqual(Language.translate("Hintergrundaktualisierung: Ein", mode: .swissGerman), "Hintergrund-Aktualisierig: Aa")
         XCTAssertEqual(Language.translate("Nachrichten von Beispiel mit Essen", mode: .swissGerman), "Nachrichten von Beispiel mit Essen")
+        XCTAssertEqual(Language.translate("Wetter zum nächsten Termin", mode: .swissGerman), "Wätter zum nöchschte Termin")
+        XCTAssertEqual(Language.translate("War die Zahlung erfolgreich?", mode: .swissGerman), "Isch d Zahlig erfolgreich gsi?")
     }
 }

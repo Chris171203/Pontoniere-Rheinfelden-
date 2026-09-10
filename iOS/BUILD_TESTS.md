@@ -25,6 +25,8 @@ Alternativ `iOS/PFVR.xcodeproj` nach der Generierung in Xcode öffnen, Scheme `P
 | PFVRAppTests | Gehostet in der echten Simulator-App | WKWebView/JavaScript, Navigation und sichere Speicherung mit lokalen Prüfdaten |
 | PFVRUITests | XCUITest auf zwei iPhone-Größen | Freigabe, Navigation, Warenkorb-Neustart, Zahlungsbestätigung, QR-Anzeige, Termine und Sprache |
 
+Vor den Swift-Tests prüft die CI den JavaScript-Export bytegenau gegen den echten Android-Java-Generator und lässt V8 beide Sprachvarianten sowie das WebKit-Fixtureskript parsen. Das prüft Exportdrift und JavaScript-Syntax; DOM-Verhalten bleibt Aufgabe der WebKit-Tests.
+
 Der Workflow `iOS CI` läuft auf `main`, `codex/ios-port-*`, Pull Requests nach `main` und manuell. PR-/Push-Läufe derselben Branch teilen eine Concurrency-Gruppe. Tests laufen ohne automatische Wiederholung fehlgeschlagener Fälle. Beide Simulatorgrößen werden auch dann unabhängig geprüft, wenn eine fehlschlägt. Compact kompiliert zusätzlich die Release-Konfiguration, damit auch die Grenzen der Debug-Testhilfen durch den Compiler geprüft werden.
 
 Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime mit zwei unterschiedlichen iPhone-Größen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact läuft hell, large dunkel. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.

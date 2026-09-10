@@ -107,7 +107,7 @@ public enum HydroRange: String, CaseIterable, Identifiable, Sendable {
     public var label: String { switch self { case .hour: return "1h"; case .day: return "24h"; case .week: return "7d" } }
     public var window: TimeInterval { switch self { case .hour: return 3600; case .day: return 86400; case .week: return 604800 } }
 }
-public struct HydroDataset {
+public struct HydroDataset: Sendable {
     public let station: HydroStation
     public var live: Loaded<[HydroObservation]>?
     public var fine: Loaded<[HydroObservation]>?

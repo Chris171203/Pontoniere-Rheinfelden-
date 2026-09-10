@@ -58,7 +58,7 @@ struct AppShellView: View {
                 case .home: HomeView()
                 case .river: RiverView()
                 case .events: CalendarView()
-                case .internal: InternalAttendanceView(language: state.language.rawValue)
+                case .internal: InternalAttendanceView(language: state.language.rawValue, openSettings: { settings = true })
                 case .cash: CashView()
                 case .club: ClubView()
                 }

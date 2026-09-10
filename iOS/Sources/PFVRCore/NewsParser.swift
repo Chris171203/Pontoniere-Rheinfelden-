@@ -3,13 +3,17 @@ import Foundation
 public enum NewsParser {
     public static func parse(_ data: Data) throws -> [NewsArticle] {
         guard let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { throw PFVRDataError.invalidPayload("News: ungültige Antwort") }
-        return rows.compactMap { row in
+        var seen: Set<Int> = []
+        let articles: [NewsArticle] = rows.compactMap { row in
             let title = plain((row["title"] as? [String: Any])?["rendered"] as? String ?? "")
             let excerpt = plain((row["excerpt"] as? [String: Any])?["rendered"] as? String ?? "")
-            guard !title.isEmpty, let link = row["link"] as? String, let url = URL(string: link), ["http","https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { return nil }
+            guard let number = row["id"] as? NSNumber, number.intValue > 0, !seen.contains(number.intValue), !title.isEmpty, let link = row["link"] as? String, let url = URL(string: link), ["http","https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { return nil }
+            seen.insert(number.intValue)
             let date = (row["date"] as? String).flatMap { PFVRDate.parseLocal($0, format: "yyyy-MM-dd'T'HH:mm:ss") }
-            return NewsArticle(id: (row["id"] as? NSNumber)?.intValue ?? 0, publishedAt: date, title: title, excerpt: excerpt, url: url)
+            return NewsArticle(id: number.intValue, publishedAt: date, title: title, excerpt: excerpt, url: url)
         }
+        guard rows.isEmpty || !articles.isEmpty else { throw PFVRDataError.invalidPayload("News: keine gültigen Artikel") }
+        return articles
     }
     public static func plain(_ html: String) -> String {
         var value = html.replacingOccurrences(of: "(?is)<(script|style)\\b[^>]*>.*?</\\1\\s*>", with: "", options: .regularExpression)

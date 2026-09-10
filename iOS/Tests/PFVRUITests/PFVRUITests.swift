@@ -81,12 +81,14 @@ final class PFVRUITests: XCTestCase {
         capture("landing-invalid-code")
         app.terminate()
         launch(reset: false, unlocked: false)
-        XCTAssertTrue(app.secureTextFields["gate.code"].waitForExistence(timeout: 5))
+        reveal(app.secureTextFields["gate.code"])
+        XCTAssertTrue(app.secureTextFields["gate.code"].exists)
         XCTAssertFalse(app.buttons["tab.home"].exists)
     }
 
     func testEveryTabIsReachableAndCapturesScreenshots() {
         launch()
+        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.waitForExistence(timeout: 5))
         for name in ["home", "river", "events", "internal", "cash", "club"] {
             let tab = app.buttons["tab.\(name)"]
             XCTAssertTrue(tab.isHittable, "The \(name) tab must be directly reachable")
@@ -95,6 +97,21 @@ final class PFVRUITests: XCTestCase {
             tab.tap()
             XCTAssertTrue(element("screen.\(name)").waitForExistence(timeout: 5))
             capture("screen-\(name)")
+        }
+    }
+
+    func testRiverRendersActualFixtureReadingsAndBothGraphs() {
+        launch()
+        tap("tab.river")
+        let rheinfelden = element("river.station.2091")
+        let basel = element("river.station.2289")
+        XCTAssertTrue(rheinfelden.waitForExistence(timeout: 5))
+        XCTAssertTrue(rheinfelden.label.contains("268."), "Rheinfelden must show its real fixture level, not an empty-state dash")
+        XCTAssertTrue(basel.label.contains("245."), "Basel must show metres above sea level")
+        for station in ["2091", "2289"] {
+            let graph = element("river.graph.\(station)")
+            reveal(graph)
+            capture("river-graph-\(station)")
         }
     }
 
@@ -108,6 +125,7 @@ final class PFVRUITests: XCTestCase {
         XCTAssertEqual(cashTotal(), savedTotal)
         capture("cart-restored")
         tap("cart.clear")
+        tap("cart.clear.confirm")
         XCTAssertTrue(cashTotal().contains("0.00"))
         app.terminate()
         launch(reset: false, unlocked: false)
@@ -174,14 +192,48 @@ final class PFVRUITests: XCTestCase {
         capture("settings-swiss-german")
         tap("settings.done")
         let dialectLabel = app.buttons["tab.events"].label
+        XCTAssertTrue(dialectLabel.contains("Termin"))
+        XCTAssertFalse(dialectLabel.contains("Termine"), "The app-owned tab label must actually switch language")
         app.terminate()
         launch(reset: false, unlocked: false)
         XCTAssertEqual(app.buttons["tab.events"].label, dialectLabel)
         tap("tab.events")
-        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        XCTAssertTrue(app.buttons["event.ui-training"].label.contains("Vereinstraining"))
+        let sourceTitle = app.buttons["event.ui-source-text"]
+        reveal(sourceTitle)
+        XCTAssertTrue(sourceTitle.label.contains("Warenkorb"), "A source title matching the app dictionary must remain unchanged")
+        XCTAssertFalse(sourceTitle.label.contains("Warenchorb"))
         capture("events-swiss-german")
         tap("settings.open")
         let language = app.buttons["settings.language.gsw"]
         XCTAssertTrue(language.isSelected, "The saved Swiss German choice must remain selected")
     }
+
+    func testTileVisibilityAndOrderPersistWhileCartRemainsPinned() {
+        launch()
+        tap("settings.open")
+        tap("settings.tiles")
+        let threeDays = app.switches["tiles.toggle.home_weather_3day"]
+        XCTAssertTrue(threeDays.waitForExistence(timeout: 5))
+        reveal(threeDays)
+        XCTAssertEqual(threeDays.value as? String, "1")
+        threeDays.tap()
+        XCTAssertEqual(threeDays.value as? String, "0")
+        tap("tiles.up.home_weather_3day")
+        XCTAssertLessThan(threeDays.frame.minY, app.switches["tiles.toggle.home_weather"].frame.minY)
+        capture("tiles-customized")
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        tap("settings.open")
+        tap("settings.tiles")
+        XCTAssertTrue(threeDays.waitForExistence(timeout: 5))
+        XCTAssertEqual(threeDays.value as? String, "0")
+        XCTAssertLessThan(threeDays.frame.minY, app.switches["tiles.toggle.home_weather"].frame.minY)
+        tap("tiles.area.cash")
+        XCTAssertFalse(app.switches["tiles.toggle.cash_cart"].exists)
+        XCTAssertFalse(app.buttons["tiles.up.cash_cart"].exists)
+        XCTAssertFalse(app.buttons["tiles.down.cash_cart"].exists)
+        capture("tiles-cart-pinned")
+    }
+
 }

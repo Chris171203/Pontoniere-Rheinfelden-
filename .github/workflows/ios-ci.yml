@@ -3,10 +3,10 @@ name: iOS CI
 on:
   push:
     branches: [main, 'codex/ios-port-*']
-    paths: ['iOS/**', 'tools/ios-*', '.github/workflows/ios-ci.yml']
+    paths: ['iOS/**', '!iOS/**/*.md', 'tools/ios-*', 'tools/internal-*', 'Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java', 'Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java', '.github/workflows/ios-ci.yml']
   pull_request:
     branches: [main]
-    paths: ['iOS/**', 'tools/ios-*', '.github/workflows/ios-ci.yml']
+    paths: ['iOS/**', '!iOS/**/*.md', 'tools/ios-*', 'tools/internal-*', 'Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java', 'Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java', '.github/workflows/ios-ci.yml']
   workflow_dispatch:
 
 permissions:
@@ -33,6 +33,20 @@ jobs:
           swift --version
           xcodebuild -version
           python3 tools/ios-audit.py
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify shared renderer bytes and JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/core
+          python3 tools/internal-export-renderer.py --check 2>&1 | tee artifacts/core/renderer-drift.log
+          node tools/internal-renderer-check.mjs 2>&1 | tee artifacts/core/renderer-syntax.log
       - name: Run actual Swift package tests
         shell: bash
         run: |
