@@ -219,7 +219,20 @@ struct RiverTemperatureCard: View {
             else {
                 Chart(points) { point in
                     LineMark(x: .value("Zeit", point.time), y: .value("°C", point.value)).foregroundStyle(PFVRTheme.water)
-                }.chartYScale(domain: .automatic(includesZero: false)).frame(height: 150)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 3)) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                Text(AppDates.format(date, state.range == .week ? "dd.MM." : "HH:mm"))
+                            }
+                        }
+                    }
+                }
+                .chartYScale(domain: .automatic(includesZero: false)).frame(height: 150)
+                .accessibilityIdentifier("river.temperature.\(station.rawValue)")
                 SourceStamp(source: "BAFU · °C", updated: points.last?.time)
             }
         }

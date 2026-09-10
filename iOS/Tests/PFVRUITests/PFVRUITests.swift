@@ -43,6 +43,38 @@ final class PFVRUITests: XCTestCase {
         XCTAssertTrue(item.exists && item.isHittable, "Missing/unreachable element: \(item)", file: file, line: line)
     }
 
+    private func revealGraphFully(_ graph: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let scroll = app.scrollViews.firstMatch
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5), file: file, line: line)
+        let screen = app.frame
+        let navigation = app.navigationBars.firstMatch
+        let tabs = app.buttons["tab.river"]
+        let top = max(scroll.frame.minY, navigation.frame.maxY) + 12
+        let bottom = min(scroll.frame.maxY, tabs.frame.minY) - 12
+        let viewport = CGRect(x: max(scroll.frame.minX, screen.minX) + 4, y: top,
+                              width: min(scroll.frame.maxX, screen.maxX) - max(scroll.frame.minX, screen.minX) - 8,
+                              height: bottom - top)
+        XCTAssertGreaterThan(viewport.height, 205, file: file, line: line)
+        for _ in 0..<10 {
+            if graph.exists && graph.isHittable && viewport.contains(graph.frame) {
+                XCTAssertGreaterThan(graph.frame.height, 100, "A full graph must be exposed", file: file, line: line)
+                return
+            }
+            let requested = graph.exists && !graph.frame.isEmpty ? graph.frame.midY - viewport.midY : viewport.height * 0.6
+            let distance = min(max(requested, -viewport.height * 0.6), viewport.height * 0.6)
+            // Drag the page gutter so the graph's own selection gesture cannot
+            // consume the scroll. Hittability alone also includes clipped graphs.
+            let startY = distance >= 0 ? viewport.maxY - 24 : viewport.minY + 24
+            let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
+                CGVector(dx: viewport.minX + 4 - screen.minX, dy: startY - screen.minY))
+            let end = start.withOffset(CGVector(dx: 0, dy: -distance))
+            start.press(forDuration: 0.1, thenDragTo: end)
+        }
+        XCTAssertTrue(graph.exists && graph.isHittable && viewport.contains(graph.frame),
+                      "The complete graph must fit between navigation and tabs: \(graph.frame), viewport \(viewport)",
+                      file: file, line: line)
+    }
+
     private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
         let button = app.buttons[id]
         reveal(button, file: file, line: line)
@@ -122,8 +154,12 @@ final class PFVRUITests: XCTestCase {
         XCTAssertTrue(basel.label.contains("245."), "Basel must show metres above sea level")
         for station in ["2091", "2289"] {
             let graph = element("river.graph.\(station)")
-            reveal(graph)
+            revealGraphFully(graph)
             capture("river-graph-\(station)")
+            if station == "2091" {
+                revealGraphFully(element("river.temperature.\(station)"))
+                capture("river-temperature-\(station)")
+            }
         }
     }
 

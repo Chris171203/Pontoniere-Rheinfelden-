@@ -8,12 +8,19 @@ final class InternalAttendanceTests: XCTestCase {
     private var webView: WKWebView!
     private var testStore: SecureInternalStore!
     private var window: UIWindow!
+    private weak var previousKeyWindow: UIWindow?
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         testStore = SecureInternalStore(service: "ch.pfvr.tests.internal." + UUID().uuidString)
         model = InternalAttendanceModel(store: testStore)
-        window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        // A detached UIWindow can run DOM tests while WebKit returns entirely
+        // transparent snapshots. Use the hosted app's actual foreground scene.
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }, "Hosted app needs a foreground scene for rendered evidence")
+        previousKeyWindow = scene.windows.first { $0.isKeyWindow }
+        window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
         window.rootViewController = UIViewController()
         window.makeKeyAndVisible()
     }
@@ -22,8 +29,10 @@ final class InternalAttendanceTests: XCTestCase {
         model.detach()
         webView = nil
         try? testStore.removeURL()
-        window.isHidden = true
+        window?.isHidden = true
         window = nil
+        previousKeyWindow?.makeKeyAndVisible()
+        previousKeyWindow = nil
         model = nil
         testStore = nil
         super.tearDown()
@@ -41,7 +50,9 @@ final class InternalAttendanceTests: XCTestCase {
         let fixture = try html ?? String(contentsOf: XCTUnwrap(resource), encoding: .utf8)
         webView = model.makeWebView(initialURL: initialURL, appView: appView, language: language, dark: dark, startLoading: false)
         webView.frame = window.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         window.rootViewController!.view.addSubview(webView)
+        window.layoutIfNeeded()
         model.loadFixture(fixture)
     }
 
@@ -68,14 +79,44 @@ final class InternalAttendanceTests: XCTestCase {
         XCTAssertTrue(built)
     }
 
+    private func captureMatrix(_ name: String) async throws {
+        XCTAssertNotNil(webView.window?.windowScene)
+        XCTAssertFalse(webView.isHidden)
+        webView.layoutIfNeeded()
+        // DOM-ready is earlier than the first painted frame after reveal.
+        _ = try await webView.evaluateJavaScript("window.__pfvrSnapshotPainted=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{window.__pfvrSnapshotPainted=true}));null;")
+        try await waitFor { try await self.bool("window.__pfvrSnapshotPainted===true") }
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = webView.bounds
+        configuration.afterScreenUpdates = true
+        let screenshot = try await webView.takeSnapshot(configuration: configuration)
+        let attachment = XCTAttachment(image: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        // Reject the observed all-transparent result, or a single background
+        // color, instead of recording another apparently successful blank PNG.
+        let cgImage = try XCTUnwrap(screenshot.cgImage)
+        var pixels = [UInt8](repeating: 0, count: 16 * 16 * 4)
+        try pixels.withUnsafeMutableBytes { bytes in
+            let context = try XCTUnwrap(CGContext(data: bytes.baseAddress, width: 16, height: 16,
+                bitsPerComponent: 8, bytesPerRow: 16 * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 16, height: 16))
+        }
+        let colors = Set(stride(from: 0, to: pixels.count, by: 4).map { index in
+            UInt32(pixels[index]) << 24 | UInt32(pixels[index + 1]) << 16 |
+                UInt32(pixels[index + 2]) << 8 | UInt32(pixels[index + 3])
+        })
+        XCTAssertTrue(stride(from: 3, to: pixels.count, by: 4).contains { pixels[$0] > 0 }, "Matrix snapshot must contain painted pixels")
+        XCTAssertGreaterThan(colors.count, 1, "Matrix snapshot must contain visible content, not one background color")
+    }
+
     func testActualControlsFormPayloadAndListenersSurviveMatrixProjection() async throws {
         try load()
         try await ready()
-        let screenshot = try await webView.takeSnapshot(configuration: nil)
-        let attachment = XCTAttachment(image: screenshot)
-        attachment.name = "internal-matrix-390pt-de-light"
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        try await captureMatrix("internal-matrix-390pt-de-light")
         XCTAssertFalse(webView.configuration.websiteDataStore.isPersistent)
         let actualNodes = try await bool("document.querySelector('.pfvr-person-control #original-submit')===fixtureOriginalSubmit && document.querySelector('.pfvr-person-control #original-input')===fixtureOriginalInput && document.querySelector('.pfvr-person-control #original-status')===fixtureOriginalStatus")
         XCTAssertTrue(actualNodes)
@@ -172,11 +213,7 @@ final class InternalAttendanceTests: XCTestCase {
     func testSwissGermanDarkRendererAndSafelyEncodedPrivateLink() async throws {
         try load(language: "gsw", dark: true)
         try await ready()
-        let screenshot = try await webView.takeSnapshot(configuration: nil)
-        let attachment = XCTAttachment(image: screenshot)
-        attachment.name = "internal-matrix-390pt-gsw-dark"
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        try await captureMatrix("internal-matrix-390pt-gsw-dark")
         let dark = try await bool("getComputedStyle(document.body).backgroundColor==='rgb(17, 23, 28)' && getComputedStyle(document.documentElement).colorScheme==='dark'")
         XCTAssertTrue(dark)
         let originalUntranslated = try await bool("fixtureOriginalSubmit.textContent==='Ich komme, mit Essen'")
