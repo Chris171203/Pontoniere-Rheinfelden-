@@ -24,6 +24,10 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>UIBackgroundModes</key>
+    <array><string>fetch</string></array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array><string>ch.pfvr.app.test.public-refresh</string></array>
     <key>NSCalendarsWriteOnlyAccessUsageDescription</key>
     <string>Du kannst einen Vereinstermin auf Wunsch in deinen Kalender übernehmen.</string>
 </dict>

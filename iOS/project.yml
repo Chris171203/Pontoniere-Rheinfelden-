@@ -30,6 +30,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SUPPORTS_MACCATALYST: NO
         SWIFT_EMIT_LOC_STRINGS: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
     dependencies:
       - package: PFVRCore
         product: PFVRCore

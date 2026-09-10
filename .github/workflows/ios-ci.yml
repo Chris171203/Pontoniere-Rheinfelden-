@@ -33,6 +33,7 @@ jobs:
           swift --version
           xcodebuild -version
           python3 tools/ios-audit.py
+          python3 tools/ios-select-simulator-tests.py
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

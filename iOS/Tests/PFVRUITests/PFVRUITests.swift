@@ -236,4 +236,24 @@ final class PFVRUITests: XCTestCase {
         capture("tiles-cart-pinned")
     }
 
+
+    func testClearingPublicCachePreservesCartAndLanguage() {
+        launch()
+        addDrink()
+        let savedTotal = cashTotal()
+        tap("settings.open")
+        tap("settings.language.gsw")
+        tap("settings.cache.clear")
+        tap("settings.cache.clear.confirm")
+        tap("settings.done")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        XCTAssertFalse(app.buttons["tab.events"].label.contains("Termine"))
+        app.terminate()
+        launch(reset: false, unlocked: false)
+        tap("tab.cash")
+        XCTAssertEqual(cashTotal(), savedTotal)
+        XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
+        XCTAssertFalse(app.buttons["tab.events"].label.contains("Termine"))
+    }
+
 }

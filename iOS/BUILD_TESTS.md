@@ -29,7 +29,7 @@ Vor den Swift-Tests prüft die CI den JavaScript-Export bytegenau gegen den echt
 
 Der Workflow `iOS CI` läuft auf `main`, `codex/ios-port-*`, Pull Requests nach `main` und manuell. PR-/Push-Läufe derselben Branch teilen eine Concurrency-Gruppe. Tests laufen ohne automatische Wiederholung fehlgeschlagener Fälle. Beide Simulatorgrößen werden auch dann unabhängig geprüft, wenn eine fehlschlägt. Compact kompiliert zusätzlich die Release-Konfiguration, damit auch die Grenzen der Debug-Testhilfen durch den Compiler geprüft werden.
 
-Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime mit zwei unterschiedlichen iPhone-Größen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact läuft hell, large dunkel. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
+Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact läuft hell, large dunkel. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
 
 Ein separater Core-Schritt führt mit `PFVR_LIVE_SMOKE=1` den `LiveSourceSmokeTests`-Vertragstest gegen die öffentlichen Datenquellen aus. Er prüft echte Antworten und verwendet keinen persönlichen Serverzugang. Ein externer Ausfall blockiert die deterministische Prüfung nicht (`continue-on-error`); das eigene Log `live-source-smoke.log` muss deshalb ausdrücklich bewertet werden.
 
@@ -38,6 +38,8 @@ Ein separater Core-Schritt führt mit `PFVR_LIVE_SMOKE=1` den `LiveSourceSmokeTe
 Jeder Simulatorlauf lädt `.xcresult`, Build-/Testlogs, Coverage-Bericht, exportierte Screenshot-PNGs sowie die unsignierte Simulator-App und das erzeugte Xcode-Projekt als GitHub-Artefakte hoch. Screenshots werden für alle Tabs, Terminansicht, Sprachwahl, QR und Zahlungsbestätigung aufbewahrt. Die Bilder benötigen eine tatsächliche Sichtprüfung; vorhandene Screenshots allein sind kein visueller Qualitätsnachweis.
 
 UI-Tests verwenden `-ui-testing` mit eigener Preferences-Domain und deterministischen öffentlichen Beispieldaten. `-ui-test-reset`, `-ui-test-unlocked` und `-ui-test-pending-payment` sind ausschließlich im Debug-Build wirksam. Die Tests geben keine echte Zahlung frei und verwenden keinen persönlichen Intern-Link. Die QR-Anzeige darf weder Warenkorb noch Zahlungsbestätigungsstatus verändern. Ein extern gestarteter Zahlungsversuch wird für die Bestätigungsprüfung explizit nachgebildet.
+
+Der erste Simulatorstand hat noch kein fertiges AppIcon-Set; die Vorgabe eines nicht vorhandenen `AppIcon`-Assets ist im Testprojekt deaktiviert. Ein ausreichend hoch aufgelöstes offizielles Icon und die vollständigen Store-Assets sind vor einer Veröffentlichung zu ergänzen.
 
 Die vollständige reale Zahlung mit Banking-/TWINT-App, persönliche produktive An-/Abmeldung, Apple-Signierung/TestFlight und physische Geräte sind durch Simulatorprüfungen nicht abgedeckt. Bereits durchgeführte Läufe, Ergebnisse und offene Prüfpunkte werden in `PORTING_STATUS.md` dokumentiert; vorbereitete Tests gelten dort erst nach realer Ausführung als bestanden.
 

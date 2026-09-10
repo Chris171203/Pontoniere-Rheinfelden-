@@ -2,8 +2,11 @@ import SwiftUI
 import PFVRCore
 
 @main
+@MainActor
 struct PFVRApp: App {
     @StateObject private var state = AppState()
+
+    init() { BackgroundRefresh.shared.register() }
 
     var body: some Scene {
         WindowGroup {
@@ -102,6 +105,9 @@ struct AppShellView: View {
             Text(state.ui("Ja leert den Warenkorb. Ohne Bestätigung bleibt er gespeichert."))
         }
         .task { await state.startIfNeeded() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { state.scheduleBackgroundRefresh() }
+        }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             state.checkPaymentConfirmation()

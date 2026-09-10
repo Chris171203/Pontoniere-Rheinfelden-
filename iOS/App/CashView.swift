@@ -103,7 +103,9 @@ struct CashView: View {
     }
     private func openTwint(fromCart: Bool) {
         do {
-            let amount = try fromCart ? PaymentAmount(money: state.total) : PaymentAmount(raw: amountText)
+            let amount: PaymentAmount
+            if fromCart { amount = try PaymentAmount(money: state.total) }
+            else { amount = try PaymentAmount(raw: amountText) }
             if let money = amount.money { UIPasteboard.general.string = money.decimalString }
             openURL(PaymentDetails.twintURL) { accepted in state.paymentHandoff(fromCart: fromCart, launched: accepted) }
         } catch { invalidAmount = true }
@@ -127,7 +129,7 @@ struct CashCategoryTile: View {
                     Text("\(state.quantity(item))").font(.subheadline.monospacedDigit()).frame(minWidth: 20)
                     Button { state.setQuantity(state.quantity(item) + 1, for: item) } label: {
                         Image(systemName: "plus.circle.fill").font(.title2).frame(width: 44, height: 44)
-                    }.accessibilityLabel(state.ui("Hinzufügen") + " " + item.displayName).accessibilityIdentifier("cart.add.\(item.id)")
+                    }.disabled(state.quantity(item) >= 99).accessibilityLabel(state.ui("Hinzufügen") + " " + item.displayName).accessibilityIdentifier("cart.add.\(item.id)")
                 }
                 if item.id != category.items.last?.id { Divider() }
             }

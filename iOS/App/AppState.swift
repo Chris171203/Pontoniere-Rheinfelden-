@@ -14,6 +14,12 @@ final class AppState: ObservableObject {
     @Published var secondStationEnabled: Bool { didSet { defaults.set(secondStationEnabled, forKey: "river_second_enabled") } }
     @Published var range: HydroRange { didSet { defaults.set(range.rawValue, forKey: "river_range") } }
     @Published var baselCentimetres: Bool { didSet { defaults.set(baselCentimetres, forKey: "river_basel_cm") } }
+    @Published var backgroundRefresh: Bool {
+        didSet {
+            defaults.set(backgroundRefresh, forKey: "background_refresh")
+            scheduleBackgroundRefresh()
+        }
+    }
     @Published private(set) var weather: Loaded<[WeatherHour]>?
     @Published private(set) var events: Loaded<[PFVREvent]>?
     @Published private(set) var news: Loaded<[NewsArticle]>?
@@ -48,6 +54,7 @@ final class AppState: ObservableObject {
         secondStationEnabled = defaults.object(forKey: "river_second_enabled") as? Bool ?? true
         range = HydroRange(rawValue: defaults.string(forKey: "river_range") ?? "day") ?? .day
         baselCentimetres = defaults.bool(forKey: "river_basel_cm")
+        backgroundRefresh = defaults.object(forKey: "background_refresh") as? Bool ?? true
     }
 
     var colorScheme: ColorScheme? { theme == "dark" ? .dark : theme == "light" ? .light : nil }
@@ -76,6 +83,7 @@ final class AppState: ObservableObject {
     func startIfNeeded() async {
         guard unlocked, !activated else { return }
         activated = true
+        scheduleBackgroundRefresh()
         tiles = TileLayoutStore(defaults: defaults)
         cartStore = CashCartStore(defaults: defaults)
         cart = cartStore!.state
@@ -123,6 +131,28 @@ final class AppState: ObservableObject {
         rivers[.baselRheinhalle] = await baselRequest
     }
 
+    func clearPublicCache() async {
+        guard unlocked, !loading else { return }
+        loading = true
+        await BackgroundRefresh.shared.cancelAndWait()
+        do {
+            if let service { try await service.clearCache() }
+            weather = nil; events = nil; news = nil; rivers = [:]; failures = []
+            #if DEBUG
+            if testing { seedFixtures(); loading = false; return }
+            #endif
+            loading = false
+            await refresh(force: true)
+        } catch {
+            loading = false
+            failures = [ui("Der Daten-Cache konnte nicht gelöscht werden.")]
+        }
+    }
+
+    func scheduleBackgroundRefresh() {
+        BackgroundRefresh.shared.schedule(unlocked: unlocked, enabled: backgroundRefresh, testing: testing)
+    }
+
     func quantity(_ item: CashItem) -> Int { cart.quantities[item.id] ?? 0 }
     func setQuantity(_ amount: Int, for item: CashItem) {
         cartStore?.setQuantity(max(0, min(99, amount)), for: item.id)
@@ -165,6 +195,7 @@ final class AppState: ObservableObject {
             PFVREvent(id: "ui-event", title: "Endfahren", location: "Depot PFVR, Rheinfelden", details: "Vereinsanlass am Rhein.", start: PFVRDate.parseLocal("2026-09-12T00:00")!, end: PFVRDate.parseLocal("2026-09-13T00:00")!, allDay: true),
             PFVREvent(id: "ui-source-text", title: "Warenkorb", details: "Unveränderter externer Quelltext für den Sprachtest.", start: PFVRDate.parseLocal("2026-09-13T18:00")!, end: PFVRDate.parseLocal("2026-09-13T20:00")!)
         ], metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))
+        news = Loaded(value: [NewsArticle(id: 1001, publishedAt: now, title: "Gemeinsam auf dem Rhein", excerpt: "Ein Rückblick auf das Vereinsleben und die nächste gemeinsame Ausfahrt.", url: PublicLinks.news)], metadata: CacheMetadata(source: "PFVR WordPress · Testdaten", updatedAt: now))
         for station in HydroStation.allCases {
             var samples: [HydroObservation] = []
             for index in 0..<169 {

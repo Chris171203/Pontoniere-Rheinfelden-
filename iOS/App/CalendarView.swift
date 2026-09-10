@@ -55,10 +55,16 @@ struct EventDetailView: View {
                 Label(AppDates.day(event.start, language: state.language), systemImage: "calendar")
                 if event.allDay {
                     Text(state.ui("Ganztägig"))
-                    if event.end.timeIntervalSince(event.start) > 86400 {
+                    if !AppDates.zurich.isDate(event.start, inSameDayAs: event.end.addingTimeInterval(-1)) {
                         Text(state.ui("Bis") + " " + AppDates.day(event.end.addingTimeInterval(-1), language: state.language))
                     }
-                } else { Label(AppDates.time(event.start) + "–" + AppDates.time(event.end), systemImage: "clock") }
+                } else {
+                    if AppDates.zurich.isDate(event.start, inSameDayAs: event.end) {
+                        Label(AppDates.time(event.start) + "–" + AppDates.time(event.end), systemImage: "clock")
+                    } else {
+                        Label(AppDates.stamp(event.start) + " – " + AppDates.stamp(event.end), systemImage: "clock")
+                    }
+                }
                 if !event.location.isEmpty { Label(event.location, systemImage: "mappin.and.ellipse") }
                 if !event.details.isEmpty { Divider(); Text(event.details).font(.body).textSelection(.enabled) }
             }

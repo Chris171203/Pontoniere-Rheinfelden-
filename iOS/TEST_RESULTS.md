@@ -22,6 +22,15 @@ Diese Zahlen beschreiben den konkreten Abruf und sind keine dauerhaft erwarteten
 
 Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompilierung: XcodeGen fand den noch nicht enthaltenen Ordner `Tests/PFVRAppTests` nicht. Daraus folgt kein bestandenes App-/Simulatorergebnis. Der Ordner samt Tests wurde danach ergänzt; erneute Ausführung erforderlich.
 
+## Integrierter Zwischenstand
+
+- Commit: `9f7b81a965a2411f05e4518dde55ee6adce74df8`.
+- [GitHub Actions 34503980734](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34503980734), Foundation-Job `102961465938`.
+- 49 Fachtests bestanden, 0 Fehler; vier Netzwerktests in diesem Schritt planmäßig übersprungen. Anschließend alle vier Live-Netzwerktests tatsächlich bestanden.
+- Android-Renderer-Bytevergleich und JavaScript-Syntaxprüfung jetzt auch auf dem macOS-Runner bestanden.
+- Die Simulator-Builds scheiterten an der XcodeGen-Vorgabe `AppIcon`, obwohl bisher nur das Vereinslogo als Bildressource vorlag. Zusätzlich hatte die Auswahl einen iOS-26.2-Simulator mit Xcode 16.4 kombiniert; dieser Lauf ist kein iOS-Funktionstestnachweis.
+- Korrekturen danach: fehlende AppIcon-Vorgabe für den Testbuild entfernt; Simulatorauswahl auf die vom aktiven Xcode-SDK unterstützten Versionen begrenzt. Store-Icon bleibt ein eigener offener Release-Punkt.
+
 ## Lokal ausgeführte Prüfungen
 
 - Der aktuelle Android-Referenzbaum wurde mit GitHub verglichen; Baumhash identisch.

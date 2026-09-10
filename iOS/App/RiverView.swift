@@ -47,10 +47,13 @@ struct RiverStationSummary: View {
     let station: HydroStation
     private var dataset: HydroDataset? { state.rivers[station] }
     private var level: HydroObservation? { dataset?.latest(parameter: "W") }
-    private var stage: RhineNavigation.Stage {
-        RhineNavigation.currentStage(gaugeCentimetres: level.flatMap { RiverDisplay.gaugeCentimetres(station: station, metresAboveSea: $0.value) }, measurement: level?.time, cacheUpdated: dataset?.live?.metadata.updatedAt, now: state.now)
-    }
     var body: some View {
+        TimelineView(.periodic(from: state.now, by: 30)) { context in
+            let stage = RhineNavigation.currentStage(gaugeCentimetres: level.flatMap { RiverDisplay.gaugeCentimetres(station: station, metresAboveSea: $0.value) }, measurement: level?.time, cacheUpdated: dataset?.live?.metadata.updatedAt, now: state.testing ? state.now : context.date)
+            summary(stage: stage)
+        }
+    }
+    private func summary(stage: RhineNavigation.Stage) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             Text(station.label).font(.subheadline.bold()).lineLimit(2).frame(minHeight: 36, alignment: .top)
             Text(AppDates.number(level?.value, digits: 2)).font(.system(.title2, design: .rounded).weight(.bold))

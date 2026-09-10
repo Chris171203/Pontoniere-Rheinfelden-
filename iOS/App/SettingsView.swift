@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var internalURL = ""
     @State private var linkResult: String?
     @State private var confirmRemove = false
+    @State private var confirmClearCache = false
     var body: some View {
         NavigationStack {
             Form {
@@ -19,9 +20,13 @@ struct SettingsView: View {
                     }.accessibilityIdentifier("settings.theme")
                     NavigationLink { TileSettingsView() } label: { Label(state.ui("Ansicht & Kacheln"), systemImage: "square.grid.2x2") }
                         .accessibilityIdentifier("settings.tiles")
+                    Toggle(state.ui("Hintergrundaktualisierung"), isOn: $state.backgroundRefresh)
+                        .accessibilityIdentifier("settings.backgroundRefresh")
                     Button { Task { await state.refresh(force: true) } } label: {
                         HStack { Text(state.ui("Daten aktualisieren")); Spacer(); if state.loading { ProgressView() } }
                     }.disabled(state.loading)
+                    Button(state.ui("Daten-Cache leeren"), role: .destructive) { confirmClearCache = true }
+                        .disabled(state.loading).accessibilityIdentifier("settings.cache.clear")
                 }
                 Section {
                     SecureField(state.ui("Persönlicher intern.pfvr.ch-Link"), text: $internalURL)
@@ -74,6 +79,13 @@ struct SettingsView: View {
                 catch { linkResult = state.ui("Der Link konnte nicht entfernt werden.") }
             }
             Button(state.ui("Abbrechen"), role: .cancel) {}
+        }
+        .confirmationDialog(state.ui("Daten-Cache leeren?"), isPresented: $confirmClearCache, titleVisibility: .visible) {
+            Button(state.ui("Daten-Cache leeren"), role: .destructive) { Task { await state.clearPublicCache() } }
+                .accessibilityIdentifier("settings.cache.clear.confirm")
+            Button(state.ui("Abbrechen"), role: .cancel) {}
+        } message: {
+            Text(state.ui("Wetter, Rhein, Kalender und News werden neu geladen. Warenkorb, Einstellungen und persönlicher Zugang bleiben erhalten."))
         }
     }
     private func saveLink() {

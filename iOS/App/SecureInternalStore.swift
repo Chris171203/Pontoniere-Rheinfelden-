@@ -8,7 +8,20 @@ extension Notification.Name {
 /// Personal links and explicitly selected participants stay on this device.
 /// The WebView uses an ephemeral store; only this allowlisted participant state persists.
 final class SecureInternalStore {
-    static let shared = SecureInternalStore()
+    static let shared: SecureInternalStore = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-ui-testing") {
+            let store = SecureInternalStore(service: "ch.pfvr.app.internal.ui-tests")
+            if arguments.contains("-ui-test-reset") {
+                try? store.delete(account: "initial-url")
+                try? store.delete(account: "people-v4")
+            }
+            return store
+        }
+        #endif
+        return SecureInternalStore()
+    }()
     private let service: String
 
     init(service: String = "ch.pfvr.app.internal") { self.service = service }
