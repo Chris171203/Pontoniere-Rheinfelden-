@@ -1,0 +1,58 @@
+# iOS bauen und prüfen
+
+Stand 2026-09-10. Die erste iOS-Portierung bleibt Testversion `0.12.6`, Bundle-ID `ch.pfvr.app.test`, Mindestversion iOS/iPadOS 17. Das Xcode-Projekt wird ohne Quellcodeänderungen aus `project.yml` erzeugt. SwiftPM verwendet Tools 5.9 und Swift-Sprachmodus 5.
+
+## Ausführung
+
+Voraussetzungen: macOS, vollständiges Xcode mit installierten iPhone-Simulatoren und XcodeGen ≥ 2.42. Ein Apple-Entwicklerkonto oder Signierschlüssel ist für diese Simulatorprüfungen nicht erforderlich. Die Simulator-App erhält eine lokale Ad-hoc-Signatur (`codesign -`) mit einem ausschließlich für Simulator-SDKs eingebundenen eigenen Keychain-Zugriffsbereich. So wird die echte Keychain geprüft; sie wird nicht durch einen Mock ersetzt.
+
+```bash
+swift test --package-path iOS --enable-code-coverage
+xcodegen generate --spec iOS/project.yml
+bash tools/ios-test.sh compact
+bash tools/ios-test.sh large
+bash tools/ios-test.sh tablet # vollständige UI-Suite, ohne Core/App-Duplikate
+```
+
+Alternativ `iOS/PFVR.xcodeproj` nach der Generierung in Xcode öffnen, Scheme `PFVR`, iPhone-Simulator und Test wählen. Für Gerät/TestFlight sind ein eigenes Team, passende Bundle-ID, Signierung und ein gesonderter Freigabeprozess erforderlich; die CI erzeugt eine Simulator-App, keine installierbare iPhone-IPA.
+
+`tools/ios-audit.py` prüft Plists und einige Build-Vorgaben. Diese Prüfung ist ausdrücklich kein Ersatz für Kompilierung oder Tests. `tools/ios-test.sh` bricht auf Linux verständlich ab, bevor es einen Build behauptet.
+
+## Automatische Prüfpakete
+
+| Paket | Laufzeit | Zweck |
+|---|---|---|
+| PFVRCoreTests | SwiftPM/macOS und iOS-Simulator | Fachlogik, Beträge/Swiss-QR, persistenter Warenkorb, Hydrologie, Kalender/Wetter, Parser/Cache und URL-Regeln |
+| PFVRAppTests | Gehostet in der echten Simulator-App | WKWebView/JavaScript, Navigation und sichere Speicherung mit lokalen Prüfdaten |
+| PFVRUITests | XCUITest auf zwei iPhone-Größen; dieselbe vollständige UI-Suite zusätzlich auf iPad | Freigabe, Navigation, Warenkorb-Neustart, Zahlungsbestätigung, QR-Anzeige, Termine, Sprache sowie System-Teilen/Kalender öffnen und abbrechen |
+
+Vor den Swift-Tests prüft die CI den JavaScript-Export bytegenau gegen den echten Android-Java-Generator und lässt V8 beide Sprachvarianten sowie das WebKit-Fixtureskript parsen. Das prüft Exportdrift und JavaScript-Syntax; DOM-Verhalten bleibt Aufgabe der WebKit-Tests.
+
+Der Workflow `iOS CI` läuft auf `main`, `codex/ios-port-*`, Pull Requests nach `main` und manuell. PR-/Push-Läufe derselben Branch und desselben Quellcommits teilen eine Concurrency-Gruppe; ein neuer Commit bricht einen älteren noch laufenden Prüfnachweis nicht ab. Tests laufen ohne automatische Wiederholung fehlgeschlagener Fälle. Ein Abschluss-Gate verlangt tatsächlich bestandene XCTest-Fälle und den erfolgreichen Abschluss jedes vorgesehenen Test-Bundles; bloße Build-Ergebnisse oder leere Testauswahlen genügen nicht. Beide Simulatorgrößen werden auch dann unabhängig geprüft, wenn eine fehlschlägt. Compact kompiliert zusätzlich die Release-Konfiguration, damit auch die Grenzen der Debug-Testhilfen durch den Compiler geprüft werden.
+
+Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact und tablet laufen hell, large dunkel. `tablet` wählt ein passendes iPad und führt alle elf UI-Tests einschließlich der echten Systemdialoge aus. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
+
+Ein separater Core-Schritt führt mit `PFVR_LIVE_SMOKE=1` den `LiveSourceSmokeTests`-Vertragstest gegen die öffentlichen Datenquellen aus. Er prüft echte Antworten und verwendet keinen persönlichen Serverzugang. Ein externer Ausfall blockiert die deterministische Prüfung nicht (`continue-on-error`); das eigene Log `live-source-smoke.log` muss deshalb ausdrücklich bewertet werden.
+
+## Nachweise und Grenzen
+
+Jeder Simulatorlauf lädt `.xcresult`, Build-/Testlogs, Coverage-Bericht, exportierte Screenshot-PNGs sowie die lokal ad-hoc-signierte Simulator-App und das erzeugte Xcode-Projekt als GitHub-Artefakte hoch. Screenshots werden für alle Tabs, Terminansicht, Sprachwahl, QR und Zahlungsbestätigung aufbewahrt. Ein begrenzter Kontaktbogen ausschließlich benannter synthetischer UI-Prüfbilder wird zusätzlich als Base64 im Joblog ausgegeben, damit die Sichtprüfung auch bei blockiertem Artefaktdownload möglich bleibt. Die echte macOS-Ad-hoc-Signatur und die von Xcode separat in den Mach-O-Abschnitt `__TEXT,__entitlements` eingebetteten Simulator-Keychain-Rechte werden vor den Tests geprüft und protokolliert. Eine leere macOS-Signatur-Rechteliste ist dabei zulässig; die tatsächlich eingebetteten Simulatorrechte müssen den eigenen Zugriffsbereich enthalten. Die Bilder benötigen eine tatsächliche Sichtprüfung; vorhandene Screenshots allein sind kein visueller Qualitätsnachweis.
+
+UI-Tests verwenden `-ui-testing` mit eigener Preferences-Domain und deterministischen öffentlichen Beispieldaten. `-ui-test-reset`, `-ui-test-unlocked` und `-ui-test-pending-payment` sind ausschließlich im Debug-Build wirksam. Die Tests geben keine echte Zahlung frei und verwenden keinen persönlichen Intern-Link. Die QR-Anzeige darf weder Warenkorb noch Zahlungsbestätigungsstatus verändern. Ein extern gestarteter Zahlungsversuch wird für die Bestätigungsprüfung explizit nachgebildet.
+
+Das AppIcon wird beim Erzeugen des Xcode-Projekts aus dem vorhandenen Vereinslogo aufgebaut (`tools/ios-app-icon.py`, macOS `sips`). Das unveränderte 96×96-JPEG bleibt die einzige Bildquelle; die technische 1024×1024-Konvertierung erfindet keine zusätzlichen Details. Ein höher aufgelöstes Original wäre optisch besser, ist aber keine Voraussetzung für die erste Geräteinstallation. Der Gerätearchiv-Prüfer verlangt das kompilierte AppIcon für iPhone und iPad.
+
+Die vollständige reale Zahlung mit Banking-/TWINT-App, persönliche produktive An-/Abmeldung, Apple-Signierung/TestFlight und physische Geräte sind durch Simulatorprüfungen nicht abgedeckt. Bereits durchgeführte Läufe, Ergebnisse und offene Prüfpunkte werden in `PORTING_STATUS.md` dokumentiert; vorbereitete Tests gelten dort erst nach realer Ausführung als bestanden.
+
+## Referenzen
+
+- [Apple: Automatisierung mit xcodebuild, Ergebnissen und Coverage](https://developer.apple.com/videos/play/wwdc2019/413/)
+- [XcodeGen: verbindliches Projektformat](https://github.com/yonaskolb/XcodeGen/blob/master/Docs/ProjectSpec.md)
+- [GitHub: Runner-Images und installierte Software](https://github.com/actions/runner-images)
+- [Apple: Verwendungsgründe für erforderliche APIs](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api)
+
+## Geräte-Release-Archiv (unsigniert)
+
+`bash tools/ios-archive.sh` baut mit dem aktiven Xcode gegen `generic/platform=iOS` ein Release-Archiv. Der unabhängige CI-Job benötigt keine Signierschlüssel. `ios-verify-device-archive.py` prüft das erzeugte Produkt: iPhoneOS/arm64 statt Simulator, beide Gerätefamilien, Mindestversion 17.0, Test-Bundle/Version, Privacy-Manifest sowie fehlendes Provisioning und fehlende Simulator-Entitlements. Logs, Prüfbericht und `.xcarchive` werden als Artefakte erhalten. Das belegt Geräte-Kompilierung, keine Installation, Laufzeit oder Store-Abnahme. Archivieren und Exportieren sind getrennte Schritte; siehe [Apple TN2339](https://developer.apple.com/library/archive/technotes/tn2339/_index.html).
+
+Für einen signierten TestFlight-Kandidaten bleiben ein offizieller Icon-Master, die bestätigte App-Identität samt Apple-Team, sicher bereitgestellte Signiermittel sowie eine ausdrücklich freigegebene Verteilung offen. Die vorhandene Test-Bundle-ID bleibt bis zu dieser Entscheidung bestehen. Bei einem ID-Wechsel müssen auch der BGTask-Identifier in Info.plist und im Scheduler gemeinsam angepasst und getestet werden. Es werden keine Zugangsdaten in Projektdateien abgelegt.

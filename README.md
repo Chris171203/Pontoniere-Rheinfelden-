@@ -29,7 +29,7 @@ Schwerpunkte des aktuellen Stands:
 ## Struktur
 
 - `Android/` – aktuelle native Android-App und Build-Konfiguration.
-- `iOS/` – vorbereitet für eine spätere native iOS-App.
+- `iOS/` – native SwiftUI-Portierung ab iOS 17; Umsetzung und tatsächliche Testnachweise in [`iOS/PORTING_STATUS.md`](iOS/PORTING_STATUS.md).
 - `PlayStore/` – aktuelle Store-, Datenschutz-, Data-Safety-, Review-, Asset- und Release-Unterlagen.
 - `decisions/` – relevante Architektur- und Sicherheitsentscheidungen.
 

@@ -2,6 +2,12 @@
 
 Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 
+## iOS-Portierung
+
+- Native SwiftUI-Entwicklungsversion des Android-Stands `0.12.6` ab iOS 17 umgesetzt, auf Branch `codex/ios-port-0.12.6` in [Draft-PR #32](https://github.com/Chris171203/Pontoniere-Rheinfelden-/pull/32). Android-Referenz: `c617bae`; Main und Android unverändert.
+- Geprüfter Quellstand `9da6295`: [CI 34518227820](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34518227820) mit fünf erfolgreichen Jobs. Je 79 Tests auf iPhone SE 3 und iPhone 16 Pro Max / iOS 18.5, alle elf UI-Szenarien auf iPad Air 11 M2, vier echte Live-Quellenprüfungen, Debug-/Release-Build und erstmals geprüftes unsigniertes iPhoneOS/arm64-Release-Archiv. iPad-Originalaufnahmen geprüft; commitgenaue Ergebnisse in `iOS/TEST_RESULTS.md`.
+- Sechs Agentenpakete samt Nachprüfung abgeschlossen. Für Geräte-/Store-Verteilung fehlen AppIcon/Store-Assets, Apple-Signierung und gesonderte Geräte-/Produktivintegrationsnachweise. Keine installierbare Geräte-IPA oder Veröffentlichung. Details/Fortsetzung: [`iOS/PORTING_STATUS.md`](iOS/PORTING_STATUS.md), commitgenaue Nachweise: [`iOS/TEST_RESULTS.md`](iOS/TEST_RESULTS.md).
+
 ## Aktueller Teststand
 
 - `0.12.6` reduziert erklärenden Prototyp-Text auf Home und im Warenkorb: Hero-Zusatzsatz sowie redundante Untertitel bei Wetter, 3-Tage-Wetter, Rhein, Terminen und Warenkorb entfallen; News zeigt nur noch den Stand, Wetterquellen werden kompakt als `MeteoSwiss/Open-Meteo` ausgewiesen und der sicherheitsrelevante BAFU-Hinweis bleibt in gekürzter Form erhalten. Rechts bei `Rhein aktuell` sitzt nun ein dezentes `↻` mit 44-dp-Tapfläche; ein Tap dreht das Symbol kurz um 360° und erzwingt über `refreshLive(true)` einen neuen Wetter- und Rheinabruf.
@@ -96,4 +102,4 @@ Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 - Für die private An-/Abmeldeseite langfristig einen klaren Adapter beziehungsweise dokumentierten Backend-Endpunkt verwenden, sobald Zugriff darauf besteht. Weitere DOM-Sonderfälle nicht unkontrolliert in die Hauptlogik einbauen.
 - Remote-Katalog mit Server-JSON, lokalem Cache und eingebautem Fallback vorbereiten, sobald ein pflegbarer Website-Endpunkt verfügbar ist.
 - Optionaler Upload-Portal-Zugang für Vereinsbilder und Videos.
-- Optionale Trainingsbenachrichtigungen, Homescreen-Widget und spätere iOS-Implementierung.
+- Optionale Trainingsbenachrichtigungen und Homescreen-Widget; laufende iOS-Portierung einschließlich eigener Testabnahme siehe oben.

@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PFVR local fixture</title></head>
+<body>
+<!-- Synthetic data only. Every submission is intercepted locally; this fixture makes no network calls. -->
+<header id="original-header">Originalansicht</header>
+<form id="attendance" action="about:blank" method="post">
+<table id="attendance-source">
+  <tr><th>Person</th>
+    <th>10.09.2026<br>Training<input id="cook" type="text" name="cook" value="Beispiel Sehrlangerkochname"></th>
+    <th>12.09.2026<br>Wettfahren</th><th>17.09.2026<br>Training</th></tr>
+  <tr><td><button type="button">✎ Muster Alex</button></td>
+    <td>Mit Essen<br>Training<button id="original-submit" type="submit" name="choice" value="attend-with-food">Ich komme, mit Essen</button></td>
+    <td><input id="original-input" type="button" name="second-choice" value="Ich komme, ohne Essen"></td>
+    <td><select id="original-status" name="third-choice"><option value="none">Nicht gewählt</option><option value="yes">Mit Essen</option><option value="no">Komme nicht</option></select></td></tr>
+  <tr><td><input type="button" value="✎ Beispiel Bea"></td>
+    <td><button type="button">Ich komme nicht</button></td><td><button type="button">Ich komme, mit Essen</button></td><td><button type="button">Ich komme, ohne Essen</button></td></tr>
+  <tr><td><span>Test</span> <span>Carlo</span></td>
+    <td><button type="button">Ich komme, ohne Essen</button></td><td><button type="button">Ich komme nicht</button></td><td><button type="button">Ich komme, mit Essen</button></td></tr>
+</table>
+</form>
+<form id="person-tools" action="about:blank">
+  <p>Person zur Liste hinzuzufügen:</p>
+  <select id="person-select" name="person"><option value="">Bitte wählen</option><option value="fixture-alex">Muster Alex</option><option value="fixture-bea">Beispiel Bea</option><option value="fixture-carlo">Test Carlo</option><option value="fixture-dora">Probe Dora</option></select>
+  <button id="bulk-action" type="button">Alle Personen anzeigen</button>
+</form>
+<script>
+window.fixture={submissions:[],inputClicks:0,statusChanges:[],personInputs:[],personChanges:[],bulkClicks:0};
+window.fixtureOriginalSubmit=document.getElementById('original-submit');
+window.fixtureOriginalInput=document.getElementById('original-input');
+window.fixtureOriginalStatus=document.getElementById('original-status');
+document.getElementById('attendance').addEventListener('submit',function(event){
+  event.preventDefault();
+  fixture.submissions.push({name:event.submitter.name,value:event.submitter.value,cook:new FormData(event.target).get('cook')});
+});
+document.getElementById('person-tools').addEventListener('submit',function(event){event.preventDefault();});
+fixtureOriginalInput.addEventListener('click',function(){fixture.inputClicks++;});
+fixtureOriginalStatus.addEventListener('change',function(){fixture.statusChanges.push(this.value);});
+document.getElementById('bulk-action').addEventListener('click',function(){fixture.bulkClicks++;});
+document.getElementById('person-select').addEventListener('input',function(){fixture.personInputs.push(this.value);});
+document.getElementById('person-select').addEventListener('change',function(){
+  fixture.personChanges.push(this.value);
+  if(this.value!=='fixture-dora'||document.getElementById('added-person'))return;
+  var row=document.createElement('tr');row.id='added-person';
+  row.innerHTML='<td>Probe Dora</td><td><button type="button">Ich komme, mit Essen</button></td><td><button type="button">Ich komme nicht</button></td><td><button type="button">Ich komme, ohne Essen</button></td>';
+  document.getElementById('attendance-source').tBodies[0].appendChild(row);
+});
+</script>
+</body></html>

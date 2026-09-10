@@ -1,0 +1,117 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main, 'codex/ios-port-*']
+    paths: ['iOS/**', '!iOS/**/*.md', 'tools/ios-*', 'tools/internal-*', 'Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java', 'Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java', '.github/workflows/ios-ci.yml']
+  pull_request:
+    branches: [main]
+    paths: ['iOS/**', '!iOS/**/*.md', 'tools/ios-*', 'tools/internal-*', 'Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java', 'Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java', '.github/workflows/ios-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deduplicate PR/push for the same source commit while preserving evidence from older running commits.
+concurrency:
+  group: ios-${{ github.head_ref || github.ref_name }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: '1'
+  HOMEBREW_NO_INSTALL_CLEANUP: '1'
+
+jobs:
+  core:
+    name: Foundation unit tests
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain and manifest checks
+        run: |
+          swift --version
+          xcodebuild -version
+          python3 tools/ios-audit.py
+          python3 tools/ios-select-simulator-tests.py
+          python3 tools/ios-verify-test-execution-tests.py
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify shared renderer bytes and JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/core
+          python3 tools/internal-export-renderer.py --check 2>&1 | tee artifacts/core/renderer-drift.log
+          node tools/internal-renderer-check.mjs 2>&1 | tee artifacts/core/renderer-syntax.log
+      - name: Run actual Swift package tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/core
+          swift test --package-path iOS --enable-code-coverage 2>&1 | tee artifacts/core/swift-test.log
+      - name: Public source contract smoke tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          PFVR_LIVE_SMOKE=1 swift test --package-path iOS --filter LiveSourceSmokeTests 2>&1 | tee artifacts/core/live-source-smoke.log
+      - name: Upload package test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-iOS-core-${{ github.run_number }}
+          path: artifacts/core/
+          if-no-files-found: warn
+          retention-days: 14
+
+  simulator:
+    name: Simulator ${{ matrix.profile }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [compact, large, tablet]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project generator
+        run: |
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          xcodegen --version
+          xcodebuild -version
+      - name: Compile and run simulator tests
+        run: bash tools/ios-test.sh '${{ matrix.profile }}'
+      - name: Upload simulator evidence and ad-hoc-signed simulator app
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-iOS-${{ matrix.profile }}-${{ github.run_number }}
+          path: artifacts/ios-${{ matrix.profile }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  device-archive:
+    name: Unsigned device Release archive
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project generator
+        run: |
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+      - name: Build and verify actual iPhoneOS archive
+        run: bash tools/ios-archive.sh
+      - name: Upload device compile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-iOS-device-${{ github.run_number }}
+          path: artifacts/ios-device/
+          if-no-files-found: warn
+          retention-days: 14
