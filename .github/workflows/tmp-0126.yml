@@ -19,6 +19,18 @@ jobs:
         with:
           ref: ui/home-cleanup-refresh-0.12.6
 
+      - name: Align staged patch with current source layout
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/tmp-0126.py')
+          s=p.read_text()
+          start=s.index("old='''    private String weatherAge(String source,long updated){")
+          end=s.index("new='''    private String compactWeatherSource",start)
+          replacement="""old='''    private String weatherAge(String source,long updated){if(updated<=0)return source;long min=Math.max(0,(System.currentTimeMillis()-updated)/60000);return source+(min>90?\" · Cache \"+(min/60)+\" h\":\" · \"+ui(\"vor\")+\" \"+min+\" min\");}\n'''\n"""
+          p.write_text(s[:start]+replacement+s[end:])
+          PY
+
       - name: Apply staged source patch
         run: python3 .github/tmp-0126.py
 
