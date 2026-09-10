@@ -177,15 +177,30 @@ final class PFVRUITests: XCTestCase {
     /// Opens Apple's real controllers and cancels them without sharing or saving.
     /// This also runs alone on iPad to exercise native modal/popover presentation.
     func testSystemShareAndCalendarEditorsCanBeCancelled() {
+        executionTimeAllowance = 90 // Includes first simulator launch and two native controller transitions.
         launch()
         addDrink()
         let savedTotal = cashTotal()
         tap("payment.qr")
         XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
         tap("payment.share")
-        XCTAssertTrue(element("system.share").waitForExistence(timeout: 10))
+        // Observed in the actual iPad AX tree: UIKit presents these native
+        // controls in a remote activity view and omits our container's ID.
+        let activities = app.collectionViews["activityCollectionView"]
+        let shareAppeared = activities.waitForExistence(timeout: 10)
+        let copyAction = activities.cells.matching(NSPredicate(format: "label IN %@", ["Kopieren", "Copy"])).firstMatch
+        let copyAppeared = copyAction.waitForExistence(timeout: 5)
         capture("system-share-ui")
-        cancelSystemEditor("system.share", allowSwipe: true)
+        if !shareAppeared || !copyAppeared {
+            print("PFVR_SYSTEM_SHARE_AX_BEGIN\n" + app.debugDescription + "\nPFVR_SYSTEM_SHARE_AX_END")
+        }
+        XCTAssertTrue(shareAppeared && copyAppeared, "The real native share actions must be presented")
+        XCTAssertTrue(copyAction.isHittable)
+        let closeShare = app.buttons["header.closeButton"]
+        XCTAssertTrue(closeShare.waitForExistence(timeout: 5))
+        XCTAssertTrue(closeShare.isHittable)
+        closeShare.tap()
+        waitUntilGone(activities)
         XCTAssertTrue(element("payment.qr.image").waitForExistence(timeout: 5))
         tap("payment.done")
         XCTAssertEqual(cashTotal(), savedTotal)
@@ -194,9 +209,20 @@ final class PFVRUITests: XCTestCase {
         tap("tab.events")
         tap("event.ui-training")
         tap("event.calendar")
-        XCTAssertTrue(element("system.calendar").waitForExistence(timeout: 10))
+        // The source title must be editable in Apple's real editor; the
+        // underlying event detail has only static text and no title field.
+        let titleField = app.textFields.matching(NSPredicate(format: "value == %@", "Vereinstraining")).firstMatch
+        let calendarAppeared = titleField.waitForExistence(timeout: 10)
         capture("system-calendar-ui")
-        cancelSystemEditor("system.calendar", allowSwipe: false)
+        if !calendarAppeared {
+            print("PFVR_SYSTEM_CALENDAR_AX_BEGIN\n" + app.debugDescription + "\nPFVR_SYSTEM_CALENDAR_AX_END")
+        }
+        XCTAssertTrue(calendarAppeared, "The native calendar editor must contain the source title")
+        let cancelCalendar = app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Abbrechen", "Cancel"])).firstMatch
+        XCTAssertTrue(cancelCalendar.waitForExistence(timeout: 5))
+        XCTAssertTrue(cancelCalendar.isHittable)
+        cancelCalendar.tap()
+        waitUntilGone(titleField)
         XCTAssertTrue(element("event.detail").waitForExistence(timeout: 5))
         app.terminate()
         launch(reset: false, unlocked: false)
@@ -205,22 +231,9 @@ final class PFVRUITests: XCTestCase {
         XCTAssertFalse(app.buttons["payment.confirm.yes"].exists)
     }
 
-    private func cancelSystemEditor(_ id: String, allowSwipe: Bool, file: StaticString = #filePath, line: UInt = #line) {
-        let controller = element(id)
-        let labels = ["Abbrechen", "Cancel", "Schließen", "Schliessen", "Close"]
-        let cancelButtons = controller.buttons.matching(NSPredicate(format: "label IN %@", labels)).allElementsBoundByIndex
-        if let cancel = cancelButtons.first(where: { $0.isHittable }) {
-            cancel.tap()
-        } else if allowSwipe {
-            // Native activity sheets also support dragging their top edge down.
-            let top = controller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
-            let bottom = controller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
-            top.press(forDuration: 0.1, thenDragTo: bottom)
-        } else {
-            XCTFail("The native calendar Cancel button is unavailable", file: file, line: line)
-        }
-        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: controller)
-        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed, "The system editor must actually close", file: file, line: line)
+    private func waitUntilGone(_ nativeElement: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: nativeElement)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed, "The native system editor must actually close", file: file, line: line)
     }
 
     func testEventDetailPreservesSourceTextAndExposesActions() {

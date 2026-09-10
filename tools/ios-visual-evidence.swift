@@ -26,7 +26,7 @@ for file in files where file.pathExtension == "json" {
     if let data = try? Data(contentsOf: file), let object = try? JSONSerialization.jsonObject(with: data) { collect(object) }
 }
 let desired = profile == "tablet"
-    ? ["system-share-ui", "system-calendar-ui"]
+    ? ["system-share-ui", "system-calendar-ui", "failure"]
     : ["screen-home", "screen-river", "screen-events", "screen-internal", "screen-cash", "screen-club", "payment-swiss-qr", "river-graph-2091", "river-graph-2289"]
 var chosen: [(String, NSImage)] = []
 for name in desired {
@@ -36,6 +36,12 @@ for name in desired {
     }), let image = NSImage(contentsOf: file) else { continue }
     chosen.append((name, image))
     if chosen.count == 9 { break }
+}
+if chosen.isEmpty, let failed = files.first(where: { candidate in
+    let label = metadata[candidate.lastPathComponent] ?? candidate.lastPathComponent
+    return ["png", "jpg", "jpeg"].contains(candidate.pathExtension.lowercased()) && label.contains("failure_")
+}), let image = NSImage(contentsOf: failed) {
+    chosen.append(("failure", image))
 }
 guard !chosen.isEmpty else {
     print("PFVR_VISUAL_EVIDENCE_UNAVAILABLE: no named synthetic screenshot mappings in export manifest")
