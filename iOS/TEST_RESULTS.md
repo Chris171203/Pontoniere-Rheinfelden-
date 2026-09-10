@@ -2,6 +2,33 @@
 
 Aktualisiert: 2026-09-10. Ergebnisse beziehen sich immer auf den angegebenen Commit, nicht automatisch auf spätere lokale Änderungen.
 
+## Abschließend bestandener Quellstand
+
+Geprüfter Produkt- und Testcode: **`2bf0749f490ffe0aee5f050aec7ee6583e79717d`**, [GitHub Actions 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048). Alle vier Jobs erfolgreich; Logs, echte XCTest-Abschlussmarken und exportierte `.xcresult`-Zusammenfassungen wurden geprüft. Nach diesem Stand wurden ausschließlich Dokumentationen geändert.
+
+Umgebung: macOS 15.7.9, Xcode 16.4, Apple Swift 6.1.2, Simulator-SDK und Runtime iOS 18.5 (22F77), arm64. Swift-Sprachmodus 5, Deployment-Ziel iOS 17.
+
+| Paket / Gerät | Tatsächlich bestanden | Job | Artefakt-ID |
+|---|---|---|---|
+| Foundation/macOS | 49 deterministische Fälle und separat vier echte Live-Quellenprüfungen | `102993933226` | `10166892146` |
+| iPhone SE (3. Generation), hell | 49 Core + 19 Hosted + 11 UI = **79**, 0 Fehler | `102993932973` | `10167388772` |
+| iPhone 16 Pro Max, dunkel | 49 Core + 19 Hosted + 11 UI = **79**, 0 Fehler | `102993933067` | `10167257495` |
+| iPad Air 11 Zoll (M2), hell | Ein gezielter nativer Teilen-/Kalendereditor-Test, 0 Fehler | `102993933205` | `10167068246` |
+
+Vier opt-in Live-Fälle werden in jeder Offline-Suite bewusst übersprungen und im Foundation-Job tatsächlich separat ausgeführt. Es gab keine automatische Wiederholung fehlgeschlagener Testfälle. Der kompakte Lauf bestand zusätzlich den Release-Build; alle drei Simulatorziele bestanden Debug-Testbuild, Ad-hoc-Signaturprüfung und Prüfung der tatsächlich eingebetteten eigenen Keychain-Rechte.
+
+Die 19 Hosted-Fälle umfassen acht Hintergrund-Lifecycle-Fälle, sechs echte WebKit-/Formularfälle, zwei Sicherheits-/Keychain-Fälle und drei Zahlungs-/QR-Fälle. Der Swiss-QR-PNG wurde mit Vision vollständig zurückgelesen: offener Betrag, CHF 0.01, 12.50 und 99999.99, einschließlich Empfänger, IBAN, CHF und 34 Payload-Feldern. Ein unabhängiges Kontrollbild prüft den Reader.
+
+Die elf UI-Fälle prüfen Freigabefehler, alle Tabs, beide Rhein-Diagramme mit tatsächlichen Fixturewerten, Termindetails, Sprache und unveränderte Quelltitel, Warenkorb über Neustart/manuelles Leeren, explizite Zahlungsbestätigung mit Nein/Ja, QR-Ansehen ohne Zahlungsfrage, native Systemdialoge, Kacheln und Cache-Löschung ohne Verlust anderer Einstellungen.
+
+### Tatsächliche Bildprüfung
+
+Original-PNGs wurden aus den beiden finalen iPhone-Artefakten gelesen. Beide Pegel-/Abflussgrafiken sind vollständig erfasst, die Temperatur-Zeitachse ist auch auf SE lesbar. Home, Kasse, QR, Zahlungsfrage, native Teilen-/Kalenderdialoge und weitere zuvor geprüfte unveränderte Ansichten zeigen keine erkennbaren Überlappungen oder abgeschnittenen Bedienelemente.
+
+Die internen Matrizen enthalten nach der Scene-Korrektur tatsächliche Inhalte. Deutsch/hell und Schweizerdeutsch/dunkel zeigen die originalen Website-Controls, zwei sichtbare Personenspalten, Namen, Statusfarben und lesbare Beschriftungen. Eine zunächst verdächtige Vorschau ohne Buttontexte wurde direkt anhand der unveränderten PNG-Datei und ihrer Pixel überprüft: Alle Texte sind vorhanden. Archiv und Datei haben identischen SHA-256 `0d22d52e7899c0eac561594700768b0c91c439eab3761ddd2c1aded47f6cc53c`; daraus folgt kein weiterer Produktfehler. Vorsorgliche, noch nicht integrierte Teständerungen wurden verworfen, der grün geprüfte Quellstand blieb unverändert.
+
+Die nachstehenden älteren Läufe dokumentieren die gefundenen und behobenen Fehler; ihre Zwischenstände ersetzen nicht die abschließende Tabelle. GitHub-Testartefakte werden gemäß Workflow 14 Tage aufbewahrt; Quellcode, Testergebnisse und Reproduktionsbefehle bleiben im Repository erhalten.
+
 ## Erster Compiler- und Datenquellentest
 
 - Commit: `126997b8a69a2107d127f4064b9a02ddd72052b2`.
@@ -70,6 +97,7 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 
 - Commit: `e57a286558d7edfcf5bf6b64b856c129e1c7d709`; [Lauf 34510327390](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34510327390).
 - iPhone SE (3. Generation), iOS 18.5, hell, Job `102982567649`: Debug-Testbuild und Release-Build bestanden. 49 Core-Tests bestanden, vier Live-Fälle bewusst ausgelassen; **alle 19 Hosted-App-Tests bestanden**; neun von elf UI-Tests bestanden.
+- iPhone 16 Pro Max, iOS 18.5, dunkel, Job `102982567748`: dieselben 49 Core-, 19 Hosted- und neun von elf UI-Testfälle bestanden. Identische zwei Dialogadapterfehler, kein zusätzlicher Fehler.
 - Damit tatsächlich nachgewiesen: alle acht Hintergrund-Lifecycle-Fälle; alle sechs internen WKWebView-Fälle einschließlich Wiederherstellung von Personen, Original-/App-Modus und echten Formular-Controls; beide Sicherheits-/Keychain-Fälle; alle drei Zahlungsfälle einschließlich vollständigem Swiss-QR-PNG-Roundtrip über Vision für offenen Betrag, CHF 0.01, 12.50 und 99999.99 sowie unabhängigem Reader-Kontrollbild.
 - UI tatsächlich bestanden: Freigabefehler, sechs Tabs/Mindest-Tapflächen, beide Rhein-Diagramme, Termindetails, persistente Sprache, Warenkorb-Neustart/manuelles Leeren, Kachelanordnung/-sichtbarkeit, Cache-Löschen ohne Warenkorbverlust und QR-Ansehen ohne Zahlungsbestätigung.
 - Zwei UI-Adapterfehler blieben: die bekannte Teilen-Container-ID und die von UIKit nicht exponierten Ja-/Nein-Button-IDs. Der originale Zahlungs-Screenshot samt AX-Baum zeigt die echte Frage „War die Zahlung erfolgreich?“ mit Nein/Ja. Der folgende Testadapter fragt deshalb genau diesen Alert und dessen native Antworten ab; auch sämtliche negativen Prüfungen wurden auf das echte Alert-Element umgestellt. Warenkorb- und Neustartassertions wurden beibehalten.
@@ -79,7 +107,23 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 - Commit: `c04d95a9778dc45c527946b901a48f930f48540f`; [Lauf 34511181146](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34511181146).
 - Foundation-Job `102986088657`: 49 deterministische Tests und anschließend **alle vier tatsächlichen Live-Quellentests** bestanden; Live-Dauer 24,678 Sekunden.
 - iPad Air 11 Zoll (M2), iOS 18.5, hell, Job `102986088728`: Debug-Testbuild und gezielter UI-Test bestanden (61,980 Sekunden). Apples echter Teilen-Dialog mit bedienbarer Kopieren-Aktion wurde geöffnet und geschlossen, anschließend der echte EventKit-Editor mit editierbarem Quelltitel geöffnet und abgebrochen. Warenkorb blieb nach Prozessneustart erhalten; keine Zahlungsfrage durch Abbruch.
-- Dieser einzelne gezielte iPad-Test ersetzt keine vollständige iPad-Testmatrix. Die iPhone-Gesamtläufe und der korrigierte Zahlungsalert-Test werden separat ausgewertet.
+- Die beiden iPhone-Jobs `102986088569` (SE) und `102986088754` (Pro Max) bestanden je 49 Core-, 19 Hosted- und zehn von elf UI-Testfällen. Teilen und Kalender bestanden auch auf beiden iPhones. Einzig die Zahlungsalert-Kennung war noch fehlerhaft; der Folgecommit `3c0aca0` korrigiert diesen Adapter.
+- Dieser einzelne gezielte iPad-Test ersetzt keine vollständige iPad-Testmatrix.
+
+## Vollständige Bedienabläufe und WebKit-Nachprüfung
+
+- Commit `3c0aca08227c5f8785669929d5a03ffe2ca0a677`; [Lauf 34512395375](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34512395375).
+- Auf iPhone 16 Pro Max dunkel, Job `102989474775`, sind erstmals **alle elf UI-Tests tatsächlich bestanden**, einschließlich Zahlungsfrage, Nein/Ja und Warenkorbzustand über Neustarts. 49 Core-Tests ebenfalls bestanden. Ein Hosted-Fall überschritt beim Laden der Original-WebKit-Fixture sein Zeitlimit (`testOriginalModeAndAutomaticFallbackKeepUntouchedPageAvailable`, bisheriges Testfenster ohne aktive Scene); 18 von 19 Hosted-Fällen bestanden. Das ist kein vollständig erfolgreicher Job.
+- iPhone SE, Job `102989474823`: ebenfalls alle elf UI-Tests und 49 Core-Tests bestanden. Der Hosted-Fall `testActualControlsFormPayloadAndListenersSurviveMatrixProjection` überschritt beim Warten auf die lokale Fixture sein Zeitlimit; 18 von 19 Hosted-Fällen bestanden. Diese zwei Scene-losen Läufe sind trotz erfolgreicher Bedienungstests keine vollständige Abnahme.
+- Core-Job `102989474574`: 49 Offlinefälle sowie alle vier tatsächlichen Live-Quellenprüfungen bestanden. iPad-Job `102989474834`: gezielter nativer Systemdialogtest erneut bestanden, jetzt auch mit der stärkeren negativen Prüfung des echten Zahlungsalerts.
+- Nachprüfstand `2bf0749f490ffe0aee5f050aec7ee6583e79717d`, [Lauf 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048): Szene-/Bildkorrekturen und lesbare Temperaturachse; Ergebnis erst nach tatsächlichem Abschluss bewerten.
+
+## Visuelles Review und letzte Korrekturen
+
+- 18 exportierte Originalbilder aus `e57a286` / iPhone SE unabhängig angesehen. Home, Rheinwerte, Termine/Detail, Kasse, QR, Verein, Einstellungen, Kachelanpassung und Intern-Leerzustand zeigten keine erkennbaren Überlappungen oder abgeschnittenen Bedienelemente. Zusätzlich den neun Ansichten umfassenden Kontaktbogen aus `c04d95a` / iPhone 16 Pro Max dunkel angesehen; keine sichtbaren Überlappungen.
+- Kleiner tatsächlicher Darstellungsfehler: Die automatische Temperatur-X-Achse kürzte auf SE mehrere Uhrzeiten zu identischen „9. Sept., 1…“. `RiverTemperatureCard` erhält kurze, zur Auswahl passende `HH:mm`-/`dd.MM.`-Labels.
+- Zwei Aufnahmelücken: Beide gehosteten internen Matrixbilder waren vollständig transparent; die DOM-/Formulartests waren trotzdem echt bestanden. Das Testfenster wird nun an eine aktive `UIWindowScene` gebunden, auf tatsächliche gezeichnete Frames gewartet und leere/einfarbige Bilder werden zurückgewiesen. Die zwei kleinen Pegel-/Abflussaufnahmen zeigten nur Graphanfänge; der UI-Test verlangt jetzt vollständige Sichtbarkeit zwischen Navigation und Tabs und erfasst zusätzlich die Temperaturkurve.
+- Die korrigierten Tests wurden im abschließenden Lauf tatsächlich bestanden; die Originalbilder wurden anschließend geprüft, siehe Tabelle und Bildprüfung oben.
 
 ## Lokal ausgeführte Prüfungen
 
@@ -88,6 +132,6 @@ Die zwei Simulatorjobs dieses frühen Zwischenstands endeten vor der App-Kompili
 - `bash -n tools/ios-test.sh`: Shell-Syntax bestanden.
 - `python3 tools/internal-export-renderer.py --check`: Deutsch und Schweizerdeutsch stimmen mit der Ausgabe des tatsächlichen Android-Java-Generators überein.
 
-## Noch ausstehend
+## Grenzen der Abnahme
 
-Vollständig erfolgreicher integrierter iPhone-UI-Lauf mit den korrigierten nativen Dialogabfragen und abschließende Sichtprüfung. Release-Build, alle Hosted-App-Tests und QR-PNG-Decodierung sind inzwischen tatsächlich bestanden. Reale Bankzahlungen, produktive Intern-Aktionen, physische Geräte und signierte Verteilung sind separate Nachweise.
+Die Entwicklungsversion ist für die oben benannten Simulatorfälle abgenommen. Nicht nachgewiesen sind physische Geräte, die Mindest-Runtime iOS 17, sämtliche iPad-Abläufe, produktive persönliche Intern-Aktionen, reale Banking-/TWINT-Übernahmen und -Zahlungen sowie die tatsächliche Häufigkeit von iOS-Hintergrundzustellungen. Store-AppIcon und Apple-Produktionssignierung/TestFlight bleiben Release-Aufgaben. Der Simulator-Build ist keine auf einem iPhone installierbare IPA.

@@ -2,6 +2,8 @@
 
 Native SwiftUI-Portierung des Android-Stands **0.12.6** für iPhone und iPad ab iOS 17. Entwicklungsversion; aktueller Funktions- und Teststatus steht in [`PORTING_STATUS.md`](PORTING_STATUS.md).
 
+Die konfigurierte Simulator-Abnahme ist bestanden: je 79 Tests auf kleinem/großem iPhone, ein gezielter iPad-Systemdialogtest, vier echte Live-Quellenprüfungen und Debug-/Release-Build. Geprüfter Quellstand und Grenzen: [`TEST_RESULTS.md`](TEST_RESULTS.md). Eine Geräte-/TestFlight-Verteilung ist noch nicht eingerichtet.
+
 ## Aufbau
 
 - `Sources/PFVRCore/`: Fachregeln, Zahlungsdaten, Kalender/Wetter/Rhein/News und persistente öffentliche Caches.
@@ -20,6 +22,7 @@ swift test --package-path iOS
 xcodegen generate --spec iOS/project.yml
 bash tools/ios-test.sh compact
 bash tools/ios-test.sh large
+bash tools/ios-test.sh tablet
 ```
 
 Das erzeugte `iOS/PFVR.xcodeproj` kann anschließend in Xcode geöffnet werden. Eine Installation auf einem echten Gerät benötigt eine passende Apple-Entwicklersignierung. Details und tatsächlich ausgeführte Prüfungen: [`BUILD_TESTS.md`](BUILD_TESTS.md).

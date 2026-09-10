@@ -62,3 +62,19 @@ Am 10.09.2026 wurde ausschliesslich der lokale Diff `83d015d` → `95d169d` für
 - **QR-Nachweis:** CPU-Ausführung und Vision-Revision 2 ändern den verwendeten Leserpfad, nicht die Anforderungen. Vollständiger Payload, Feldanzahl, IBAN, Empfänger, Betrag und Währung werden unverändert geprüft. Ein zusätzlicher Kontroll-QR muss mit demselben Leser ebenfalls dekodierbar sein. Es wurde keine fehlgeschlagene QR-Prüfung in einen Skip oder Erfolg umgewandelt.
 
 Dieses Nachreview ist ein Quellvergleich. Ergebnisse des dazugehörigen neuen Simulatorlaufs und die Sichtprüfung seiner Bilder müssen gesondert in den Testnachweisen festgehalten werden.
+
+## Visuelle Nachprüfung der echten Simulatorbilder
+
+18 Original-PNGs aus `e57a286`, iPhone SE 3 / iOS 18.5 / hell wurden unabhängig visuell geprüft. Home, Rheinwerte, Termine/Detail, Kasse, QR, Verein, Settings, Kachelverwaltung und Intern-Leerzustand enthielten keine sichtbaren Überlappungen oder abgeschnittenen Bedienelemente.
+
+Zusätzlicher kleiner Produktbefund R8: Die unformatierte Temperatur-X-Achse in `RiverTemperatureCard` kürzte Datums-/Zeitangaben zu identischen „9. Sept., 1…“ und verlor dadurch Stundeninformation. Korrektur: kurze Uhrzeit für 1h/24h, kurzes Datum für 7d; tatsächlicher Nachtest und Screenshot stehen noch aus. Das Anpassungsverfahren folgt [Apples Swift-Charts-Achsenanpassung](https://developer.apple.com/videos/play/wwdc2022/10137/).
+
+Die beiden gehosteten Matrixbilder waren vollständig transparent; daraus wird ausdrücklich keine visuelle Freigabe abgeleitet. Teilweise abgeschnittene Graphaufnahmen sind ebenfalls unzureichende Evidenz. Der Testadapter wird für eine echte aktive WindowScene, gezeichnete Pixel und vollständig sichtbare Graphen korrigiert; Funktionstests und erfolgreiche Bildprüfung bleiben getrennte Nachweise.
+
+## Abschließende Simulator- und Bildnachweise
+
+Produkt-/Testcode `2bf0749` bestand in CI `34513741048` alle vorgesehenen Fälle: jeweils 79 auf beiden iPhones und einen gezielten iPad-Systemdialogtest, außerdem 49 Foundation-Fälle und vier tatsächliche Live-Quellenprüfungen. Die Testzahlen und Umgebungen sind in `TEST_RESULTS.md` getrennt dokumentiert.
+
+Die finalen Originalbilder wurden nachgesehen: beide Pegel-/Abflussgrafiken sind vollständig erfasst, R8 ist durch lesbare Temperaturzeiten auch auf SE behoben. Acht zusätzliche große Dark-Originale (Home, gefüllte Kasse, QR, Zahlungsfrage, Teilen, Kalender und beide Pegelgrafiken) zeigten keine weiteren Clipping-/Überlappungsbefunde.
+
+Die Scene-gebundenen Matrizen sind tatsächlich gerendert. Eine zunächst ohne Buttontexte angezeigte Vorschau wurde gegen die unveränderte PNG-Datei, Archivhash und Pixel geprüft: Die Texte sind vorhanden. Keine Produktänderung daraus; vorsorgliche zusätzliche Teständerungen wurden nicht integriert. Im abschließend geprüften Entwicklungsumfang verbleibt kein belegter offener Produktbefund. Die oben beschriebenen Geräte-, Betriebs- und Verteilungsgrenzen gelten weiter.
