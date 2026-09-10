@@ -12,9 +12,9 @@ on:
 permissions:
   contents: read
 
-# A PR and its branch push share one group; only the latest run uses runners.
+# Deduplicate PR/push for the same source commit while preserving evidence from older running commits.
 concurrency:
-  group: ios-${{ github.head_ref || github.ref_name }}
+  group: ios-${{ github.head_ref || github.ref_name }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 env:

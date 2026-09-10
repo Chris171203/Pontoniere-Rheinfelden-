@@ -24,8 +24,15 @@ for PFVR_RESULT in build.xcresult tests.xcresult release.xcresult; do
   fi
 done
 
+PFVR_TESTS_FINISHED=0
 collect_evidence() {
   PFVR_EXIT=$?
+  # Bash 3.2 can report zero to EXIT after a failed pipeline expansion.
+  # A run without a completed xcodebuild test command must always fail.
+  if [[ "$PFVR_EXIT" == 0 && "$PFVR_TESTS_FINISHED" != 1 ]]; then
+    PFVR_EXIT=1
+    echo "Simulator test command did not complete successfully." >&2
+  fi
   trap - EXIT
   set +e
   printf 'Exit status: %s\nCommit: %s\nProfile: %s\n' "$PFVR_EXIT" "${GITHUB_SHA:-$(git rev-parse HEAD)}" "$PFVR_PROFILE" > "$PFVR_OUT/run-info.txt"
@@ -73,11 +80,14 @@ if [[ "$PFVR_PROFILE" == compact ]]; then
     CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual build -resultBundlePath "$PFVR_OUT/release.xcresult" \
     2>&1 | tee "$PFVR_OUT/release-build.log"
 fi
-PFVR_TEST_SELECTION=()
 if [[ "$PFVR_PROFILE" == tablet ]]; then
-  PFVR_TEST_SELECTION=(-only-testing:PFVRUITests/PFVRUITests/testSystemShareAndCalendarEditorsCanBeCancelled)
+  PFVR_ARGS+=(-only-testing:PFVRUITests/PFVRUITests/testSystemShareAndCalendarEditorsCanBeCancelled)
 fi
-xcodebuild "${PFVR_ARGS[@]}" test-without-building "${PFVR_TEST_SELECTION[@]}" -resultBundlePath "$PFVR_OUT/tests.xcresult" \
+xcodebuild "${PFVR_ARGS[@]}" test-without-building -resultBundlePath "$PFVR_OUT/tests.xcresult" \
   -parallel-testing-enabled NO -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 \
   2>&1 | tee "$PFVR_OUT/test.log"
+
+[[ -d "$PFVR_OUT/tests.xcresult" ]]
+python3 tools/ios-verify-test-execution.py "$PFVR_OUT/test.log" "$PFVR_PROFILE"
+PFVR_TESTS_FINISHED=1
