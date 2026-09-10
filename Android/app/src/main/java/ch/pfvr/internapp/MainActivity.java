@@ -101,6 +101,7 @@ public class MainActivity extends Activity {
     private static final String PREF_WEATHER_UPDATED = "weather_updated";
     private static final String PREF_WEATHER_SOURCE = "weather_source";
     private static final String PREF_CASH_CART = "cash_cart_v1";
+    private static final String PREF_CASH_PAYMENT_CONFIRM_PENDING = "cash_payment_confirm_pending_v1";
     private static final String PREF_HYDRO_CACHE = "hydro_cache";
     private static final String PREF_HYDRO_UPDATED = "hydro_updated";
     private static final String PREF_HYDRO_FINE_CACHE = "hydro_fine_cache";
@@ -222,6 +223,7 @@ public class MainActivity extends Activity {
     private LinearLayout cashSummaryContainer;
     private TextView cashTotalView;
     private EditText cashFreeAmountInput;
+    private boolean cashPaymentConfirmationShowing = false;
     private volatile boolean weatherLoading = false;
     private volatile boolean hydroLoading = false;
     private boolean darkMode = false;
@@ -276,6 +278,7 @@ public class MainActivity extends Activity {
             else if(current==Screen.NEWS)navigate(Screen.NEWS);
         }
         if(dataRefreshHandler!=null){dataRefreshHandler.removeCallbacks(dataRefreshTick);dataRefreshHandler.postDelayed(dataRefreshTick,5L*60L*1000L);}
+        new Handler(Looper.getMainLooper()).post(this::maybeShowCashPaymentConfirmation);
     }
 
     @Override protected void onPause(){
@@ -2746,16 +2749,16 @@ private View cashCartTile(){
     cartBank.setOnClickListener(v->{
         if(!hasPreferredBank()){openPaymentSettings();return;}
         EditText input=cartAmountInput();
-        if(input!=null)payWithPreferredBank(input);
+        if(input!=null)payWithPreferredBank(input,true);
     });
     cart.addView(cartBank,new LinearLayout.LayoutParams(-1,dp(48)));
     LinearLayout payRow=new LinearLayout(this);
     payRow.setPadding(0,dp(8),0,0);
     Button cartQr=btn("Swiss QR",Color.rgb(232,240,244),NAVY);
-    cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input);});
+    cartQr.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)showPaymentQr(input,true);});
     payRow.addView(cartQr,new LinearLayout.LayoutParams(0,dp(44),1));
     Button cartTwint=btn("TWINT",Color.rgb(232,240,244),NAVY);
-    cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input);});
+    cartTwint.setOnClickListener(v->{EditText input=cartAmountInput();if(input!=null)openTwintDirect(input,true);});
     LinearLayout.LayoutParams twintParams=new LinearLayout.LayoutParams(0,dp(44),1);
     twintParams.setMargins(dp(7),0,0,0);
     payRow.addView(cartTwint,twintParams);
@@ -3049,13 +3052,15 @@ private View cashPaymentDetailsTile(){
     }
 
 
-    private void payWithPreferredBank(EditText amountInput){
+    private void payWithPreferredBank(EditText amountInput){payWithPreferredBank(amountInput,false);}
+
+    private void payWithPreferredBank(EditText amountInput,boolean fromCart){
         if(!hasPreferredBank()){
             Toast.makeText(this,ui("Bitte unter Einstellungen → Zahlung eine Banking-App festlegen."),Toast.LENGTH_LONG).show();
             openPaymentSettings();
             return;
         }
-        sharePaymentQr(amountInput);
+        sharePaymentQr(amountInput,fromCart);
     }
 
     private CashCatalog.Catalog cashCatalog(){
@@ -3097,9 +3102,41 @@ private View cashPaymentDetailsTile(){
         prefs.edit().putStringSet(PREF_CASH_CART,CashCartState.encode(cashCart)).apply();
     }
 
+    private void markCashPaymentConfirmationPending(){
+        if(prefs==null)return;
+        CashCatalog.Catalog catalog=cashCatalog();
+        if(catalog==null||catalog.itemCount(cashCart)<=0)return;
+        prefs.edit().putBoolean(PREF_CASH_PAYMENT_CONFIRM_PENDING,true).apply();
+    }
+
+    private void maybeShowCashPaymentConfirmation(){
+        if(prefs==null||cashPaymentConfirmationShowing||!prefs.getBoolean(PREF_CASH_PAYMENT_CONFIRM_PENDING,false))return;
+        CashCatalog.Catalog catalog=cashCatalog();
+        if(catalog==null||catalog.itemCount(cashCart)<=0){
+            prefs.edit().remove(PREF_CASH_PAYMENT_CONFIRM_PENDING).apply();
+            return;
+        }
+        cashPaymentConfirmationShowing=true;
+        new AlertDialog.Builder(this,dialogTheme())
+                .setTitle(ui("Bezahlung erfolgreich?"))
+                .setMessage(ui("Die App kann den Zahlungserfolg nicht automatisch prüfen. War die Zahlung des Warenkorbs erfolgreich? Bei Ja wird der Warenkorb geleert. Bei Nein bleibt er erhalten."))
+                .setPositiveButton(ui("Ja"),(dialog,which)->{
+                    cashPaymentConfirmationShowing=false;
+                    clearCashCart();
+                    Toast.makeText(this,ui("Warenkorb geleert."),Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(ui("Nein"),(dialog,which)->{
+                    cashPaymentConfirmationShowing=false;
+                    prefs.edit().remove(PREF_CASH_PAYMENT_CONFIRM_PENDING).apply();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
     private void clearCashCart(){
         cashCart.clear();
         saveCashCart();
+        if(prefs!=null)prefs.edit().remove(PREF_CASH_PAYMENT_CONFIRM_PENDING).apply();
         for(TextView quantity:cashQuantityViews.values())quantity.setText("0");
         updateCashSummary();
     }
@@ -3144,14 +3181,18 @@ private View cashPaymentDetailsTile(){
         EditText input=new EditText(this);input.setText(String.format(Locale.US,"%.2f",catalog.total(cashCart)));return input;
     }
 
-    private void openTwintDirect(EditText amountInput){
+    private void openTwintDirect(EditText amountInput){openTwintDirect(amountInput,false);}
+
+    private void openTwintDirect(EditText amountInput,boolean fromCart){
         String a=amount(amountInput==null?null:amountInput.getText().toString());
         if(a==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben oder das Feld leer lassen."),Toast.LENGTH_LONG).show();return;}
         if(!a.isBlank())copy("PFVR TWINT-Betrag",a,"CHF "+a+" "+(UiLanguage.isSwissGerman(uiMode())?"kopiert – uf de PFVR-Site iitrage.":"kopiert – auf der PFVR-Seite eintragen."));
-        external(TWINT_DIRECT_URL);
+        external(TWINT_DIRECT_URL,fromCart);
     }
 
-    private void sharePaymentQr(EditText amountInput){
+    private void sharePaymentQr(EditText amountInput){sharePaymentQr(amountInput,false);}
+
+    private void sharePaymentQr(EditText amountInput,boolean fromCart){
         String value=amount(amountInput==null?null:amountInput.getText().toString());
         if(value==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben."),Toast.LENGTH_LONG).show();return;}
         try{
@@ -3171,15 +3212,15 @@ private View cashPaymentDetailsTile(){
 
                 // Share-first: jede Banking-App bekommt dieselben QR-Bildversuche. Die statische
                 // Capability steuert ausschließlich den Fallback, niemals ob Share versucht wird.
-                if(tryQrImageHandoff(preferred,uri,paymentText))return;
+                if(tryQrImageHandoff(preferred,uri,paymentText,fromCart))return;
 
                 if(profile.capability==BankingAppRegistry.Capability.FILE_IMPORT){
-                    showBankFileImportFallback(qr,value,paymentText,preferred);
+                    showBankFileImportFallback(qr,value,paymentText,preferred,fromCart);
                     return;
                 }
 
                 if(profile.capability==BankingAppRegistry.Capability.SCAN_ONLY){
-                    launchPreferredBankWithCopiedData(preferred,paymentText,"QR-Bildübergabe wurde von dieser App nicht angeboten – Banking-App geöffnet und Zahlungsdaten kopiert.");
+                    launchPreferredBankWithCopiedData(preferred,paymentText,"QR-Bildübergabe wurde von dieser App nicht angeboten – Banking-App geöffnet und Zahlungsdaten kopiert.",fromCart);
                     return;
                 }
 
@@ -3188,25 +3229,26 @@ private View cashPaymentDetailsTile(){
                 textShare.putExtra(Intent.EXTRA_SUBJECT,"PFVR Zahlung");
                 textShare.putExtra(Intent.EXTRA_TEXT,paymentText);
                 textShare.setPackage(preferred);
-                if(startIfResolvable(textShare)){
+                if(startIfResolvable(textShare,fromCart)){
                     Toast.makeText(this,ui("Zahlungsdaten an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                launchPreferredBankWithCopiedData(preferred,paymentText,"Direkter QR-Import wurde von dieser App nicht angeboten – Zahlungsdaten wurden kopiert.");
+                launchPreferredBankWithCopiedData(preferred,paymentText,"Direkter QR-Import wurde von dieser App nicht angeboten – Zahlungsdaten wurden kopiert.",fromCart);
                 return;
             }
 
             Intent send=qrShareIntent(uri,paymentText,"image/png",null);
             if(packageManager.queryIntentActivities(send,0).isEmpty()){
                 Toast.makeText(this,ui("Keine App unterstützt die direkte QR-Übergabe. QR wird stattdessen angezeigt."),Toast.LENGTH_LONG).show();
-                showPaymentQr(amountInput);
+                showPaymentQr(amountInput,fromCart);
                 return;
             }
             startActivity(Intent.createChooser(send,"Swiss QR an Banking-App übergeben"));
+            if(fromCart)markCashPaymentConfirmationPending();
         }catch(Exception e){
             Toast.makeText(this,ui("Direkte QR-Übergabe nicht möglich. QR wird stattdessen angezeigt."),Toast.LENGTH_LONG).show();
-            showPaymentQr(amountInput);
+            showPaymentQr(amountInput,fromCart);
         }
     }
 
@@ -3222,17 +3264,20 @@ private View cashPaymentDetailsTile(){
         return send;
     }
 
-    private boolean startIfResolvable(Intent intent){
+    private boolean startIfResolvable(Intent intent){return startIfResolvable(intent,false);}
+
+    private boolean startIfResolvable(Intent intent,boolean fromCart){
         try{
             if(intent.resolveActivity(getPackageManager())==null)return false;
             startActivity(intent);
+            if(fromCart)markCashPaymentConfirmationPending();
             return true;
         }catch(Exception ignored){return false;}
     }
 
-    private boolean tryQrImageHandoff(String preferred,Uri uri,String paymentText){
+    private boolean tryQrImageHandoff(String preferred,Uri uri,String paymentText,boolean fromCart){
         Intent direct=qrShareIntent(uri,paymentText,"image/png",preferred);
-        if(startIfResolvable(direct)){
+        if(startIfResolvable(direct,fromCart)){
             Toast.makeText(this,ui("Swiss QR an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
             return true;
         }
@@ -3242,20 +3287,22 @@ private View cashPaymentDetailsTile(){
         imageView.setClipData(ClipData.newUri(getContentResolver(),"PFVR Swiss QR",uri));
         imageView.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         imageView.setPackage(preferred);
-        if(startIfResolvable(imageView)){
+        if(startIfResolvable(imageView,fromCart)){
             Toast.makeText(this,ui("Swiss QR mit")+" "+selectedBankLabel()+" "+ui("geöffnet."),Toast.LENGTH_SHORT).show();
             return true;
         }
 
         Intent genericImage=qrShareIntent(uri,paymentText,"image/*",preferred);
-        if(startIfResolvable(genericImage)){
+        if(startIfResolvable(genericImage,fromCart)){
             Toast.makeText(this,ui("Zahlungsbild an")+" "+selectedBankLabel()+" "+ui("übergeben."),Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;
     }
 
-    private void launchPreferredBankWithCopiedData(String preferred,String paymentText,String reason){
+    private void launchPreferredBankWithCopiedData(String preferred,String paymentText,String reason){launchPreferredBankWithCopiedData(preferred,paymentText,reason,false);}
+
+    private void launchPreferredBankWithCopiedData(String preferred,String paymentText,String reason,boolean fromCart){
         Intent launch=getPackageManager().getLaunchIntentForPackage(preferred);
         if(launch==null){
             Toast.makeText(this,ui("Die gewählte Banking-App ist nicht mehr verfügbar."),Toast.LENGTH_LONG).show();
@@ -3264,10 +3311,11 @@ private View cashPaymentDetailsTile(){
         }
         copy("PFVR Zahlung",paymentText,"Zahlungsdaten kopiert");
         startActivity(launch);
+        if(fromCart)markCashPaymentConfirmationPending();
         Toast.makeText(this,ui(reason),Toast.LENGTH_LONG).show();
     }
 
-    private void showBankFileImportFallback(Bitmap qr,String value,String paymentText,String preferred){
+    private void showBankFileImportFallback(Bitmap qr,String value,String paymentText,String preferred,boolean fromCart){
         LinearLayout box=new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(16),dp(8),dp(16),0);
@@ -3282,7 +3330,7 @@ private View cashPaymentDetailsTile(){
         new AlertDialog.Builder(this,dialogTheme())
                 .setTitle(selectedBankLabel()+" · QR-Datei")
                 .setView(box)
-                .setPositiveButton(ui("Banking-App öffnen"),(d,w)->launchPreferredBankWithCopiedData(preferred,paymentText,"Zahlungsdaten kopiert – QR-Datei bei Bedarf in der Banking-App auswählen."))
+                .setPositiveButton(ui("Banking-App öffnen"),(d,w)->launchPreferredBankWithCopiedData(preferred,paymentText,"Zahlungsdaten kopiert – QR-Datei bei Bedarf in der Banking-App auswählen.",fromCart))
                 .setNeutralButton(ui("QR speichern"),(d,w)->saveQr(value))
                 .setNegativeButton(ui("Schliessen"),null)
                 .show();
@@ -3295,7 +3343,9 @@ private View cashPaymentDetailsTile(){
         return text.toString();
     }
 
-    private void showPaymentQr(EditText amountInput) {
+    private void showPaymentQr(EditText amountInput){showPaymentQr(amountInput,false);}
+
+    private void showPaymentQr(EditText amountInput,boolean fromCart) {
         String a=amount(amountInput==null?null:amountInput.getText().toString());
         if(a==null){Toast.makeText(this,ui("Bitte einen gültigen CHF-Betrag eingeben oder Feld leer/0 für offenen Betrag lassen."),Toast.LENGTH_LONG).show();return;}
         try {
@@ -3309,7 +3359,7 @@ private View cashPaymentDetailsTile(){
             new AlertDialog.Builder(this,dialogTheme())
                     .setTitle(ui("Bankzahlung · Swiss QR"))
                     .setView(box)
-                    .setPositiveButton(ui("Direkt an Banking-App"),(d,w)->sharePaymentQr(amountInput))
+                    .setPositiveButton(ui("Direkt an Banking-App"),(d,w)->sharePaymentQr(amountInput,fromCart))
                     .setNeutralButton(ui("QR speichern"),(d,w)->saveQr(a))
                     .setNegativeButton(ui("Schliessen"),null)
                     .show();
@@ -3944,12 +3994,15 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
                 .replace("Sonntag","Sunntig");
     }
     private String cap(String s){return s==null||s.isEmpty()?s:s.substring(0,1).toUpperCase(Locale.GERMAN)+s.substring(1);}
-    private void external(String url){
+    private void external(String url){external(url,false);}
+    private boolean external(String url,boolean fromCart){
         try{
             Uri uri=Uri.parse(url);
-            if(!AppLinkPolicy.mayOpenExternally(uri.getScheme())){Toast.makeText(this,ui("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet."),Toast.LENGTH_SHORT).show();return;}
+            if(!AppLinkPolicy.mayOpenExternally(uri.getScheme())){Toast.makeText(this,ui("Dieser Linktyp wird aus Sicherheitsgründen nicht geöffnet."),Toast.LENGTH_SHORT).show();return false;}
             startActivity(new Intent(Intent.ACTION_VIEW,uri));
-        }catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();}
+            if(fromCart)markCashPaymentConfirmationPending();
+            return true;
+        }catch(Exception e){Toast.makeText(this,ui("Link konnte nicht geöffnet werden."),Toast.LENGTH_SHORT).show();return false;}
     }
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 

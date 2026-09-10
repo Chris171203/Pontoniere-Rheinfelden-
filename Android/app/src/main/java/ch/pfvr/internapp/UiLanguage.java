@@ -307,6 +307,11 @@ final class UiLanguage {
         put("Leer oder 0 erzeugt einen Swiss QR mit offenem Betrag.", "Leer oder 0 git en Swiss QR mit offem Betrag.");
         put("Konsumation bezahlen", "Konsumation zahle");
         put("Warenkorb leeren", "Warenchorb leere");
+        put("Bezahlung erfolgreich?", "Zahlig erfolgreich?");
+        put("Die App kann den Zahlungserfolg nicht automatisch prüfen. War die Zahlung des Warenkorbs erfolgreich? Bei Ja wird der Warenkorb geleert. Bei Nein bleibt er erhalten.", "D App cha de Zahligserfolg nöd automatisch prüefe. Isch d Zahlig vom Warenchorb erfolgreich gsi? Bi Ja wird de Warenchorb gleert. Bi Nei blibt er erhalte.");
+        put("Ja", "Ja");
+        put("Nein", "Nei");
+        put("Warenkorb geleert.", "Warenchorb gleert.");
         put("Entfernen", "Entferne");
         put("Zahlungsweg", "Zahligswäg");
         put("Zahlungsdaten", "Zahligsdate");
