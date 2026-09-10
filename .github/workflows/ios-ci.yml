@@ -34,6 +34,7 @@ jobs:
           xcodebuild -version
           python3 tools/ios-audit.py
           python3 tools/ios-select-simulator-tests.py
+          python3 tools/ios-verify-test-execution-tests.py
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -92,5 +93,25 @@ jobs:
         with:
           name: PFVR-iOS-${{ matrix.profile }}-${{ github.run_number }}
           path: artifacts/ios-${{ matrix.profile }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  device-archive:
+    name: Unsigned device Release archive
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project generator
+        run: |
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+      - name: Build and verify actual iPhoneOS archive
+        run: bash tools/ios-archive.sh
+      - name: Upload device compile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PFVR-iOS-device-${{ github.run_number }}
+          path: artifacts/ios-device/
           if-no-files-found: warn
           retention-days: 14

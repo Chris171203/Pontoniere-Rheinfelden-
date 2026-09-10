@@ -227,7 +227,7 @@ final class PFVRUITests: XCTestCase {
 
 
     /// Opens Apple's real controllers and cancels them without sharing or saving.
-    /// This also runs alone on iPad to exercise native modal/popover presentation.
+    /// The full UI suite also runs on iPad, covering native modal/popover presentation.
     func testSystemShareAndCalendarEditorsCanBeCancelled() {
         executionTimeAllowance = 90 // Includes first simulator launch and two native controller transitions.
         launch()

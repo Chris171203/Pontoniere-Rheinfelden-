@@ -80,8 +80,10 @@ if [[ "$PFVR_PROFILE" == compact ]]; then
     CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual build -resultBundlePath "$PFVR_OUT/release.xcresult" \
     2>&1 | tee "$PFVR_OUT/release-build.log"
 fi
+# Tablet repeats the entire UI suite only; Core/App tests already run on compact
+# and large profiles. The verifier rejects incomplete or duplicated UI execution.
 if [[ "$PFVR_PROFILE" == tablet ]]; then
-  PFVR_ARGS+=(-only-testing:PFVRUITests/PFVRUITests/testSystemShareAndCalendarEditorsCanBeCancelled)
+  PFVR_ARGS+=(-only-testing:PFVRUITests)
 fi
 xcodebuild "${PFVR_ARGS[@]}" test-without-building -resultBundlePath "$PFVR_OUT/tests.xcresult" \
   -parallel-testing-enabled NO -test-timeouts-enabled YES \

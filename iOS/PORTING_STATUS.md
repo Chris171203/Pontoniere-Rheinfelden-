@@ -61,3 +61,16 @@ Nächste konkrete Arbeiten für eine Geräte-/Store-Version:
 4. Erst danach Verteilungs-/Release-Freigabe behandeln. Der bestehende PR ist nicht gemergt und nichts wurde veröffentlicht.
 
 Ein aus Android übernommener Gleitkommafehler an der exakten 820-cm-Grenze wurde nur in iOS behoben und in [`REVIEW.md`](REVIEW.md) für eine separate Android-Korrektur dokumentiert.
+
+## Fortsetzung: breitere iPad-Prüfung und Geräte-Kompilierung
+
+Stand 2026-09-10, in Bearbeitung. Ausgangspunkt Remote `739d71d`; auch dessen CI-Lauf `34516084257` ist erfolgreich. Die folgenden Bedingungen werden vor Abschluss anhand der neuen CI bewertet:
+
+| Arbeitspaket | Abnahmebedingung | Status |
+|---|---|---|
+| iPad (Terra-Agent) | Alle 11 benannten UI-Fälle genau einmal bestanden, vollständiger XCTest-Abschluss; kein Core/App-Duplikat | Umsetzung vorbereitet, Lauf ausstehend |
+| Gerätearchiv (Integration) | Release-Archiv für echtes iPhoneOS/arm64; Produktmetadaten/Privacy/Entitlement-Trennung geprüft | Umsetzung vorbereitet, Lauf ausstehend |
+| Release-Inventar (Luna-Agent) | Tatsächliche Icon-Abmessungen, App-Identität und Signierkonfiguration geprüft | Erledigt: nur identisches 96×96-JPEG; kein AppIcon/Team/Exportprofil im Repository |
+| Review | Keine aufgeweichten UI-Assertions, absichtlich übersprungene Core-Live-Tests bleiben zulässig | In Bearbeitung |
+
+Ein Simulatorlauf oder unsigniertes Archiv ersetzt weiterhin keinen physischen Geräte-/TestFlight-Nachweis. Die vorhandenen Quelllogos werden nicht als hochauflösende Originale ausgegeben.
