@@ -2,9 +2,23 @@
 
 Aktualisiert: 2026-09-10. Ergebnisse beziehen sich immer auf den angegebenen Commit, nicht automatisch auf spätere lokale Änderungen.
 
-## Abschließend bestandener Quellstand
+## Erweiterte Abnahme: Gerätearchiv und vollständige iPad-UI
 
-Geprüfter Produkt- und Testcode: **`2bf0749f490ffe0aee5f050aec7ee6583e79717d`**, [GitHub Actions 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048). Alle vier Jobs erfolgreich; Logs, echte XCTest-Abschlussmarken und exportierte `.xcresult`-Zusammenfassungen wurden geprüft. Nach diesem Stand wurden ausschließlich Dokumentationen geändert.
+Quellstand `9da62951bfae021324df5b9c56c968e9465a0893`, [CI 34518227820](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34518227820). Der tatsächlich ausgecheckte PR-Merge `13b537e54bbc788122a9760007fee9e6a0abca11` und der Branch haben identischen Baum `090b30f6bd6bfb90b577c6c8f3a8ff6fc19c5881`.
+
+- Geräte-Release-Archiv bestanden (Job `103008954522`, Artefakt `10168605139`). `ARCHIVE SUCCEEDED` und der separate Verifikationsbericht wurden im echten Log geprüft; heruntergeladenes Archiv zusätzlich inspiziert. Mach-O arm64, Plattform IOS/iPhoneOS, Familien 1/2, Mindestziel 17.0, Version 0.12.6 (Build 1), Test-Bundle `ch.pfvr.app.test`, Privacy-Manifest, keine Simulator-Entitlement-Sektion und keine Signierung/Provisionierung. Kein installierbares IPA und keine Store-Validierung.
+- Foundation (Job `103008954618`): 49 deterministische Fälle bestanden; vier Live-Fälle separat tatsächlich ausgeführt und bestanden. Sechs Regressionen für Testausführung und vier Simulatorauswahlfälle bestanden. Die vier planmäßig übersprungenen Live-Fälle im Offline-Schritt gelten nicht als ausgeführte Tests.
+- iPhone SE 3, hell (Job `103008954281`, Artefakt `10168843803`) und iPhone 16 Pro Max, dunkel (Job `103008954417`, Artefakt `10169058810`): jeweils 49 Core + 19 Hosted + 11 UI = **79 bestanden**, vier planmäßige Core-Live-Skips, keine Fehler. Echte `SIMULATOR-TEST-EXECUTION`-Marken und `TEST EXECUTE SUCCEEDED` aus beiden Joblogs geprüft; compact zusätzlich Release-Build bestanden.
+- iPad Air 11 Zoll (M2), hell, iPadOS 18.5 (Job `103008954413`, Artefakt `10169032150`): **11 UI-Fälle bestanden**, null Fehler, null Skips. Heruntergeladenes `.xcresult`-Summary und Testlog unabhängig ausgewertet; alle elf erwarteten Namen genau einmal nachgewiesen. Gesamte Testzeit laut Summary etwa 390 Sekunden.
+- Sichtprüfung der iPad-Originale für Home/Wetter, Rhein/Temperatur, QR und Schweizerdeutsch-Einstellungen sowie Kontaktbogen der nativen Teilen-/Kalenderdialoge: lesbare Inhalte, vollständiger QR, erreichbare Navigation/Schließen. Lange Seiten und modale Inhalte bleiben scrollbar; diese Aufnahmen sind kein Querformat-/Multitasking-Nachweis.
+
+Alle fünf Jobs des Laufs sind erfolgreich. Testumgebung weiterhin Xcode 16.4 / iOS 18.5. Mindestziel 17.0 im Geräteprodukt ist ein Build-Nachweis, keine ausgeführte iOS-17-Runtime.
+
+Die Erweiterung verändert keine App-Fachlogik: Tablet führt nun die bestehende vollständige UI-Suite aus, während Core/Hosted weiterhin auf beiden iPhones geprüft werden. Der neue Abschlussprüfer verlangt elf konkret benannte iPad-Fälle jeweils genau einmal; Regressionen prüfen fehlende, doppelte, übersprungene Fälle und fehlenden Suite-Abschluss. Die absichtlichen Core-Live-Skips bleiben zulässig. Ein Review korrigierte diese Skip-Abgrenzung vor dem Lauf. Der Geräteprüfer wurde von roher Byte-Suche auf die tatsächliche Mach-O-Sektionstabelle umgestellt; unabhängige lokale Fixtures unterschieden eine harmlose Zeichenfolge, eine echte Entitlement-Sektion und einen abgeschnittenen Load Command.
+
+## Frühere vollständige Simulator-Abnahme
+
+Geprüfter Produkt- und Testcode: **`2bf0749f490ffe0aee5f050aec7ee6583e79717d`**, [GitHub Actions 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048). Alle vier Jobs erfolgreich; Logs, echte XCTest-Abschlussmarken und exportierte `.xcresult`-Zusammenfassungen wurden geprüft. Bis `739d71d` folgten ausschließlich Dokumentationsänderungen. Die anschließende Erweiterung der CI/iPad-Abdeckung ist unten gesondert nachgewiesen.
 
 Umgebung: macOS 15.7.9, Xcode 16.4, Apple Swift 6.1.2, Simulator-SDK und Runtime iOS 18.5 (22F77), arm64. Swift-Sprachmodus 5, Deployment-Ziel iOS 17.
 

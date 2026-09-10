@@ -3,7 +3,7 @@
 ## Struktur
 
 - `Android/`: aktuelle Android-App und Android-Build.
-- `iOS/`: spätere iOS-Implementierung.
+- `iOS/`: native SwiftUI-Entwicklungsversion; Build und Abnahme unter `iOS/BUILD_TESTS.md`, aktueller Stand unter `iOS/PORTING_STATUS.md`.
 - Plattformübergreifende Anforderungen gehören in `PROJECT.md` / `STATUS.md`, nicht nur in Plattformcode.
 
 ## Arbeitsregeln

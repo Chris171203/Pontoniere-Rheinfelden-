@@ -4,7 +4,7 @@ Aktualisiert: 2026-09-10. Android-Referenz: 0.12.6, Commit `c617bae7c1f00fbb1136
 
 ## Ergebnis
 
-Native SwiftUI-Entwicklungsversion für iPhone und iPad ab iOS 17 umgesetzt. Der Produkt- und Testcode `2bf0749f490ffe0aee5f050aec7ee6583e79717d` hat die vollständige konfigurierte Simulator-Abnahme bestanden: [CI 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048). Nach diesem Stand folgen nur Dokumentationsänderungen. Arbeitsbranch: `codex/ios-port-0.12.6`, [Draft-PR #32](https://github.com/Chris171203/Pontoniere-Rheinfelden-/pull/32). Main und Android wurden nicht geändert.
+Native SwiftUI-Entwicklungsversion für iPhone und iPad ab iOS 17 umgesetzt. Der aktuelle geprüfte Quellstand `9da62951bfae021324df5b9c56c968e9465a0893` hat die erweiterte Abnahme bestanden: [CI 34518227820](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34518227820), fünf erfolgreiche Jobs einschließlich vollständiger iPad-UI-Suite und unsigniertem Geräte-Release-Archiv. Danach folgen nur Dokumentationsänderungen. Arbeitsbranch: `codex/ios-port-0.12.6`, [Draft-PR #32](https://github.com/Chris171203/Pontoniere-Rheinfelden-/pull/32). Main und Android wurden nicht geändert.
 
 ## Arbeitspakete
 
@@ -32,17 +32,17 @@ Native SwiftUI-Entwicklungsversion für iPhone und iPad ab iOS 17 umgesetzt. Der
 
 ## Ausgeführte Abnahme
 
-Xcode 16.4 / iOS 18.5: iPhone SE 3 hell und iPhone 16 Pro Max dunkel bestanden jeweils **49 Core + 19 Hosted + 11 UI = 79 Tests**, ohne Fehler. Auf iPad Air 11 Zoll M2 bestand zusätzlich der gezielte Test für echte Teilen-/Kalenderdialoge mit Abbruch und erhaltenem Warenkorb. Vier Live-Quellenprüfungen wurden separat tatsächlich ausgeführt. Debug-Testbuilds, kompakter Release-Build, echte Simulator-Keychain-Rechte und QR-PNG-/Vision-Roundtrip sind bestanden.
+Xcode 16.4 / iOS 18.5: iPhone SE 3 hell und iPhone 16 Pro Max dunkel bestanden jeweils **49 Core + 19 Hosted + 11 UI = 79 Tests**, ohne Fehler. Auf iPad Air 11 Zoll M2 bestanden alle elf UI-Szenarien, einschließlich echter Teilen-/Kalenderdialoge mit Abbruch und erhaltenem Warenkorb. Vier Live-Quellenprüfungen wurden separat tatsächlich ausgeführt. Debug-Testbuilds, kompakter Release-Build, echte Simulator-Keychain-Rechte und QR-PNG-/Vision-Roundtrip sind bestanden.
 
 Original-Screenshots wurden tatsächlich angesehen. Die letzte Korrektur beseitigt abgeschnittene Temperatur-Zeitangaben; beide Graphen und die internen hellen/dunklen Matrizen sind im finalen Stand sichtbar und lesbar. Detaillierte Commit-, Job-, Artefakt- und Fehlerhistorie: [`TEST_RESULTS.md`](TEST_RESULTS.md). Reproduktionsbefehle: [`BUILD_TESTS.md`](BUILD_TESTS.md).
 
-Der Android-Ausgangsbaum wurde identisch aus dem Remote-Commit rekonstruiert (`6e9808b2357a0e584a1ecc63f706176632cdf0e8`). Der abschließend getestete lokale iOS-Baum stimmt exakt mit Remote überein (`117ebb91a2d1e8bdde46fe782587ac0e40e2800d`). Lokale Plist-, Shell- und Java-Renderer-Prüfungen sind ergänzende Prüfungen, keine behauptete lokale Xcode-Ausführung.
+Der Android-Ausgangsbaum wurde identisch aus dem Remote-Commit rekonstruiert (`6e9808b2357a0e584a1ecc63f706176632cdf0e8`). Der zuletzt getestete lokale iOS-Baum stimmt exakt mit Remote-Branch und geprüftem PR-Merge überein (`090b30f6bd6bfb90b577c6c8f3a8ff6fc19c5881`). Lokale Plist-, Shell- und Java-Renderer-Prüfungen sind ergänzende Prüfungen, keine behauptete lokale Xcode-Ausführung.
 
 ## Plattformunterschiede und fehlende Release-Nachweise
 
-- Geräteinstallation/TestFlight benötigt Apple-Team, geeignete Bundle-ID und Produktionssignierung. Die CI erzeugt eine ad-hoc-signierte Simulator-App, keine installierbare Geräte-IPA.
+- Geräteinstallation/TestFlight benötigt Apple-Team, geeignete Bundle-ID und Produktionssignierung. Die CI erzeugt eine ad-hoc-signierte Simulator-App und ein unsigniertes iPhoneOS-Release-Archiv, keine installierbare Geräte-IPA.
 - Ein ausreichend hoch aufgelöstes offizielles AppIcon und vollständige Store-Assets fehlen. Das vorhandene 96×96-Vereinslogo ist in der App enthalten.
-- Physische Geräte und iOS 17 sind nicht zur Laufzeit geprüft. Der iPad-Test deckt gezielt Systemdialoge ab, nicht alle App-Abläufe.
+- Physische Geräte und iOS 17 sind nicht zur Laufzeit geprüft. Das iPad besteht die elf vorhandenen UI-Szenarien im Hochformat; Querformat, Multitasking und reale Geräte sind gesondert offen.
 - Reale Banking-/TWINT-Übernahmen und Zahlungen sowie persönliche produktive Intern-Aktionen sind nicht durch synthetische Simulatorfälle belegt.
 - iOS-Teilen ersetzt Android-Paketwahl. Eine erfolgreiche Übergabe ist keine automatisch verifizierte Zahlung.
 - Hintergrundaktualisierung ist standardmäßig eingeschaltet; 30 Minuten sind eine früheste Anforderung, kein garantiertes Intervall. Die Tests prüfen Bedingungen, Abbruch und Zustand, nicht die Zustellhäufigkeit durch iOS.
@@ -57,20 +57,20 @@ Nächste konkrete Arbeiten für eine Geräte-/Store-Version:
 
 1. Offizielles hochauflösendes AppIcon und Store-Assets ergänzen.
 2. Apple-Team, Produktions-Bundle-ID und geschützte Signierung/TestFlight-Verteilung einrichten.
-3. Verfügbare physische Geräte/iOS-17-Runtime und breitere iPad-Abläufe prüfen; tatsächliche Banking-/Intern-Integrationen mit dafür vorgesehenen Zugängen gesondert abnehmen.
+3. Verfügbare physische Geräte/iOS-17-Runtime sowie iPad-Querformat/Multitasking prüfen; tatsächliche Banking-/Intern-Integrationen mit dafür vorgesehenen Zugängen gesondert abnehmen.
 4. Erst danach Verteilungs-/Release-Freigabe behandeln. Der bestehende PR ist nicht gemergt und nichts wurde veröffentlicht.
 
 Ein aus Android übernommener Gleitkommafehler an der exakten 820-cm-Grenze wurde nur in iOS behoben und in [`REVIEW.md`](REVIEW.md) für eine separate Android-Korrektur dokumentiert.
 
 ## Fortsetzung: breitere iPad-Prüfung und Geräte-Kompilierung
 
-Stand 2026-09-10, in Bearbeitung. Ausgangspunkt Remote `739d71d`; auch dessen CI-Lauf `34516084257` ist erfolgreich. Die folgenden Bedingungen werden vor Abschluss anhand der neuen CI bewertet:
+Stand 2026-09-10, abgeschlossen. Ausgangspunkt Remote `739d71d`; auch dessen CI-Lauf `34516084257` ist erfolgreich. Die folgenden Bedingungen wurden anhand der neuen CI abgenommen:
 
 | Arbeitspaket | Abnahmebedingung | Status |
 |---|---|---|
-| iPad (Terra-Agent) | Alle 11 benannten UI-Fälle genau einmal bestanden, vollständiger XCTest-Abschluss; kein Core/App-Duplikat | Umsetzung vorbereitet, Lauf ausstehend |
-| Gerätearchiv (Integration) | Release-Archiv für echtes iPhoneOS/arm64; Produktmetadaten/Privacy/Entitlement-Trennung geprüft | Umsetzung vorbereitet, Lauf ausstehend |
+| iPad (Terra-Agent) | Alle 11 benannten UI-Fälle genau einmal bestanden, vollständiger XCTest-Abschluss; kein Core/App-Duplikat | Bestanden in CI 34518227820 |
+| Gerätearchiv (Integration) | Release-Archiv für echtes iPhoneOS/arm64; Produktmetadaten/Privacy/Entitlement-Trennung geprüft | Bestanden in CI 34518227820 |
 | Release-Inventar (Luna-Agent) | Tatsächliche Icon-Abmessungen, App-Identität und Signierkonfiguration geprüft | Erledigt: nur identisches 96×96-JPEG; kein AppIcon/Team/Exportprofil im Repository |
-| Review | Keine aufgeweichten UI-Assertions, absichtlich übersprungene Core-Live-Tests bleiben zulässig | In Bearbeitung |
+| Review | Keine aufgeweichten UI-Assertions, absichtlich übersprungene Core-Live-Tests bleiben zulässig | Bestanden; sechs Regressionstests, abschließendes Review ohne weitere materielle Befunde |
 
 Ein Simulatorlauf oder unsigniertes Archiv ersetzt weiterhin keinen physischen Geräte-/TestFlight-Nachweis. Die vorhandenen Quelllogos werden nicht als hochauflösende Originale ausgegeben.

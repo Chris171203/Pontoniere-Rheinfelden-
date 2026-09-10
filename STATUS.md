@@ -5,7 +5,7 @@ Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
 ## iOS-Portierung
 
 - Native SwiftUI-Entwicklungsversion des Android-Stands `0.12.6` ab iOS 17 umgesetzt, auf Branch `codex/ios-port-0.12.6` in [Draft-PR #32](https://github.com/Chris171203/Pontoniere-Rheinfelden-/pull/32). Android-Referenz: `c617bae`; Main und Android unverändert.
-- Geprüfter Produkt-/Testcode `2bf0749`: [CI 34513741048](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34513741048) vollständig grün. Je 79 Tests auf iPhone SE 3 und iPhone 16 Pro Max / iOS 18.5, gezielter iPad-Systemdialogtest, vier echte Live-Quellenprüfungen, Debug-/Release-Build, WebKit, Keychain und Swiss-QR-PNG/Vision bestanden. Originalbilder einschließlich korrigierter Temperaturachse und interner Matrizen geprüft.
+- Geprüfter Quellstand `9da6295`: [CI 34518227820](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34518227820) mit fünf erfolgreichen Jobs. Je 79 Tests auf iPhone SE 3 und iPhone 16 Pro Max / iOS 18.5, alle elf UI-Szenarien auf iPad Air 11 M2, vier echte Live-Quellenprüfungen, Debug-/Release-Build und erstmals geprüftes unsigniertes iPhoneOS/arm64-Release-Archiv. iPad-Originalaufnahmen geprüft; commitgenaue Ergebnisse in `iOS/TEST_RESULTS.md`.
 - Sechs Agentenpakete samt Nachprüfung abgeschlossen. Für Geräte-/Store-Verteilung fehlen AppIcon/Store-Assets, Apple-Signierung und gesonderte Geräte-/Produktivintegrationsnachweise. Keine installierbare Geräte-IPA oder Veröffentlichung. Details/Fortsetzung: [`iOS/PORTING_STATUS.md`](iOS/PORTING_STATUS.md), commitgenaue Nachweise: [`iOS/TEST_RESULTS.md`](iOS/TEST_RESULTS.md).
 
 ## Aktueller Teststand

@@ -2,7 +2,7 @@
 
 Native SwiftUI-Portierung des Android-Stands **0.12.6** für iPhone und iPad ab iOS 17. Entwicklungsversion; aktueller Funktions- und Teststatus steht in [`PORTING_STATUS.md`](PORTING_STATUS.md).
 
-Die konfigurierte Simulator-Abnahme ist bestanden: je 79 Tests auf kleinem/großem iPhone, ein gezielter iPad-Systemdialogtest, vier echte Live-Quellenprüfungen und Debug-/Release-Build. Geprüfter Quellstand und Grenzen: [`TEST_RESULTS.md`](TEST_RESULTS.md). Eine Geräte-/TestFlight-Verteilung ist noch nicht eingerichtet.
+Die konfigurierte Simulator-Abnahme ist bestanden: je 79 Tests auf kleinem/großem iPhone, alle elf UI-Szenarien auf iPad, vier echte Live-Quellenprüfungen und Debug-/Release-Build sowie ein geprüftes unsigniertes iPhoneOS-Release-Archiv. Geprüfter Quellstand und Grenzen: [`TEST_RESULTS.md`](TEST_RESULTS.md). Eine Geräte-/TestFlight-Verteilung ist noch nicht eingerichtet.
 
 ## Aufbau
 
