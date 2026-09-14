@@ -33,7 +33,7 @@ public class HomePolishSourceTest {
 
     @Test public void homeLiveRefreshIsSmallAnimatedAndForcesLiveReload() throws Exception {
         String activity=source();
-        assertTrue(activity.contains("addHomeLiveRefreshAction(group)"));
+        assertTrue(activity.contains("addHomeLiveRefreshAction((LinearLayout)tile)"));
         assertTrue(activity.contains("txtRaw(\"↻\",22,WATER,true)"));
         assertTrue(activity.contains("setContentDescription(ui(\"Aktualisieren\"))"));
         assertTrue(activity.contains("rotation(360f).setDuration(420L)"));

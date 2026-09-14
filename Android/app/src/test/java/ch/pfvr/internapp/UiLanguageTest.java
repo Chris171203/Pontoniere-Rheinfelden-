@@ -7,6 +7,15 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public class UiLanguageTest {
+    @Test public void clubOverviewAndGeneratedScheduleLabelsAreSwissGerman(){
+        assertEquals("Verein entdecke",UiLanguage.translate("Verein entdecken","gsw"));
+        assertEquals("Boot & Sport",UiLanguage.translate("Boote & Sport","gsw"));
+        assertEquals("Mäntig- und Mittwuchaabig",UiLanguage.translate("Montag- und Mittwochabend","gsw"));
+        assertEquals("Dunnschtig",UiLanguage.translate("Donnerstag","gsw"));
+        assertEquals("Ziite luut Homepage. Aktuelli Termin im Kaländer.",UiLanguage.translate("Zeiten laut Homepage. Aktuelle Termine im Kalender.","gsw"));
+        assertEquals("Zäme underwägs",UiLanguage.translate("Gemeinsam unterwegs","gsw"));
+        assertEquals("In der Sommersaison (April-September)",UiLanguage.translate("In der Sommersaison (April-September)","gsw"));
+    }
     @Test public void defaultsUnknownModesToGerman() {
         assertEquals(UiLanguage.DE, UiLanguage.normalizeMode(null));
         assertEquals(UiLanguage.DE, UiLanguage.normalizeMode("fr"));
@@ -56,5 +65,13 @@ public class UiLanguageTest {
         assertEquals("Kachle 1 isch immer sichtbar; Kachle 2 cha ii- oder usbländet werde.", UiLanguage.translate("Kachel 1 ist immer sichtbar; Kachel 2 kann ein- oder ausgeblendet werden.", UiLanguage.SWISS_GERMAN));
         assertEquals("Rhy-Kachle", UiLanguage.translate("Rhein-Kachel", UiLanguage.SWISS_GERMAN));
         assertEquals("Direkti QR-Übergab dokumentiert", UiLanguage.translate("Direkte QR-Übergabe dokumentiert", UiLanguage.SWISS_GERMAN));
+    }
+    @Test public void recentWeatherLabelsAndMorningMeaningAreLocalized() {
+        assertEquals("Wätter zum nöchschte Termin", UiLanguage.translate("Wetter zum nächsten Termin", "gsw"));
+        assertEquals("Aabig", UiLanguage.translate("Abend", "gsw"));
+        assertEquals("Morn", UiLanguage.translate("Morgen", "gsw"));
+        assertEquals("Morge", UiLanguage.translate("Morgen (Tageszeit)", "gsw"));
+        assertEquals("Morgen", UiLanguage.translate("Morgen (Tageszeit)", "de"));
+        assertEquals("Rägemängi", UiLanguage.translate("Regenmenge", "gsw"));
     }
 }

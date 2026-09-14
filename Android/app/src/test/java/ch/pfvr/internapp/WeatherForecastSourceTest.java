@@ -26,7 +26,7 @@ public class WeatherForecastSourceTest {
         assertTrue(activity.contains("%02d Uhr"));
         assertTrue(activity.contains("hour.precipitationProbability"));
         assertTrue(activity.contains("weatherDaypartLabel(targetHour)"));
-        assertTrue(activity.contains("if(hour<11)return ui(\"Morgen\")"));
+        assertTrue(activity.contains("if(hour<11)return ui(\"Morgen (Tageszeit)\")"));
         assertTrue(activity.contains("if(hour<17)return ui(\"Mittag\")"));
         assertTrue(activity.contains("return ui(\"Abend\")"));
         assertTrue(activity.contains("PREF_WEATHER_CACHE"));

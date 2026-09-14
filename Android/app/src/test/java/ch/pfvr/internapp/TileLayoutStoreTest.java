@@ -62,24 +62,38 @@ public class TileLayoutStoreTest {
         assertEquals("cash_drinks",movedDown.get(2));
     }
 
-    @Test public void compactClubTilesRemainKnownAfterCustomOrder(){
+    @Test public void clubLinksRemainKnownAfterCustomOrder(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_phone","club_news")
+                List.of("club_contact","club_news")
         );
-        assertEquals("club_phone",normalized.get(0));
+        assertEquals("club_contact",normalized.get(0));
         assertEquals("club_news",normalized.get(1));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 
-    @Test public void clubCatalogDropsRetiredJoinTileAndKeepsSocialTiles(){
+    @Test public void previousDefaultClubLayoutBecomesCompactDiscoveryOrder(){
+        var order=TileLayoutStore.normalizeOrder(TileLayoutStore.Area.CLUB,List.of("club_about","club_news","club_program","club_youth","club_board","club_history","club_contact"));
+        assertEquals(List.of("club_sport","club_youth","club_board","club_history"),order.subList(0,4));
+        assertFalse(order.contains("club_program"));
+        assertTrue(TileLayoutStore.sanitizeHidden(TileLayoutStore.Area.CLUB,Set.of("club_program")).isEmpty());
+        for(var spec:TileLayoutStore.specs(TileLayoutStore.Area.CLUB))assertEquals(TileLayoutStore.Width.WIDE,spec.width);
+    }
+
+    @Test public void clubCatalogDropsRetiredTilesAndPreservesRemainingLayout(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_about","club_join","club_news","club_contact")
+                List.of("club_about","club_join","club_instagram","club_facebook","club_phone","club_email","club_depot","club_news","club_contact")
         );
         assertFalse(normalized.contains("club_join"));
-        assertTrue(normalized.contains("club_instagram"));
-        assertTrue(normalized.contains("club_facebook"));
+        assertFalse(normalized.contains("club_instagram"));
+        assertFalse(normalized.contains("club_facebook"));
+        assertFalse(normalized.contains("club_phone"));
+        assertFalse(normalized.contains("club_email"));
+        assertFalse(normalized.contains("club_depot"));
+        assertEquals(List.of("club_about","club_news","club_contact"),normalized.subList(0,3));
+        assertTrue(TileLayoutStore.sanitizeHidden(TileLayoutStore.Area.CLUB,
+                Set.of("club_phone","club_email","club_depot")).isEmpty());
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 }
