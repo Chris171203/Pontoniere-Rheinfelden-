@@ -21,7 +21,7 @@ import java.io.FileOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Set;
-import java.util.Map;
+
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
@@ -33,7 +33,7 @@ public class ClubPresentationTest {
     private static View screen(MainActivity activity)throws Exception{Method m=MainActivity.class.getDeclaredMethod("clubPageScreen");m.setAccessible(true);return (View)m.invoke(activity);}
     @SuppressWarnings("unchecked") private static SharedPreferences configure(MainActivity a)throws Exception{
         ((Set<ClubPageRepository.Page>)field(a,"clubLoading")).addAll(Set.of(ClubPageRepository.Page.values()));
-        return (SharedPreferences)field(a,"prefs");
+        SharedPreferences prefs=(SharedPreferences)field(a,"prefs");set(a,"tileLayoutStore",new TileLayoutStore(prefs));return prefs;
     }
     private static void cache(SharedPreferences prefs,ClubPageRepository.Page page,String html)throws Exception{
         var rows=new JSONArray(ClubPageRepositoryTest.response(page,html));rows.getJSONObject(0).put("modified","2022-01-24T22:37:51");
@@ -63,31 +63,80 @@ public class ClubPresentationTest {
         File dir=new File("build/reports/club-ui");assertTrue(dir.isDirectory()||dir.mkdirs());
         try(FileOutputStream output=new FileOutputStream(new File(dir,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,output));}bitmap.recycle();
     }
-    @Test public void narrowLargeTextLayoutsKeepSourceAndExpansionAcrossRebuilds()throws Exception{
+    private static Object call(MainActivity a,String method)throws Exception{Method m=MainActivity.class.getDeclaredMethod(method);m.setAccessible(true);return m.invoke(a);}
+    private static View overview(MainActivity a)throws Exception{return (View)call(a,"club");}
+    private static View action(View view,String prefix){
+        if(view.isClickable()&&view.getContentDescription()!=null&&view.getContentDescription().toString().startsWith(prefix))return view;
+        if(view instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++){View found=action(group.getChildAt(i),prefix);if(found!=null)return found;}
+        return null;
+    }
+    private static int accordions(View view){
+        int count=view.isClickable()&&view.getContentDescription()!=null&&(view.getContentDescription().toString().endsWith("Aufklappen")||view.getContentDescription().toString().endsWith("Ufklappe"))?1:0;
+        if(view instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++)count+=accordions(group.getChildAt(i));
+        return count;
+    }
+    private static void assertVisibleText(View view,String value){
+        TextView found=find(view,value);assertNotNull(value,found);
+        View child=found;while(child!=view){assertEquals(value,View.VISIBLE,child.getVisibility());child=(View)child.getParent();}
+    }
+    @Test public void narrowOverviewAndFlatArticlesShowContentWithoutExpandingInBothLanguagesAndThemes()throws Exception{
         for(String theme:new String[]{"light","dark"})for(String language:new String[]{"de","gsw"}){
-            // Theme is resolved in onCreate, just like a real preference-triggered restart.
             Field name=MainActivity.class.getDeclaredField("PREFS");name.setAccessible(true);
             org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences((String)name.get(null),0).edit()
                     .clear().putString("theme_mode",theme).putString("ui_language",language).commit();
             org.robolectric.RuntimeEnvironment.setFontScale(1.5f);
             try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
-                MainActivity a=controller.get();SharedPreferences prefs=configure(a);
-                assertEquals(theme.equals("dark"),field(a,"darkMode"));
+                MainActivity a=controller.get();SharedPreferences prefs=configure(a);assertEquals(theme.equals("dark"),field(a,"darkMode"));
                 cache(prefs,ClubPageRepository.Page.ABOUT,ClubContentParserTest.ABOUT.replaceAll("<img[^>]*>",""));
-                set(a,"clubPage",ClubPageRepository.Page.ABOUT);View view=screen(a);a.setContentView(view);layout(view);
-                TextView heading=find(view,"Training  +");assertNotNull(heading);heading.performClick();
-                String summer=language.equals("gsw")?"Summertraining":"Sommertraining";
-                find(view,summer+"  +").performClick();layout(view);
-                assertNotNull(find(view,"18:30"));assertNotNull(find(view,"Homepage"));
-                assertNotNull(find(view,language.equals("gsw")?"Über de Verein":"Über den Verein"));
-                assertNotNull(find(view,language.equals("gsw")?"Abgruefe":"Abgerufen"));
-                capture(view,"training-320-large-"+theme+"-"+language);checkTextBounds(view);
-                view=screen(a);a.setContentView(view);layout(view);
-                assertNotNull(find(view,summer+"  −"));assertNotNull(find(view,"18:30"));
-                find(view,language.equals("gsw")?"Träffpunkt uf de Charte":"Treffpunkt auf Karte").performClick();
-                var intent=Shadows.shadowOf(a).getNextStartedActivity();assertEquals("geo",intent.getData().getScheme());
-                assertTrue(android.net.Uri.decode(intent.getDataString()).contains("Depot der Pontoniere Rheinfelden"));
+                View view=overview(a);a.setContentView(view);layout(view);
+                assertVisibleText(view,"18:30–20:00");assertVisibleText(view,"19:30");
+                assertVisibleText(view,language.equals("gsw")?"Mäntig- und Mittwuchaabig":"Montag- und Mittwochabend");
+                assertVisibleText(view,language.equals("gsw")?"Dunnschtig":"Donnerstag");
+                assertEquals(0,accordions(view));assertNull(find(view,"38 Mitglieder"));
+                checkTextBounds(view);capture(view,"overview-320-large-"+theme+"-"+language);
+                action(view,language.equals("gsw")?"Träffpunkt uf de Charte":"Treffpunkt auf Karte").performClick();
+                var map=Shadows.shadowOf(a).getNextStartedActivity();assertEquals("geo",map.getData().getScheme());
+                assertTrue(android.net.Uri.decode(map.getDataString()).contains("Depot der Pontoniere Rheinfelden"));
+                set(a,"clubDestination",ClubContentPresentation.Destination.SPORT);view=screen(a);a.setContentView(view);layout(view);
+                assertVisibleText(view,"340 kg");assertVisibleText(view,"460 kg");assertVisibleText(view,"Stangen nicht berühren");assertVisibleText(view,"weiter oben anlanden");
+                assertVisibleText(view,language.equals("gsw")?"Boot & Sport":"Boote & Sport");
+                assertEquals(1,accordions(view));assertNull(find(view,"38 Mitglieder"));checkTextBounds(view);
+                capture(view,"sport-320-large-"+theme+"-"+language);
+                action(view,language.equals("gsw")?"Vollständige Quelltext":"Vollständiger Quelltext").performClick();
+                assertVisibleText(view,"38 Mitglieder");
             }
+        }
+    }
+
+    @SuppressWarnings({"unchecked","rawtypes"})
+    @Test public void oneTapOpensNativeArticleAndBackRestoresOverviewAndNestedPosition()throws Exception{
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=controller.get();SharedPreferences prefs=configure(a);prefs.edit().putString("ui_language","de").commit();
+            cache(prefs,ClubPageRepository.Page.ABOUT,ClubContentParserTest.ABOUT.replaceAll("<img[^>]*>",""));
+            cache(prefs,ClubPageRepository.Page.YOUTH,"<p>Jeweils im Herbst lernen Kinder Knoten.</p>");
+            a.setContentView((View)call(a,"buildShell"));
+            Class type=Class.forName(MainActivity.class.getName()+"$Screen");Method navigate=MainActivity.class.getDeclaredMethod("navigate",type);navigate.setAccessible(true);navigate.invoke(a,Enum.valueOf(type,"CLUB"));
+            ViewGroup container=(ViewGroup)field(a,"content");View view=container.getChildAt(0);layout(view);
+            Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();view.scrollTo(0,180);
+            action(view,"Boote & Sport ·").performClick();
+            assertEquals(ClubContentPresentation.Destination.SPORT,field(a,"clubDestination"));
+            view=container.getChildAt(0);layout(view);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();view.scrollTo(0,220);
+            Method open=MainActivity.class.getDeclaredMethod("openClubPage",ClubPageRepository.Page.class);open.setAccessible(true);open.invoke(a,ClubPageRepository.Page.YOUTH);
+            call(a,"handleBack");assertEquals(ClubContentPresentation.Destination.SPORT,field(a,"clubDestination"));
+            view=container.getChildAt(0);layout(view);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(220,view.getScrollY());
+            call(a,"handleBack");assertEquals("CLUB",field(a,"current").toString());
+            view=container.getChildAt(0);layout(view);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(180,view.getScrollY());
+            assertVisibleText(view,"18:30–20:00");
+        }
+    }
+
+    @Test public void failedRefreshAndChangedHeadingsStillExposeNativeSource()throws Exception{
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=controller.get();SharedPreferences prefs=configure(a);
+            cache(prefs,ClubPageRepository.Page.ABOUT,"<h2>Neues Trainingsangebot</h2><p>Neuer Treffpunkt um 18:45 Uhr.</p>");
+            set(a,"clubDestination",ClubContentPresentation.Destination.TRAINING);
+            @SuppressWarnings("unchecked") Set<ClubPageRepository.Page> failed=(Set<ClubPageRepository.Page>)field(a,"clubFailed");failed.add(ClubPageRepository.Page.ABOUT);
+            View view=screen(a);a.setContentView(view);layout(view);assertVisibleText(view,"18:45 Uhr");assertEquals(0,accordions(view));
         }
     }
 
@@ -96,12 +145,12 @@ public class ClubPresentationTest {
             MainActivity a=controller.get();SharedPreferences prefs=configure(a);prefs.edit().putString("ui_language","de").commit();
             cache(prefs,ClubPageRepository.Page.YOUTH,"<p>Jeweils im Herbst lernen Kinder Knoten.</p>");
             cache(prefs,ClubPageRepository.Page.BOARD,"<div class='wp-block-column'><h3>Jungpontonier-Leiter</h3><p>Testperson <a href='mailto:test@example.org'>E-Mail</a></p></div>");
-            set(a,"clubPage",ClubPageRepository.Page.YOUTH);View view=screen(a);a.setContentView(view);layout(view);
+            set(a,"clubDestination",ClubContentPresentation.Destination.YOUTH);View view=screen(a);a.setContentView(view);layout(view);
             TextView contact=find(view,"Testperson");assertNotNull(contact);
             Spanned text=(Spanned)contact.getText();text.getSpans(0,text.length(),ClickableSpan.class)[0].onClick(contact);
             var email=Shadows.shadowOf(a).getNextStartedActivity();assertEquals(android.content.Intent.ACTION_SENDTO,email.getAction());assertEquals("mailto:test@example.org",email.getDataString());
             cache(prefs,ClubPageRepository.Page.HISTORY,"<p>Jubiläumsbuch 1896 – 1996.</p><a href='/wp-content/uploads/test-book.pdf'>Buch</a>");
-            set(a,"clubPage",ClubPageRepository.Page.HISTORY);view=screen(a);a.setContentView(view);layout(view);
+            set(a,"clubDestination",ClubContentPresentation.Destination.HISTORY);view=screen(a);a.setContentView(view);layout(view);
             find(view,"Jubiläumsbuch (PDF)").performClick();var pdf=Shadows.shadowOf(a).getNextStartedActivity();
             assertEquals("https://www.pfvr.ch/wp-content/uploads/test-book.pdf",pdf.getDataString());
         }

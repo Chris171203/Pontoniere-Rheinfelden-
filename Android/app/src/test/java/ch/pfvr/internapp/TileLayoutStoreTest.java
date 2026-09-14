@@ -62,7 +62,7 @@ public class TileLayoutStoreTest {
         assertEquals("cash_drinks",movedDown.get(2));
     }
 
-    @Test public void compactClubTilesRemainKnownAfterCustomOrder(){
+    @Test public void clubLinksRemainKnownAfterCustomOrder(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
                 List.of("club_contact","club_news")
@@ -70,6 +70,14 @@ public class TileLayoutStoreTest {
         assertEquals("club_contact",normalized.get(0));
         assertEquals("club_news",normalized.get(1));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
+    }
+
+    @Test public void previousDefaultClubLayoutBecomesCompactDiscoveryOrder(){
+        var order=TileLayoutStore.normalizeOrder(TileLayoutStore.Area.CLUB,List.of("club_about","club_news","club_program","club_youth","club_board","club_history","club_contact"));
+        assertEquals(List.of("club_sport","club_youth","club_board","club_history"),order.subList(0,4));
+        assertFalse(order.contains("club_program"));
+        assertTrue(TileLayoutStore.sanitizeHidden(TileLayoutStore.Area.CLUB,Set.of("club_program")).isEmpty());
+        for(var spec:TileLayoutStore.specs(TileLayoutStore.Area.CLUB))assertEquals(TileLayoutStore.Width.WIDE,spec.width);
     }
 
     @Test public void clubCatalogDropsRetiredTilesAndPreservesRemainingLayout(){

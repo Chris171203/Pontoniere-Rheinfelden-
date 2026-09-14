@@ -82,13 +82,13 @@ final class TileLayoutStore {
                 spec(Area.CASH, "cash_payment_details", "Zahlungsdaten", Width.WIDE, false)
         ));
         CATALOG.put(Area.CLUB, List.of(
-                spec(Area.CLUB, "club_about", "Über den Verein", Width.WIDE, false),
-                spec(Area.CLUB, "club_news", "Vereinsnews", Width.COMPACT, false),
-                spec(Area.CLUB, "club_program", "Jahresprogramm", Width.COMPACT, false),
-                spec(Area.CLUB, "club_youth", "Jungpontoniere", Width.COMPACT, false),
-                spec(Area.CLUB, "club_board", "Vorstand", Width.COMPACT, false),
-                spec(Area.CLUB, "club_history", "Geschichte", Width.COMPACT, false),
-                spec(Area.CLUB, "club_contact", "Kontakt", Width.COMPACT, false)
+                spec(Area.CLUB, "club_sport", "Boote & Sport", Width.WIDE, false),
+                spec(Area.CLUB, "club_youth", "Jungpontoniere", Width.WIDE, false),
+                spec(Area.CLUB, "club_board", "Vorstand", Width.WIDE, false),
+                spec(Area.CLUB, "club_history", "Geschichte", Width.WIDE, false),
+                spec(Area.CLUB, "club_about", "Vereinsleben", Width.WIDE, false),
+                spec(Area.CLUB, "club_news", "Vereinsnews", Width.WIDE, false),
+                spec(Area.CLUB, "club_contact", "Kontakt", Width.WIDE, false)
         ));
     }
 
@@ -146,6 +146,7 @@ final class TileLayoutStore {
     }
 
     static List<String> normalizeOrder(Area area, List<String> requested) {
+        if(area==Area.CLUB&&List.of("club_about","club_news","club_program","club_youth","club_board","club_history","club_contact").equals(requested))requested=null;
         Map<String, Spec> known = specsById(area);
         Set<String> requestedIds = requested == null ? Set.of() : new LinkedHashSet<>(requested);
         LinkedHashSet<String> result = new LinkedHashSet<>();

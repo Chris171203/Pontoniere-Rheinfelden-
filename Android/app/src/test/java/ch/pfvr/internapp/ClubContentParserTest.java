@@ -10,8 +10,8 @@ public class ClubContentParserTest {
         <p>Der Testverein wurde 1896 gegründet. Seitdem fährt er auf dem Rhein.</p>
         <p>Der Verein hat derzeit (2021) ca. 38 Mitglieder.</p>
         <p>Das gesellschaftliche Leben umfasst ein Essen nach dem Training.</p>
-        <h2>Training</h2><p>In der Sommersaison treffen wir uns beim Depot der Pontoniere Rheinfelden um 18:30 Uhr.<br>
-        Während der Wintersaison treffen wir uns bei der Schützenturnhalle um 19:30 Uhr. <a href='/kontakt/'>Kontakt</a></p>
+        <h2>Training</h2><p>In der Sommersaison (April-September) treffen wir uns am Montag- und Mittwochabend, von 18:30 Uhr bis 20:00 Uhr beim Depot der Pontoniere Rheinfelden.<br>
+        Während der Wintersaison (Oktober-März) treffen wir uns am Donnerstag um 19:30 Uhr bei der Schützenturnhalle. <a href='/kontakt/'>Kontakt</a></p>
         <h2>Sport</h2><p>Pontonier ist eine Sportart auf dem Wasser.</p><p>Das Schiff wird jeweils zu zweit gesteuert.</p>
         <h3>Weidling</h3><p><img width='758' height='90' src='/wp-content/uploads/weidling.jpg' alt='Weidling'>Ein Weidling wiegt 340 kg.</p>
         <h3>Boot</h3><p><img src='/wp-content/uploads/boot.jpg' alt='Boot'>Ein Boot wiegt 460 kg.</p>

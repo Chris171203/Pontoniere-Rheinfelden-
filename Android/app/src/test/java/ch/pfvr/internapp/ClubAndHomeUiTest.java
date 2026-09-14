@@ -92,7 +92,7 @@ public class ClubAndHomeUiTest {
         try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity activity=controller.get();configure(activity);
             SharedPreferences prefs=(SharedPreferences)field(activity,"prefs");
-            var page=ClubPageRepository.Page.BOARD;set(activity,"clubPage",page);
+            var page=ClubPageRepository.Page.BOARD;set(activity,"clubDestination",ClubContentPresentation.Destination.forPage(page));
             prefs.edit().putString(page.cacheKey(),ClubPageRepositoryTest.response(page,"<h3>Präsident</h3><p>Test Person <a href='mailto:test@example.org'>E-Mail</a></p>"))
                     .putLong(page.updatedKey(),1L).commit();
             ((Set<?>)field(activity,"clubFailed")).clear();

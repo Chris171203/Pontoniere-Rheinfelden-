@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.12.9` (`versionCode 66`).
+Aktuelle Android-Testversion: `0.12.10` (`versionCode 67`).
 
 ## Entwicklung
 

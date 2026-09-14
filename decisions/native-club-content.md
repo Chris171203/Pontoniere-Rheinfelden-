@@ -1,6 +1,6 @@
 # Native Vereinsinhalte
 
-Datum: 2026-09-14 · Android 0.12.9; fachliche Referenz für den späteren iOS-Abgleich.
+Datum: 2026-09-14 · Android 0.12.10; fachliche Referenz für den späteren iOS-Abgleich.
 
 ## Quelle und Darstellung
 
@@ -21,3 +21,13 @@ Die Textansicht funktioniert unabhängig von Bildern. Ein fehlendes Bild zeigt e
 ## Prüfung
 
 Parser-Tests prüfen Quellzuordnung, Rückfall, alte Zahlen, Kontakt-Entitäten, Alters-Ausschnitte, belegte Daten und Bild-URLs. Robolectric prüft Bildcache nach Neustart/Netzfehler, fehlerhafte Downloads und Cache-Leeren während eines Downloads. Native Darstellung bei 320 dp und 150 Prozent Schrift in beiden Themen und Sprachen; Screenshots als CI-Artefakt. Weiterhin keine physische Geräteabnahme.
+
+## UX-Korrektur 0.12.10
+
+Die verschachtelten Akkordeons aus 0.12.9 wurden vom Nutzer als unpraktisch bewertet. Die freigegebene Alternative ist eine kurze Übersicht mit direkt sichtbarem Training und eigenen, durchgehend lesbaren Unterseiten. Der frühere Ansatz wird für fachliche Inhalte nicht fortgeführt.
+
+`ClubContentPresentation.Destination` trennt App-Ziele von WordPress-Quellseiten: Training, Boote & Sport und Vereinsleben teilen weiterhin denselben validierten Vereinscache. Es werden keine zusätzlichen Kopien derselben WordPress-Seite abgerufen. Die Übersicht extrahiert Saison, Wochentage, Uhrzeiten und Treffpunkt aus dem vorhandenen Quelltext; unerkannte Formulierungen ergeben einen Originalsatz statt erfundener Zeiten. App-generierte Wochentagsanzeigen werden lokalisiert, der vollständige Originaltext bleibt unverändert.
+
+Artikelüberschriften sind statisch, Bildkarten und Manöver unmittelbar lesbar. Nur der vollständige Quelltext lässt sich optional öffnen. Ein kleiner Navigationsverlauf stellt bei internen Querverweisen die vorherige Vereinsseite samt Scrollposition wieder her; beim Rückweg zur Übersicht bleibt deren Position erhalten. Der Jahresprogramm-Zugang ist jetzt fest beim Training, die doppelte Kachel-ID wird normalisiert. Frühere Standardlayouts erhalten die neue Reihenfolge; individuell angeordnete Einträge behalten ihre relative Reihenfolge.
+
+Die Bilder werden beim Öffnen der jeweiligen Unterseite geladen; Begrenzung, Cache und Fehlerverhalten bleiben unverändert. Abnahme über echte native Ansichten: keine Fachakkordeons, beide Trainingszeiten ohne Tap, ein Tap zur Sportseite, Querverweis und Rückweg, schmale Darstellung mit grosser Schrift in beiden Themen/Sprachen.

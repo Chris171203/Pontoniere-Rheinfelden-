@@ -7,6 +7,15 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public class UiLanguageTest {
+    @Test public void clubOverviewAndGeneratedScheduleLabelsAreSwissGerman(){
+        assertEquals("Verein entdecke",UiLanguage.translate("Verein entdecken","gsw"));
+        assertEquals("Boot & Sport",UiLanguage.translate("Boote & Sport","gsw"));
+        assertEquals("Mäntig- und Mittwuchaabig",UiLanguage.translate("Montag- und Mittwochabend","gsw"));
+        assertEquals("Dunnschtig",UiLanguage.translate("Donnerstag","gsw"));
+        assertEquals("Ziite luut Homepage. Aktuelli Termin im Kaländer.",UiLanguage.translate("Zeiten laut Homepage. Aktuelle Termine im Kalender.","gsw"));
+        assertEquals("Zäme underwägs",UiLanguage.translate("Gemeinsam unterwegs","gsw"));
+        assertEquals("In der Sommersaison (April-September)",UiLanguage.translate("In der Sommersaison (April-September)","gsw"));
+    }
     @Test public void defaultsUnknownModesToGerman() {
         assertEquals(UiLanguage.DE, UiLanguage.normalizeMode(null));
         assertEquals(UiLanguage.DE, UiLanguage.normalizeMode("fr"));

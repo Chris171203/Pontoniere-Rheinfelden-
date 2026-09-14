@@ -1,6 +1,13 @@
 # Status
 
-Stand: Testversion `0.12.9` (`versionCode 66`) · aktualisiert 2026-09-14.
+Stand: Testversion `0.12.10` (`versionCode 67`) · aktualisiert 2026-09-14.
+
+## Arbeitspaket 0.12.10 (in Umsetzung)
+
+- Freigegebener UX-Umbau: Vereinsbild und kurzer Einstieg, Sommer-/Wintertraining direkt auf der Übersicht; kompakte Verweise auf Boote & Sport, Nachwuchs, Vorstand, Geschichte und Vereinsleben.
+- Unterseiten als durchgehend lesbare Artikel/Bildkarten; nur der vollständige Quelltext bleibt aufklappbar. Quellen, Cache und Kontakt-/Social-Footer bleiben erhalten.
+- App-Beschriftungen inklusive neuer Navigation und Trainingszusammenfassung Deutsch/Schweizerdeutsch; Originaltexte unverändert.
+- Prüfkriterien: Trainingszeiten ohne Tap sichtbar, maximal ein Tap zur Fachseite, keine versteckten Fachabschnitte, funktionierender Rückweg mit Scrollposition, 320 dp / grosse Schrift / beide Themen und Sprachen. Abnahme ausstehend.
 
 ## Ergänzung 0.12.9
 

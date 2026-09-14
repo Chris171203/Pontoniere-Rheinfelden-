@@ -40,6 +40,24 @@ final class UiLanguage {
         put("Mehr erfahren", "Meh erfahre");
         put("Folge uns", "Folg eus");
 
+        // Club overview and flat article navigation
+        put("Verein entdecken", "Verein entdecke");
+        put("Trainingsinfos", "Trainingsinfos");
+        put("Boote & Sport", "Boot & Sport");
+        put("Weidling, Boot und Fahrtechnik", "Weidling, Boot und Fahrtechnik");
+        put("Ablauf und Trainingsinhalte", "Ablauf und Trainingsinhalt");
+        put("Gemeinsam unterwegs", "Zäme underwägs");
+        put("Zeiten laut Homepage. Aktuelle Termine im Kalender.", "Ziite luut Homepage. Aktuelli Termin im Kaländer.");
+        put("Trainingszeiten stehen im Originaltext.", "Trainingsziite stönd im Originaltext.");
+        put("Montag- und Mittwochabend", "Mäntig- und Mittwuchaabig");
+        put("Donnerstag", "Dunnschtig");
+        put("Montag", "Mäntig");
+        put("Dienstag", "Ziischtig");
+        put("Mittwoch", "Mittwuch");
+        put("Freitag", "Friitig");
+        put("Samstag", "Samschtig");
+        put("Sonntag", "Sunntig");
+
         // Native public club content
         put("Jungpontoniere", "Jungpontoniere");
         put("Fahren, Knoten und Lager", "Fahre, Chnöte und Lager");

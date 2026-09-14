@@ -4,14 +4,14 @@ Stand: 2026-09-14. Vom Nutzer freigegeben und mit Android 0.12.9 in beiden Schri
 
 ## Empfohlene Inhalte
 
-Die Vereinsübersicht erhält einen kurzen Einstieg und wenige klar benannte Bereiche. Längere Texte werden innerhalb der App in aufklappbaren Abschnitten gezeigt. Der bereits vorhandene Kalender und die News bleiben die Ziele für aktuelle Termine und Meldungen.
+Die Vereinsübersicht erhält einen kurzen Einstieg und wenige klar benannte Bereiche. Längere Texte werden auf eigenen nativen Unterseiten durchgehend lesbar gezeigt (UX-Korrektur 0.12.10). Der bereits vorhandene Kalender und die News bleiben die Ziele für aktuelle Termine und Meldungen.
 
 | Reihenfolge | Bereich | Inhalt aus der Homepage | Darstellung in der App |
 |---|---|---|---|
 | 1 | Verein auf einen Blick | Gründung, Sport und Gemeinschaft; ein geeignetes Vereinsbild | Kurzer Einstieg mit einem Bild; keine als aktuell ausgegebenen alten Mitgliederzahlen. Quelle: [Verein/Sport](https://www.pfvr.ch/verein/). |
 | 2 | Training | Sommer-/Wintertraining, Treffpunkte und Trainingsinhalte | Zwei übersichtliche Abschnitte, Treffpunkt anklickbar; für konkrete Anlässe in den vorhandenen Kalender wechseln. Die Homepage-Zeiten entsprechen derzeit dem App-Regelplan, ihr tatsächlicher Fortbestand wurde nicht beim Verein bestätigt. Quelle: [Training](https://www.pfvr.ch/verein/). |
 | 3 | Unsere Boote | Beschreibung von Weidling und Übersetzboot | Zwei kompakte Bildkarten mit den Daten aus der Homepage. Quelle: [Boote](https://www.pfvr.ch/verein/). |
-| 4 | Pontoniersport erklärt | Grundidee, Fahren zu zweit, typische Manöver und Sektionsfahren | Kurze Einführung; einzelne Manöver bei Interesse aufklappen, jeweils mit höchstens einem passenden Originalbild. Keine vollständige Bildergalerie in der Übersicht. Quelle: [Sport](https://www.pfvr.ch/verein/). |
+| 4 | Pontoniersport erklärt | Grundidee, Fahren zu zweit, typische Manöver und Sektionsfahren | Kurze Einführung; einzelne Manöver direkt als Bildkarten lesen, jeweils mit höchstens einem passenden Originalbild. Keine vollständige Bildergalerie in der Übersicht. Quelle: [Sport](https://www.pfvr.ch/verein/). |
 | 5 | Jungpontoniere | Ausbildung im Weidling, Knoten, Prüfungen und Lager | Eigener nativer Abschnitt, Kontakt zum JP-Leiter aus der vorhandenen Vorstandsquelle. Alters-/Wettkampfkategorien erst nach aktueller fachlicher Prüfung als verbindliche Information darstellen. Quelle: [Jungpontoniere](https://www.pfvr.ch/verein/jungpontoniere/). |
 | 6 | Vereinsleben | Gemeinsames Essen, Pfingstlager, Wanderung und weitere Vereinsaktivitäten | Kurzer Abschnitt mit einem Bild. Aktuelle Durchführungstermine aus dem Kalender, nicht aus allgemeinen Beschreibungen ableiten. Quelle: [Vereinsleben](https://www.pfvr.ch/verein/). |
 | 7 | Geschichte | Einleitung, Jubiläumsbuch und vorhandene historische Verweise | Native Einleitung beibehalten; eine kurze Zeitleiste nur mit belegten Ereignissen ergänzen. Das komplette Jubiläumsbuch bleibt über einen deutlich benannten PDF-Link erreichbar. Quelle: [Geschichte](https://www.pfvr.ch/geschichte/). |
@@ -53,3 +53,7 @@ Die vorhandene WordPress-Anbindung bleibt Grundlage. Inhalte werden nach Seite u
 - Aufklappzustände bleiben während Navigation und Hintergrundaktualisierung erhalten. Bilder werden erst beim Einblenden geladen, verkleinert gespeichert und bei Netzfehlern aus dem lokalen Cache angezeigt.
 
 Architektur und Cache-Grenzen: [Entscheidung](../decisions/native-club-content.md).
+
+## UX-Umsetzung 0.12.10
+
+Der Nutzer hat die Akkordeon-Struktur verworfen und die kurze Vereinsübersicht mit eigenen Unterseiten freigegeben. Die Übersicht enthält Vereinsbild und zwei Sätze aus der Quelle, beide Trainingssaisons mit Zeiten und Kartenaktion, Kalenderzugang und kompakte Navigationszeilen. Sport/Boote, Nachwuchs, Vorstand, Geschichte, Vereinsleben und volle Trainingsinfos sind durchgehend lesbar. Der vollständige Originaltext ist das einzige optionale Aufklappelement. Alle neuen App-Beschriftungen und erzeugten Wochentagsanzeigen sind auf Schweizerdeutsch gepflegt.
