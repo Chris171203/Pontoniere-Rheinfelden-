@@ -1,6 +1,6 @@
 # Status
 
-Stand: `0.12.7` in Prüfung (Basis `0.12.6`) · aktualisiert 2026-09-14.
+Stand: Testversion `0.12.7` (`versionCode 64`) · aktualisiert 2026-09-14.
 
 ## Aktuelles Arbeitspaket 0.12.7
 
@@ -9,7 +9,9 @@ Stand: `0.12.7` in Prüfung (Basis `0.12.6`) · aktualisiert 2026-09-14.
 - Live-Refresh beim ersten sichtbaren Wetter-/Rheinblock; Social-Logos zentriert am Ende der Vereinsseite.
 - Schweizerdeutsch der jüngsten Wetter-/UI-Ergänzungen vervollständigen; externe Inhalte bleiben unverändert.
 - Android-Zielstand; der separate iOS-Entwurf #32 benötigt diese Änderungen bei seiner nächsten Synchronisierung.
-- Prüfungen und Abnahme noch ausstehend.
+- Abnahme: 106 JUnit-/native UI-Tests ohne Fehler oder Skips, vier Browser-Szenarien, Release-Lint, Debug-APK, Release-AAB-Kompilierung sowie Paket-/Signatur-/Berechtigungsprüfung bestanden. CI: [34811629510](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34811629510), Quellstand `4154c1e9`.
+- Der getestete PR-Merge `5df4945b` und der Branch hatten denselben Quellbaum. Nachfolgende Abschlussänderungen betreffen ausschließlich diese Statusdatei und den Prüfbericht.
+- Öffentliche WordPress-Seiten erfolgreich live abgerufen und mit dem tatsächlichen Parser verarbeitet. Persönliche produktive An-/Abmeldung und physisches Android-Gerät wurden nicht getestet. Details: [Prüfbericht](docs/checks-0.12.7.md).
 
 ## Aktueller Teststand
 
