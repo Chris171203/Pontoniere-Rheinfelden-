@@ -2,13 +2,16 @@
 
 Stand: Testversion `0.12.9` (`versionCode 66`) · aktualisiert 2026-09-14.
 
-## Arbeitspaket 0.12.9 (in Umsetzung)
+## Ergänzung 0.12.9
 
 - Freigegebener Inhaltsplan: native Abschnitte für Training, Boote, Fahrtechnik, Vereinsleben und Jungpontoniere; Vorstands-Kontaktkarten und belegte historische Stationen.
 - Originale Texte und Bilder stammen aus WordPress. Ein Tagescache, begrenzter Bildcache und die vollständige bereinigte Quellenansicht sichern Offline-Lesen und Rückfall bei geänderten Überschriften.
 - Quellenänderung und App-Abruf getrennt; alte Mitgliederzahlen und Nachwuchs-Alterskategorien werden nicht in aktuelle Kurzinfos übernommen. App-Bedienung Deutsch/Schweizerdeutsch.
 - Android; iOS-Abgleich weiterhin beim separaten Port #32.
-- Abnahme ausstehend.
+- Abnahme: [CI 34816581029](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34816581029) erfolgreich; 119 Tests in 31 Klassen ohne Fehler/Skips, vier Browser-Szenarien, Release-Lint, Debug-APK, Release-AAB und Paket-/Signatur-/Berechtigungsprüfung bestanden.
+- Native Ansichten mit synthetischen Quelltexten bei 320 dp und 150 Prozent Schrift in Deutsch/Schweizerdeutsch sowie Hell/Dunkel geprüft und vier Screenshots angesehen. Bildcache einschliesslich nachträglich aufgeklappter Abschnitte, Neustart, Netzfehler und Leeren während eines Downloads getestet. Fünf öffentliche WordPress-Seiten mit dem tatsächlichen Parser verarbeitet; fünf ausgewählte Originalbilder live mit HTTP 200 geprüft.
+- Geprüfter Quellcommit `2c5435cf7c0dc4e07b47bdf4bd7c54e6d0cce43b`, APK aus PR-Merge `3657ebf43fe849085e0f60da2929586fa58f5bef`; identischer Quellbaum `fb917d4f5ca14cc7b3b71a5da283d5a4895073e5`. Nachfolgend nur Abschlussdokumentation.
+- Test-APK: `PFVR-Rheinfelden-test-0.12.9-debug.apk`, 3’553’028 Byte, SHA-256 `73e81da466c03e0a1cece040650fbd1a6ea213fabfa5f77ca9a5e5feed759142`. Download, ZIP-Inhalt, CI-Hash und bisheriges Testzertifikat abgeglichen. Keine physische Geräteprüfung. Details: [Prüfbericht](docs/checks-0.12.9.md).
 
 ## Ergänzung 0.12.8
 
