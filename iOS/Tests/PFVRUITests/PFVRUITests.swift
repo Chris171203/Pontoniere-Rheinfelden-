@@ -383,7 +383,7 @@ final class PFVRUITests: XCTestCase {
         XCTAssertFalse(element("club.original").exists)
         capture("club-training-de")
         tap("club.row.sport")
-        XCTAssertTrue(element("club.detail.sport").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars.staticTexts["Boote & Sport"].waitForExistence(timeout: 5))
         let weidling = element("club.section.boat-weidling")
         reveal(weidling); XCTAssertTrue(weidling.label.contains("340 kg"))
         let boot = element("club.section.boat-boot")
@@ -430,8 +430,13 @@ final class PFVRUITests: XCTestCase {
 
     func testClubCalendarAndFirstLiveRefreshAreNativeAndReachable() {
         launch()
-        XCTAssertTrue(app.buttons["home.refresh"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["home.refresh"].isHittable)
+        let refresh = app.buttons.matching(NSPredicate(format: "label == %@", "Rhein und Wetter aktualisieren")).firstMatch
+        XCTAssertTrue(refresh.waitForExistence(timeout: 5))
+        XCTAssertTrue(refresh.isHittable)
+        let title = app.staticTexts["Wetter zum nächsten Termin"]
+        XCTAssertTrue(title.exists)
+        XCTAssertLessThan(abs(refresh.frame.midY - title.frame.midY), 44, "Refresh belongs to the first live-card heading")
+        refresh.tap()
         tap("tab.club")
         tap("club.calendar")
         XCTAssertTrue(element("screen.events").waitForExistence(timeout: 5))
