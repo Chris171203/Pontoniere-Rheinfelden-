@@ -2,12 +2,15 @@
 
 Stand: Testversion `0.12.10` (`versionCode 67`) · aktualisiert 2026-09-14.
 
-## Arbeitspaket 0.12.10 (in Umsetzung)
+## Ergänzung 0.12.10
 
 - Freigegebener UX-Umbau: Vereinsbild und kurzer Einstieg, Sommer-/Wintertraining direkt auf der Übersicht; kompakte Verweise auf Boote & Sport, Nachwuchs, Vorstand, Geschichte und Vereinsleben.
 - Unterseiten als durchgehend lesbare Artikel/Bildkarten; nur der vollständige Quelltext bleibt aufklappbar. Quellen, Cache und Kontakt-/Social-Footer bleiben erhalten.
 - App-Beschriftungen inklusive neuer Navigation und Trainingszusammenfassung Deutsch/Schweizerdeutsch; Originaltexte unverändert.
-- Prüfkriterien: Trainingszeiten ohne Tap sichtbar, maximal ein Tap zur Fachseite, keine versteckten Fachabschnitte, funktionierender Rückweg mit Scrollposition, 320 dp / grosse Schrift / beide Themen und Sprachen. Abnahme ausstehend.
+- Abnahme: [CI 34822553841 / Lauf 196](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34822553841) erfolgreich; 128 Tests in 32 Klassen ohne Fehler/Skips, vier Browser-Szenarien, Release-Lint, Debug-APK, Release-AAB sowie Paket-/Signatur-/Berechtigungsprüfung bestanden.
+- Trainingszeiten ohne Tap sichtbar, ein Tap zur Fachseite, keine versteckten Fachabschnitte, Rückweg mit Scrollposition geprüft. Acht native Screenshots bei 320 dp / 150 Prozent Schrift in beiden Themen und Sprachen angesehen; zusätzlicher Test für Abstände bei doppelter Pixeldichte.
+- Geprüfter Quellcommit `491523ddc5f59d221c3e50cc51915e5ff1e86ec4`, APK aus PR-Merge `a01acf8f19b4b8f64021b1df1df3aa85406b539f`; identischer Quellbaum `197490f401d8b771c7d73c0d11af81431830de24`. Nachfolgend nur Abschlussdokumentation.
+- Test-APK: `PFVR-Rheinfelden-test-0.12.10-debug.apk`, 3’558’524 Byte, SHA-256 `ce596c7111c211587983a0e4add41c4354e8dcfb6854304b9c7a1add0746d43f`. Download, ZIP-Inhalt, CI-Hash, Build-Metadaten und bestehendes Testzertifikat abgeglichen. Keine physische Geräteprüfung. Details: [Prüfbericht](docs/checks-0.12.10.md).
 
 ## Ergänzung 0.12.9
 
