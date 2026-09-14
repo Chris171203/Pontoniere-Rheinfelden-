@@ -1,5 +1,15 @@
 # Android Changelog
 
+## 0.12.7
+- An-/Abmeldung: Website-Zustandsfarben werden nicht mehr durch aus der Beschriftung abgeleitete App-Farben überschrieben. Verzögerte Klassen-/Inline-Änderungen bleiben ohne Reload sichtbar. Alte visuelle Buttonbeschriftungen werden bei Statuswechsel entfernt.
+- Verein/Sport, Vorstand, Geschichte und Kontakt aus WordPress als native, lokal gecachte Textansichten; Kontaktlinks bleiben anklickbar. Jahresprogramm öffnet den App-Kalender. Formulare und PDF-Bücher bleiben extern nutzbar.
+- Geschichte-Link auf den tatsächlich von WordPress gelieferten Pfad `/geschichte/` korrigiert.
+- Instagram/Facebook als Firmenlogos unten mittig. Alte Social-Kachel-IDs werden aus gespeicherten Layouts bereinigt.
+- Live-Aktualisierung direkt am ersten sichtbaren Wetter-/Rheinblock, auch bei angepassten Kachellayouts.
+- Fehlende Wettertexte auf Schweizerdeutsch ergänzt; Tageszeit `Morge` und Folgetag `Morn` unterschieden. Originale Vereinsinhalte bleiben unverändert.
+- Regressionen für verzögerte Website-Reaktionen in beiden Designs/Sprachen, native Vereins-/Home-Ansichten und Verarbeitung öffentlicher Seiten ergänzt.
+
+
 ## 0.11.5
 - Sicherheitsreview gegen die Opus-Analyse umgesetzt: Die aktuelle Schifffahrtslage aus Basel-Rheinhalle wird nur noch aus Messwert und Cache mit höchstens 60 Minuten Alter abgeleitet. Danach zeigt die App `Lage unklar` statt eine vermeintlich aktuelle Normal-/Sperrstufe.
 - `Rhein aktuell` nennt Datum und Uhrzeit des Messstands und weist ausdrücklich darauf hin, dass BAFU-Aktuellwerte ungeprüfte Rohdaten sind; die App ist keine amtliche Freigabe und verweist auf die Schweizerischen Rheinhäfen als massgebende Stelle. Rheinfelden bleibt ohne künstliche lokale `NORMAL`-Stufe neutral eingefärbt.
