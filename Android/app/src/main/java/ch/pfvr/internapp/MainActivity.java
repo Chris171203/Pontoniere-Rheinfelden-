@@ -3769,6 +3769,8 @@ private TextView clubRichText(String html){
     TextView text=txtRaw("",15,TEXT,false);
     text.setPadding(0,dp(8),0,dp(8));text.setLineSpacing(dp(3),1f);
     android.text.SpannableStringBuilder rich=new android.text.SpannableStringBuilder(android.text.Html.fromHtml(html,android.text.Html.FROM_HTML_MODE_LEGACY));
+    // Html adds trailing paragraph breaks; the native container already supplies spacing.
+    while(rich.length()>0&&Character.isWhitespace(rich.charAt(rich.length()-1)))rich.delete(rich.length()-1,rich.length());
     for(android.text.style.URLSpan link:rich.getSpans(0,rich.length(),android.text.style.URLSpan.class)){
         int start=rich.getSpanStart(link),end=rich.getSpanEnd(link);String url=link.getURL();rich.removeSpan(link);
         rich.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){openClubLink(url);}},start,end,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

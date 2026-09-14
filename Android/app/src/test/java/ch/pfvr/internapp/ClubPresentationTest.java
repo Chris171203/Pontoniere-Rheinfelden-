@@ -65,17 +65,22 @@ public class ClubPresentationTest {
     }
     @Test public void narrowLargeTextLayoutsKeepSourceAndExpansionAcrossRebuilds()throws Exception{
         for(String theme:new String[]{"light","dark"})for(String language:new String[]{"de","gsw"}){
+            // Theme is resolved in onCreate, just like a real preference-triggered restart.
+            Field name=MainActivity.class.getDeclaredField("PREFS");name.setAccessible(true);
+            org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences((String)name.get(null),0).edit()
+                    .clear().putString("theme_mode",theme).putString("ui_language",language).commit();
+            org.robolectric.RuntimeEnvironment.setFontScale(1.5f);
             try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
                 MainActivity a=controller.get();SharedPreferences prefs=configure(a);
-                prefs.edit().putString("theme_mode",theme).putString("ui_language",language).commit();
-                android.content.res.Configuration config=new android.content.res.Configuration(a.getResources().getConfiguration());config.fontScale=1.5f;
-                a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());
+                assertEquals(theme.equals("dark"),field(a,"darkMode"));
                 cache(prefs,ClubPageRepository.Page.ABOUT,ClubContentParserTest.ABOUT.replaceAll("<img[^>]*>",""));
                 set(a,"clubPage",ClubPageRepository.Page.ABOUT);View view=screen(a);a.setContentView(view);layout(view);
                 TextView heading=find(view,"Training  +");assertNotNull(heading);heading.performClick();
                 String summer=language.equals("gsw")?"Summertraining":"Sommertraining";
                 find(view,summer+"  +").performClick();layout(view);
                 assertNotNull(find(view,"18:30"));assertNotNull(find(view,"Homepage"));
+                assertNotNull(find(view,language.equals("gsw")?"Über de Verein":"Über den Verein"));
+                assertNotNull(find(view,language.equals("gsw")?"Abgruefe":"Abgerufen"));
                 capture(view,"training-320-large-"+theme+"-"+language);checkTextBounds(view);
                 view=screen(a);a.setContentView(view);layout(view);
                 assertNotNull(find(view,summer+"  −"));assertNotNull(find(view,"18:30"));
