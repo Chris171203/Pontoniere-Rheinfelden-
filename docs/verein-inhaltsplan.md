@@ -1,6 +1,6 @@
 # Vereinsinhalte für die App — Übernahmeplan
 
-Stand: 2026-09-14. Planungsstand; mit 0.12.8 wird nur die Symbolleiste umgesetzt. Grundlage sind die live abgerufenen öffentlichen WordPress-Seiten sowie der tatsächliche Android-Stand 0.12.7.
+Stand: 2026-09-14. Vom Nutzer freigegeben und mit Android 0.12.9 in beiden Schritten umgesetzt; technische Abnahme siehe STATUS.md. Grundlage sind die erneut live abgerufenen öffentlichen WordPress-Seiten. Die Anforderungen in der Tabelle bleiben als fachliche Referenz bestehen.
 
 ## Empfohlene Inhalte
 
@@ -35,10 +35,21 @@ Kontaktformulare, umfangreiche PDF-Dokumente, Bildarchive und die eigenständige
 
 Die vorhandene WordPress-Anbindung bleibt Grundlage. Inhalte werden nach Seite und Überschrift übernommen; keine parallele manuell gepflegte Faktenkopie. Bei geänderten Überschriften oder fehlenden Bildern bleibt der native bereinigte Quelltext als Rückfallansicht erreichbar. Für stabile Inhalte gilt weiter der lokale Tagescache mit manueller Aktualisierung. App-Beschriftungen erhalten Deutsch/Schweizerdeutsch; originale Namen und Homepage-Texte behalten ihre Sprache.
 
-## Prüfkriterien für den späteren Ausbau
+## Prüfkriterien
 
 - Texte, Bildzuordnung und Kontaktziele anhand des tatsächlichen Quellinhalts vergleichen; keine veralteten Angaben aus dem Datumskontext lösen.
 - Jeder übernommene Abschnitt bleibt nach erfolgreichem Abruf offline lesbar; fehlgeschlagene Aktualisierungen erhalten den Cache.
 - Übersicht und Abschnitte bleiben bei 320 dp Breite, grosser Schrift sowie Hell-/Dunkelmodus lesbar.
 - Reguläre Trainingsinformation und konkrete Kalendertermine werden erkennbar getrennt; keine widersprüchlichen App-Zeitpläne schaffen.
 - Native Quelltexte bleiben auch im Schweizerdeutsch-Modus unverändert, während die App-Bedienung vollständig lokalisiert ist.
+
+## Umsetzung 0.12.9
+
+- Training (Sommer/Winter mit Kartenaktion), Boote, Pontoniersport mit einzeln aufklappbaren Übungen und Vereinsleben in der Vereinsansicht. Ein Vereinsbild auch in der Übersicht.
+- Neue anordenbare Jungpontoniere-Kachel. Ausbildung, Knoten/Prüfungen, Lager und der JP-Kontakt aus der separat geladenen Vorstandsquelle. Altersvoraussetzungen bleiben im datierten Originaltext; keine neue Aussage über aktuelle Verbandsregeln.
+- Sieben Vorstands-Kontaktkarten aus den derzeitigen Quellspalten; Bilder werden nur übernommen, wenn vorhanden. Namen/Kontakte sind nicht im App-Quellcode hinterlegt.
+- Zeitleiste aus belegten Quellen: Gründung 1896 (Vereinsseite), Jubiläumsbuch 1996 (Geschichtsseite), Einweihung des Jubiläumsweidlings 18.09.2021 (Bildunterschrift der Vereinsseite). Jede Station zeigt ihren zugehörigen Quellenstand. PDF und Vorstandsarchiv bleiben extern.
+- Auswahl nach Überschriften und belegbaren Textmustern. Bei Abweichungen bleibt der bereinigte Quelltext nativ lesbar. Originaltexte werden weder übersetzt noch mit einem erfundenen Aktualitätsdatum versehen.
+- Aufklappzustände bleiben während Navigation und Hintergrundaktualisierung erhalten. Bilder werden erst beim Einblenden geladen, verkleinert gespeichert und bei Netzfehlern aus dem lokalen Cache angezeigt.
+
+Architektur und Cache-Grenzen: [Entscheidung](../decisions/native-club-content.md).

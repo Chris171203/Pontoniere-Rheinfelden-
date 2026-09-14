@@ -217,6 +217,8 @@ public class MainActivity extends Activity {
     private long newsUpdated = 0L;
     private volatile boolean newsLoading = false;
     private ClubPageRepository.Page clubPage=ClubPageRepository.Page.ABOUT;
+    private final java.util.Map<String,Boolean> clubExpanded=new java.util.HashMap<>();
+    private ClubImageLoader clubImages;
     private final Set<ClubPageRepository.Page> clubLoading=new LinkedHashSet<>();
     private final Set<ClubPageRepository.Page> clubFailed=new LinkedHashSet<>();
     private Bitmap pendingQrBitmap;
@@ -2440,6 +2442,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         for(HydroStation station:HydroStation.values())editor.remove(station.liveCacheKey()).remove(station.liveUpdatedKey()).remove(station.fineCacheKey()).remove(station.fineUpdatedKey()).remove(station.historyCacheKey()).remove(station.historyUpdatedKey());
         for(ClubPageRepository.Page page:ClubPageRepository.Page.values())editor.remove(page.cacheKey()).remove(page.updatedKey());
         clubFailed.clear();
+        if(clubImages!=null)clubImages.clear();
+        else {try(ClubImageLoader images=new ClubImageLoader(this)){images.clear();}}
         editor.apply();
         events=new ArrayList<>();eventsUpdated=0L;news=new ArrayList<>();newsUpdated=0L;
         Toast.makeText(this,ui("Daten-Cache geleert. Neue Daten werden nachgeladen."),Toast.LENGTH_SHORT).show();
@@ -3632,6 +3636,7 @@ private View clubTileView(TileLayoutStore.Spec spec){
         case "club_about":return clubAboutTile();
         case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
         case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->navigate(Screen.EVENTS));
+        case "club_youth":return clubActionTile("Jungpontoniere","Fahren, Knoten und Lager",v->openClubPage(ClubPageRepository.Page.YOUTH));
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openClubPage(ClubPageRepository.Page.BOARD));
         case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openClubPage(ClubPageRepository.Page.HISTORY));
         case "club_contact":return clubActionTile("Kontakt","Weitere Ansprechwege",v->openClubPage(ClubPageRepository.Page.CONTACT));
@@ -3646,6 +3651,7 @@ private View clubAboutTile(){
     ClubPageRepository.Content cached=cachedClubPage(ClubPageRepository.Page.ABOUT);
     TextView text=cached==null?txt(clubPageStatus(ClubPageRepository.Page.ABOUT),14,MUTED,false):txtRaw(cached.preview(),14,TEXT,false);
     text.setPadding(0,dp(7),0,dp(10));
+    if(cached!=null&&cached.layout().hero()!=null)addClubPhoto(about,cached.layout().hero());
     about.addView(text);
     if(cached!=null)about.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.ABOUT),11,MUTED,false));
     TextView history=txt("Mehr erfahren  →",12,WATER,true);
@@ -3694,9 +3700,11 @@ private ClubPageRepository.Content cachedClubPage(ClubPageRepository.Page page){
 
 private String clubPageStatus(ClubPageRepository.Page page){
     long updated=prefs.getLong(page.updatedKey(),0L);
-    if(cachedClubPage(page)==null)return ui(clubFailed.contains(page)?"Vereinsinfos konnten gerade nicht geladen werden.":"Vereinsinfos werden geladen …");
+    ClubPageRepository.Content cached=cachedClubPage(page);
+    if(cached==null)return ui(clubFailed.contains(page)?"Vereinsinfos konnten gerade nicht geladen werden.":"Vereinsinfos werden geladen …");
     String time=java.time.Instant.ofEpochMilli(updated).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
-    return "pfvr.ch · "+ui("Stand")+" "+time+(clubFailed.contains(page)?" · "+ui("Gespeicherter Stand"):"");
+    String source=cached.modified().isBlank()?ui("Quellenstand unbekannt"):ui("Homepage geändert am")+" "+java.time.LocalDate.parse(cached.modified()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    return "pfvr.ch · "+source+"\n"+ui("Abgerufen")+" "+time+(clubFailed.contains(page)?" · "+ui("Gespeicherter Stand"):"");
 }
 
 private View clubPageScreen(){
@@ -3704,39 +3712,156 @@ private View clubPageScreen(){
     LinearLayout body=body();scroll.addView(body);
     ClubPageRepository.Page page=clubPage;
     ClubPageRepository.Content cached=cachedClubPage(page);
-    body.addView(txtRaw(cached==null?ui(page.label):cached.title(),22,TEXT,true));
+    body.addView(txt(page.label,22,TEXT,true));
     body.addView(txtRaw(clubPageStatus(page),11,MUTED,false));
-    if(cached!=null){
-        TextView text=txtRaw("",15,TEXT,false);
-        text.setPadding(0,dp(12),0,dp(12));
-        text.setLineSpacing(dp(3),1f);
-        android.text.SpannableStringBuilder rich=new android.text.SpannableStringBuilder(android.text.Html.fromHtml(cached.html(),android.text.Html.FROM_HTML_MODE_LEGACY));
-        for(android.text.style.URLSpan link:rich.getSpans(0,rich.length(),android.text.style.URLSpan.class)){
-            int start=rich.getSpanStart(link),end=rich.getSpanEnd(link);String url=link.getURL();rich.removeSpan(link);
-            rich.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){
-                ClubPageRepository.Page target=ClubPageRepository.pageForUrl(url);
-                if(target!=null)openClubPage(target);
-                else if(PROGRAM.equals(url))navigate(Screen.EVENTS);
-                else external(url);
-            }},start,end,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-        text.setText(rich);
-        text.setLinkTextColor(themeText(WATER));
-        text.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
-        body.addView(text,new LinearLayout.LayoutParams(-1,-2));
-    }
-    Button refresh=btn("Aktualisieren",Color.rgb(232,240,244),NAVY);
+    Button refresh=addClubAction(body,"Aktualisieren",()->{
+        refreshClubPage(page,true);
+        if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,true);
+        if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,true);
+    });
     refresh.setEnabled(!clubLoading.contains(page));
-    refresh.setOnClickListener(v->{refreshClubPage(page,true);refresh.setEnabled(false);});
-    body.addView(refresh,margin(-1,dp(46),0,dp(10),0,dp(10)));
-    if(page==ClubPageRepository.Page.CONTACT){
-        Button form=btn("Kontaktformular öffnen",NAVY,Color.WHITE);
-        form.setOnClickListener(v->external(page.url));body.addView(form,margin(-1,dp(46),0,0,0,dp(8)));
+    refresh.setOnClickListener(v->{
+        refresh.setEnabled(false);refreshClubPage(page,true);
+        if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,true);
+        if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,true);
+    });
+    if(cached!=null){
+        ClubContentParser.Layout layout=cached.layout();
+        boolean structured=!layout.sections().isEmpty()||!layout.milestones().isEmpty();
+        if(!layout.intro().isBlank())body.addView(clubRichText(layout.intro()));
+        if(layout.hero()!=null)addClubPhoto(body,layout.hero());
+        if(page==ClubPageRepository.Page.ABOUT){
+            body.addView(txt("Regelmässige Trainings und Vereinsaktivitäten gemäss Homepage. Konkrete Termine stehen im Kalender.",12,MUTED,false));
+            addClubAction(body,"Termine im Kalender",()->navigate(Screen.EVENTS));
+        }
+        if(page==ClubPageRepository.Page.YOUTH)body.addView(txt("Alters- und Wettkampfkategorien stehen im datierten Originaltext. Aktuelle Voraussetzungen beim JP-Leiter erfragen.",12,MUTED,false));
+        if(page==ClubPageRepository.Page.HISTORY)addClubHistory(body,cached);
+        for(ClubContentParser.Section section:layout.sections()){
+            if(page==ClubPageRepository.Page.HISTORY){
+                addClubAction(body,section.title(),()->openClubLink(section.id()));continue;
+            }
+            boolean contact=page==ClubPageRepository.Page.BOARD;
+            addClubSection(body,page.slug,section,!contact,contact);
+        }
+        if(page==ClubPageRepository.Page.YOUTH)addYouthContact(body);
+        if(structured){
+            addClubSection(body,page.slug,new ClubContentParser.Section("original","Vollständiger Quelltext",true,cached.html(),null,java.util.List.of(),""),true,false);
+        }else body.addView(clubRichText(cached.html()));
     }
-    TextView source=txt("Quelle: pfvr.ch  →",12,WATER,false);
-    source.setPadding(0,dp(12),0,dp(12));source.setOnClickListener(v->external(page.url));body.addView(source);
+    if(page==ClubPageRepository.Page.CONTACT)addClubAction(body,"Kontaktformular öffnen",()->external(page.url));
+    addClubAction(body,"Quelle: pfvr.ch  →",()->external(page.url));
     refreshClubPage(page,false);
+    if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,false);
+    if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,false);
     return scroll;
+}
+
+private Button addClubAction(LinearLayout parent,String label,Runnable action){
+    Button button=btn(label,Color.rgb(232,240,244),NAVY);
+    button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));
+    button.setPadding(dp(12),dp(10),dp(12),dp(10));
+    button.setOnClickListener(v->action.run());
+    parent.addView(button,margin(-1,-2,0,dp(8),0,dp(8)));
+    return button;
+}
+
+private TextView clubRichText(String html){
+    TextView text=txtRaw("",15,TEXT,false);
+    text.setPadding(0,dp(8),0,dp(8));text.setLineSpacing(dp(3),1f);
+    android.text.SpannableStringBuilder rich=new android.text.SpannableStringBuilder(android.text.Html.fromHtml(html,android.text.Html.FROM_HTML_MODE_LEGACY));
+    for(android.text.style.URLSpan link:rich.getSpans(0,rich.length(),android.text.style.URLSpan.class)){
+        int start=rich.getSpanStart(link),end=rich.getSpanEnd(link);String url=link.getURL();rich.removeSpan(link);
+        rich.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){openClubLink(url);}},start,end,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+    text.setText(rich);text.setLinkTextColor(themeText(WATER));
+    text.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    return text;
+}
+
+private void openClubLink(String url){
+    ClubPageRepository.Page target=ClubPageRepository.pageForUrl(url);
+    if(target!=null)openClubPage(target);
+    else if(PROGRAM.equals(url))navigate(Screen.EVENTS);
+    else if(url.startsWith("tel:")){
+        try{startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse(url.replaceAll("[\\s\\u00a0]",""))));}catch(Exception e){external(url);}
+    }else if(url.startsWith("mailto:")){
+        try{startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse(url)));}catch(Exception e){external(url);}
+    }else external(url);
+}
+
+private void addClubSection(LinearLayout parent,String pageKey,ClubContentParser.Section section,boolean collapsible,boolean initiallyOpen){
+    LinearLayout card=card();card.setOrientation(LinearLayout.VERTICAL);
+    parent.addView(card,margin(-1,-2,0,dp(8),0,dp(4)));
+    String title=section.appTitle()?ui(section.title()):section.title();
+    TextView heading=txtRaw(title,17,TEXT,true);
+    heading.setPadding(0,dp(8),0,dp(8));heading.setMinHeight(dp(48));heading.setGravity(Gravity.CENTER_VERTICAL);
+    card.addView(heading,new LinearLayout.LayoutParams(-1,-2));
+    LinearLayout details=new LinearLayout(this);details.setOrientation(LinearLayout.VERTICAL);card.addView(details,new LinearLayout.LayoutParams(-1,-2));
+    Runnable populate=()->{
+        if(details.getChildCount()!=0)return;
+        if(section.photo()!=null)addClubPhoto(details,section.photo());
+        if(!section.html().isBlank())details.addView(clubRichText(section.html()));
+        if(!section.location().isBlank())addClubAction(details,"Treffpunkt auf Karte",()->openClubLocation(section.location()));
+        for(ClubContentParser.Section child:section.children())addClubSection(details,pageKey+"/"+section.id(),child,true,false);
+    };
+    String key=pageKey+"/"+section.id();
+    boolean open=!collapsible||clubExpanded.getOrDefault(key,initiallyOpen);
+    if(open)populate.run();details.setVisibility(open?View.VISIBLE:View.GONE);
+    if(collapsible){
+        heading.setText(title+(open?"  −":"  +"));heading.setFocusable(true);
+        heading.setContentDescription(title+" · "+ui(open?"Zuklappen":"Aufklappen"));
+        heading.setOnClickListener(v->{
+            boolean show=details.getVisibility()!=View.VISIBLE;clubExpanded.put(key,show);
+            if(show)populate.run();details.setVisibility(show?View.VISIBLE:View.GONE);
+            heading.setText(title+(show?"  −":"  +"));heading.setContentDescription(title+" · "+ui(show?"Zuklappen":"Aufklappen"));
+        });
+    }
+}
+
+private void addClubPhoto(LinearLayout parent,ClubContentParser.Photo photo){
+    ImageView image=new ImageView(this){
+        @Override protected void onMeasure(int widthSpec,int heightSpec){
+            int width=View.MeasureSpec.getSize(widthSpec);
+            int height=photo.width()>0&&photo.height()>0?(int)(width*(double)photo.height()/photo.width()):dp(180);
+            super.onMeasure(widthSpec,View.MeasureSpec.makeMeasureSpec(Math.max(dp(64),Math.min(dp(220),height)),View.MeasureSpec.EXACTLY));
+        }
+    };image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    image.setContentDescription(photo.caption().isBlank()?ui("Foto von pfvr.ch"):photo.caption());
+    // FIT_CENTER preserves entire boats and portraits instead of cropping the source.
+    parent.addView(image,margin(-1,-2,0,dp(6),0,0));
+    TextView status=txt("Bild wird geladen …",11,MUTED,false);parent.addView(status);
+    if(!photo.caption().isBlank())parent.addView(txtRaw(photo.caption(),11,MUTED,false));
+    if(clubImages==null)clubImages=new ClubImageLoader(this);
+    clubImages.bind(image,status,photo.url(),ui("Bild momentan nicht verfügbar."));
+}
+
+private void openClubLocation(String query){
+    try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?q="+Uri.encode(query))));}
+    catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode(query));}
+}
+
+private void addYouthContact(LinearLayout body){
+    ClubPageRepository.Content board=cachedClubPage(ClubPageRepository.Page.BOARD);
+    body.addView(txt("Kontakt zum JP-Leiter",17,TEXT,true));
+    body.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.BOARD),11,MUTED,false));
+    if(board!=null)for(ClubContentParser.Section section:board.layout().sections()){
+        String title=section.title().toLowerCase(Locale.ROOT);
+        if(title.contains("jungpontonier")||title.contains("jp-leiter")){addClubSection(body,"youth-contact",section,false,true);return;}
+    }
+    addClubAction(body,"Vorstand",()->openClubPage(ClubPageRepository.Page.BOARD));
+}
+
+private void addClubHistory(LinearLayout body,ClubPageRepository.Content history){
+    ClubPageRepository.Content about=cachedClubPage(ClubPageRepository.Page.ABOUT);
+    java.util.List<ClubContentParser.Section> timeline=new ArrayList<>();
+    if(about!=null)timeline.addAll(about.layout().milestones());
+    timeline.addAll(history.layout().milestones());
+    timeline.sort(java.util.Comparator.comparing(s->s.title().substring(Math.max(0,s.title().length()-4))));
+    for(ClubContentParser.Section station:timeline){
+        addClubSection(body,"history",station,false,true);
+        ClubPageRepository.Page source=station.id().equals("book")?ClubPageRepository.Page.HISTORY:ClubPageRepository.Page.ABOUT;
+        body.addView(txtRaw(clubPageStatus(source),11,MUTED,false));
+    }
 }
 
 private void refreshClubPage(ClubPageRepository.Page page,boolean force){
@@ -3753,7 +3878,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
             if(result!=null)prefs.edit().putString(page.cacheKey(),result).putLong(page.updatedKey(),System.currentTimeMillis()).apply();
             else clubFailed.add(page);
             if(isDestroyed()||isFinishing())return;
-            if((current==Screen.CLUB&&page==ClubPageRepository.Page.ABOUT)||(current==Screen.CLUB_DETAIL&&clubPage==page)){
+            if((current==Screen.CLUB&&page==ClubPageRepository.Page.ABOUT)||(current==Screen.CLUB_DETAIL&&(clubPage==page||(clubPage==ClubPageRepository.Page.YOUTH&&page==ClubPageRepository.Page.BOARD)||(clubPage==ClubPageRepository.Page.HISTORY&&page==ClubPageRepository.Page.ABOUT)))){
                 View old=content.getChildAt(0);int y=old==null?0:old.getScrollY();
                 View updated=current==Screen.CLUB?club():clubPageScreen();
                 content.removeAllViews();content.addView(updated);
@@ -4157,7 +4282,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
 
     private void handleBack(){if(current==Screen.CLUB_DETAIL){navigate(Screen.CLUB);return;}if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
-    @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){if(clubImages!=null)clubImages.close();if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}

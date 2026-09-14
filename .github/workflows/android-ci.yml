@@ -91,6 +91,7 @@ jobs:
           path: |
             Android/app/build/reports/tests/
             Android/app/build/test-results/
+            Android/app/build/reports/club-ui/
 
       - name: Verify packages, permissions and build artifacts
         shell: bash

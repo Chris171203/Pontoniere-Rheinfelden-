@@ -1,6 +1,14 @@
 # Status
 
-Stand: Testversion `0.12.8` (`versionCode 65`) · aktualisiert 2026-09-14.
+Stand: Testversion `0.12.9` (`versionCode 66`) · aktualisiert 2026-09-14.
+
+## Arbeitspaket 0.12.9 (in Umsetzung)
+
+- Freigegebener Inhaltsplan: native Abschnitte für Training, Boote, Fahrtechnik, Vereinsleben und Jungpontoniere; Vorstands-Kontaktkarten und belegte historische Stationen.
+- Originale Texte und Bilder stammen aus WordPress. Ein Tagescache, begrenzter Bildcache und die vollständige bereinigte Quellenansicht sichern Offline-Lesen und Rückfall bei geänderten Überschriften.
+- Quellenänderung und App-Abruf getrennt; alte Mitgliederzahlen und Nachwuchs-Alterskategorien werden nicht in aktuelle Kurzinfos übernommen. App-Bedienung Deutsch/Schweizerdeutsch.
+- Android; iOS-Abgleich weiterhin beim separaten Port #32.
+- Abnahme ausstehend.
 
 ## Ergänzung 0.12.8
 

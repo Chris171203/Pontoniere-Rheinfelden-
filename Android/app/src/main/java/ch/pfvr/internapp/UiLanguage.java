@@ -40,6 +40,36 @@ final class UiLanguage {
         put("Mehr erfahren", "Meh erfahre");
         put("Folge uns", "Folg eus");
 
+        // Native public club content
+        put("Jungpontoniere", "Jungpontoniere");
+        put("Fahren, Knoten und Lager", "Fahre, Chnöte und Lager");
+        put("Quellenstand unbekannt", "Quellestand unbekannt");
+        put("Homepage geändert am", "Homepage gänderet am");
+        put("Abgerufen", "Abgruefe");
+        put("Training", "Training");
+        put("Sommertraining", "Summertraining");
+        put("Wintertraining", "Wintertraining");
+        put("Unsere Boote", "Eusi Boot");
+        put("Pontoniersport erklärt", "Pontoniersport erklärt");
+        put("Vereinsleben", "Vereinsläbe");
+        put("Sektionsfahren", "Sektionsfahre");
+        put("Weitere Disziplinen", "Wiiteri Diszipline");
+        put("Fahren und Knoten", "Fahre und Chnöte");
+        put("JP-Lager", "JP-Lager");
+        put("Jubiläumsbuch (PDF)", "Jubiläumsbuech (PDF)");
+        put("Vorstandsarchiv", "Vorstandsarchiv");
+        put("Vollständiger Quelltext", "Vollständige Quelltext");
+        put("Termine im Kalender", "Termin im Kaländer");
+        put("Treffpunkt auf Karte", "Träffpunkt uf de Charte");
+        put("Kontakt zum JP-Leiter", "Kontakt zum JP-Leiter");
+        put("Aufklappen", "Ufklappe");
+        put("Zuklappen", "Zueklappe");
+        put("Foto von pfvr.ch", "Foto vo pfvr.ch");
+        put("Bild wird geladen …", "Bild wird glade …");
+        put("Bild momentan nicht verfügbar.", "Bild grad nöd verfüegbar.");
+        put("Regelmässige Trainings und Vereinsaktivitäten gemäss Homepage. Konkrete Termine stehen im Kalender.", "Regelmässigi Trainings und Vereinsaktivitäte gemäss Homepage. Konkreti Termin stönd im Kaländer.");
+        put("Alters- und Wettkampfkategorien stehen im datierten Originaltext. Aktuelle Voraussetzungen beim JP-Leiter erfragen.", "Alters- und Wettkampfkategorie stönd im datierte Originaltext. Aktuelli Vorussetzige bim JP-Leiter naafrage.");
+
         // Home
         put("RHEINFELDEN  •  SEIT 1896", "RHEINFELDEN  •  SIT 1896");
         put("Gemeinsam auf dem Rhein.", "Zäme uf em Rhy.");

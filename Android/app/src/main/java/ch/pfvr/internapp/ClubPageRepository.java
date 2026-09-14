@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 final class ClubPageRepository {
     enum Page {
         ABOUT("verein", "Über den Verein", "https://www.pfvr.ch/verein/"),
+        YOUTH("jungpontoniere", "Jungpontoniere", "https://www.pfvr.ch/verein/jungpontoniere/"),
         BOARD("vorstand", "Vorstand", "https://www.pfvr.ch/verein/vorstand/"),
         HISTORY("geschichte", "Geschichte", "https://www.pfvr.ch/geschichte/"),
         CONTACT("kontakt", "Kontakt", "https://www.pfvr.ch/kontakt/");
@@ -21,11 +22,11 @@ final class ClubPageRepository {
         Page(String slug, String label, String url) { this.slug=slug; this.label=label; this.url=url; }
         String cacheKey() { return "club_page_"+slug; }
         String updatedKey() { return cacheKey()+"_updated"; }
-        String endpoint() { return "https://www.pfvr.ch/wp-json/wp/v2/pages?slug="+slug+"&_fields=slug,link,title,content"; }
+        String endpoint() { return "https://www.pfvr.ch/wp-json/wp/v2/pages?slug="+slug+"&_fields=slug,link,title,content,modified"; }
     }
 
     static final long CACHE_AGE_MS=24L*60L*60L*1000L;
-    record Content(String title, String html, String preview) {}
+    record Content(String title, String html, String preview, String modified, ClubContentParser.Layout layout) {}
     private ClubPageRepository() {}
 
     static String fetchRaw(Page page) throws Exception {
@@ -56,16 +57,19 @@ final class ClubPageRepository {
             String title=Jsoup.parse(row.getJSONObject("title").getString("rendered")).text();
             var document=Jsoup.parseBodyFragment(row.getJSONObject("content").getString("rendered"),page.url);
             document.select("script,style,form,iframe,object,embed,svg,nav,button,input,select,textarea").remove();
-            // Images/galleries stay on the website. Preserve the meaningful text and contact links.
+            // Rich text stays passive. Selected source photos are rendered separately as native images.
             Safelist allowed=Safelist.basic().addTags("h1","h2","h3","h4","h5","h6")
                     .addProtocols("a","href","tel","mailto");
             String html=Jsoup.clean(document.body().html(),page.url,allowed);
             String text=Jsoup.parseBodyFragment(html).text();
             if(title.isBlank()||text.isBlank())throw new Exception("Empty public page");
             var paragraphs=Jsoup.parseBodyFragment(html).select("p");
-            String preview=paragraphs.isEmpty()?text:paragraphs.first().text();
+            ClubContentParser.Layout layout=ClubContentParser.extract(page,document.body());
+            String preview=layout.intro().isBlank()?(paragraphs.isEmpty()?text:paragraphs.first().text()):Jsoup.parseBodyFragment(layout.intro()).text();
             if(preview.length()>360)preview=preview.substring(0,preview.lastIndexOf(' ',360)>0?preview.lastIndexOf(' ',360):360)+" …";
-            return new Content(title,html,preview);
+            String modified="";
+            try{modified=java.time.LocalDateTime.parse(row.optString("modified")).toLocalDate().toString();}catch(Exception ignored){}
+            return new Content(title,html,preview,modified,layout);
         }
         throw new Exception("Expected public page missing");
     }
