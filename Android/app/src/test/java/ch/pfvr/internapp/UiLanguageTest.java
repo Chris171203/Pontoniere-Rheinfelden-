@@ -57,4 +57,12 @@ public class UiLanguageTest {
         assertEquals("Rhy-Kachle", UiLanguage.translate("Rhein-Kachel", UiLanguage.SWISS_GERMAN));
         assertEquals("Direkti QR-Übergab dokumentiert", UiLanguage.translate("Direkte QR-Übergabe dokumentiert", UiLanguage.SWISS_GERMAN));
     }
+    @Test public void recentWeatherLabelsAndMorningMeaningAreLocalized() {
+        assertEquals("Wätter zum nöchschte Termin", UiLanguage.translate("Wetter zum nächsten Termin", "gsw"));
+        assertEquals("Aabig", UiLanguage.translate("Abend", "gsw"));
+        assertEquals("Morn", UiLanguage.translate("Morgen", "gsw"));
+        assertEquals("Morge", UiLanguage.translate("Morgen (Tageszeit)", "gsw"));
+        assertEquals("Morgen", UiLanguage.translate("Morgen (Tageszeit)", "de"));
+        assertEquals("Rägemängi", UiLanguage.translate("Regenmenge", "gsw"));
+    }
 }

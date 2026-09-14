@@ -65,21 +65,21 @@ public class TileLayoutStoreTest {
     @Test public void compactClubTilesRemainKnownAfterCustomOrder(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_phone","club_news")
+                List.of("club_contact","club_news")
         );
-        assertEquals("club_phone",normalized.get(0));
+        assertEquals("club_contact",normalized.get(0));
         assertEquals("club_news",normalized.get(1));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 
-    @Test public void clubCatalogDropsRetiredJoinTileAndKeepsSocialTiles(){
+    @Test public void clubCatalogDropsRetiredTilesAndPreservesRemainingLayout(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_about","club_join","club_news","club_contact")
+                List.of("club_about","club_join","club_instagram","club_facebook","club_phone","club_email","club_news","club_contact")
         );
         assertFalse(normalized.contains("club_join"));
-        assertTrue(normalized.contains("club_instagram"));
-        assertTrue(normalized.contains("club_facebook"));
+        assertFalse(normalized.contains("club_instagram"));
+        assertFalse(normalized.contains("club_facebook"));
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 }

@@ -1,6 +1,15 @@
 # Status
 
-Stand: Testversion `0.12.6` · aktualisiert 2026-09-10.
+Stand: `0.12.7` in Prüfung (Basis `0.12.6`) · aktualisiert 2026-09-14.
+
+## Aktuelles Arbeitspaket 0.12.7
+
+- Originale An-/Abmelde-Controls behalten die Zustandsfarben der Website; keine aus dem Aktionstext abgeleitete Farbüberschreibung.
+- Vereinsinfos, Vorstand, Geschichte und Kontakt werden aus öffentlichen Homepage-Inhalten nativ angezeigt und lokal gecacht. Jahresprogramm öffnet den vorhandenen App-Kalender.
+- Live-Refresh beim ersten sichtbaren Wetter-/Rheinblock; Social-Logos zentriert am Ende der Vereinsseite.
+- Schweizerdeutsch der jüngsten Wetter-/UI-Ergänzungen vervollständigen; externe Inhalte bleiben unverändert.
+- Android-Zielstand; der separate iOS-Entwurf #32 benötigt diese Änderungen bei seiner nächsten Synchronisierung.
+- Prüfungen und Abnahme noch ausstehend.
 
 ## Aktueller Teststand
 

@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
     private static final String NEWS = "https://www.pfvr.ch/verein/newsarchiv/";
     private static final String CLUB = "https://www.pfvr.ch/verein/";
     private static final String BOARD = "https://www.pfvr.ch/verein/vorstand/";
-    private static final String HISTORY = "https://www.pfvr.ch/verein/geschichte/";
+    private static final String HISTORY = "https://www.pfvr.ch/geschichte/";
     private static final String PROGRAM = "https://www.pfvr.ch/verein/jahresprogramm/";
     private static final String CONTACT = "https://www.pfvr.ch/kontakt/";
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
     private static final int STATUS_WARN = Color.rgb(242,201,76);
     private static final int STATUS_ALARM = Color.rgb(200,55,55);
 
-    private enum Screen { HOME, EVENTS, CASH, CLUB, NEWS, SETTINGS, TILE_SETTINGS, INTERNAL }
+    private enum Screen { HOME, EVENTS, CASH, CLUB, CLUB_DETAIL, NEWS, SETTINGS, TILE_SETTINGS, INTERNAL }
 
     private enum SettingsTab {
         GENERAL("Allgemein"),
@@ -216,6 +216,9 @@ public class MainActivity extends Activity {
     private List<NewsRepository.Article> news = new ArrayList<>();
     private long newsUpdated = 0L;
     private volatile boolean newsLoading = false;
+    private ClubPageRepository.Page clubPage=ClubPageRepository.Page.ABOUT;
+    private final Set<ClubPageRepository.Page> clubLoading=new LinkedHashSet<>();
+    private final Set<ClubPageRepository.Page> clubFailed=new LinkedHashSet<>();
     private Bitmap pendingQrBitmap;
     private final Map<String,Integer> cashCart = new LinkedHashMap<>();
     private final Map<String,TextView> cashQuantityViews = new HashMap<>();
@@ -496,7 +499,7 @@ public class MainActivity extends Activity {
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
         if(screen!=Screen.TILE_SETTINGS)tileSettingsScroll=null;
         if (headerBack != null) headerBack.setVisibility((screen == Screen.HOME || screen == Screen.INTERNAL) ? View.GONE : View.VISIBLE);
-        Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen;
+        Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen==Screen.CLUB_DETAIL?Screen.CLUB:screen;
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==selectedNavigation;
             e.getValue().setTextColor(selected?Color.WHITE:themeText(Color.rgb(65,82,96)));
@@ -509,6 +512,7 @@ public class MainActivity extends Activity {
             case EVENTS: headerSubtitle.setText(ui("Jahresprogramm")); content.addView(eventScreen()); break;
             case CASH: headerSubtitle.setText(ui("Vereinsbeiz bezahlen")); content.addView(cash()); break;
             case CLUB: headerSubtitle.setText(ui("Verein & Kontakt")); content.addView(club()); break;
+            case CLUB_DETAIL: headerSubtitle.setText(ui(clubPage.label)); content.addView(clubPageScreen()); break;
             case NEWS: headerSubtitle.setText(ui("Vereinsnews")); content.addView(newsScreen()); break;
             case SETTINGS: headerSubtitle.setText(ui("Einstellungen")); content.addView(settings()); break;
             case TILE_SETTINGS: headerSubtitle.setText(ui("Kacheln anordnen")); content.addView(tileSettingsScreen()); break;
@@ -604,6 +608,11 @@ private LinearLayout tileGroup(String title,String subtitle){
 private void populateHomeTileStack(LinearLayout stack){
     stack.removeAllViews();
     addConfiguredTiles(stack,TileLayoutStore.Area.HOME,this::homeTileView);
+    // One refresh at the first visible live block, also for customised/hidden weather layouts.
+    for(int i=0;i<stack.getChildCount();i++){
+        View tile=stack.getChildAt(i);
+        if("home-live".equals(tile.getTag())){addHomeLiveRefreshAction((LinearLayout)tile);break;}
+    }
 }
 
 private View homeTileView(TileLayoutStore.Spec spec){
@@ -620,19 +629,21 @@ private View homeTileView(TileLayoutStore.Spec spec){
 
 private View homeWeatherTile(){
     LinearLayout group=tileGroup("Wetter zum nächsten Termin",null);
+    group.setTag("home-live");
     group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeThreeDayWeatherTile(){
     LinearLayout group=tileGroup("3-Tage-Wetter",null);
+    group.setTag("home-live");
     group.addView(threeDayWeatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeRiverSummaryTile(){
     LinearLayout group=tileGroup("Rhein aktuell",null);
-    addHomeLiveRefreshAction(group);
+    group.setTag("home-live");
     group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));
     TextView safety=txt("BAFU-Rohdaten, ungeprüft. Schifffahrtslage nur zur Orientierung – verbindlich sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);
     safety.setPadding(dp(2),dp(7),dp(2),dp(3));
@@ -666,6 +677,7 @@ private void addHomeLiveRefreshAction(LinearLayout group){
 
 private View homeRiverChartsTile(){
     LinearLayout group=tileGroup("Rhein-Grafiken","Abfluss und Pegel je Station; Temperatur separat");
+    group.setTag("home-live");
     TextView rangeLabel=txt("ZEITRAUM",10,MUTED,true);
     rangeLabel.setPadding(dp(2),0,0,dp(5));
     group.addView(rangeLabel);
@@ -932,12 +944,12 @@ private void rebuildHomePreservingScroll(){
         TextView rain=txt(ui("Regen")+" "+hour.precipitationProbability+" %",9,MUTED,false);
         rain.setGravity(Gravity.CENTER);
         box.addView(rain);
-        box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" Prozent");
+        box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" "+ui("Prozent"));
         return box;
     }
 
     private String weatherDaypartLabel(int hour){
-        if(hour<11)return ui("Morgen");
+        if(hour<11)return ui("Morgen (Tageszeit)");
         if(hour<17)return ui("Mittag");
         return ui("Abend");
     }
@@ -2426,6 +2438,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     private void clearDataCache(){
         SharedPreferences.Editor editor=prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(NewsRepository.PREF_CACHE).remove(NewsRepository.PREF_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED);
         for(HydroStation station:HydroStation.values())editor.remove(station.liveCacheKey()).remove(station.liveUpdatedKey()).remove(station.fineCacheKey()).remove(station.fineUpdatedKey()).remove(station.historyCacheKey()).remove(station.historyUpdatedKey());
+        for(ClubPageRepository.Page page:ClubPageRepository.Page.values())editor.remove(page.cacheKey()).remove(page.updatedKey());
+        clubFailed.clear();
         editor.apply();
         events=new ArrayList<>();eventsUpdated=0L;news=new ArrayList<>();newsUpdated=0L;
         Toast.makeText(this,ui("Daten-Cache geleert. Neue Daten werden nachgeladen."),Toast.LENGTH_SHORT).show();
@@ -3608,6 +3622,8 @@ private View cashPaymentDetailsTile(){
     tiles.setOrientation(LinearLayout.VERTICAL);
     body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));
     addConfiguredTiles(tiles,TileLayoutStore.Area.CLUB,this::clubTileView);
+    body.addView(clubSocialFooter(),new LinearLayout.LayoutParams(-1,-2));
+    refreshClubPage(ClubPageRepository.Page.ABOUT,false);
     return scroll;
 }
 
@@ -3615,15 +3631,11 @@ private View clubTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
         case "club_about":return clubAboutTile();
         case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
-        case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
-        case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
-        case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openInApp(HISTORY,"Geschichte"));
+        case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->navigate(Screen.EVENTS));
+        case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openClubPage(ClubPageRepository.Page.BOARD));
+        case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openClubPage(ClubPageRepository.Page.HISTORY));
         case "club_depot":return clubActionTile("Depot & Route","Rheinweg 42",v->openMap());
-        case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
-        case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
-        case "club_contact":return clubActionTile("Kontaktseite","Weitere Ansprechwege",v->openInApp(CONTACT,"Kontakt"));
-        case "club_instagram":return clubActionTile("Instagram","@pontoniererheinfelden",v->external(PublicLinks.INSTAGRAM));
-        case "club_facebook":return clubActionTile("Facebook","Pontoniere Rheinfelden",v->external(PublicLinks.FACEBOOK));
+        case "club_contact":return clubActionTile("Kontakt","Telefon, E-Mail und Kontaktformular",v->openClubPage(ClubPageRepository.Page.CONTACT));
         default:return null;
     }
 }
@@ -3632,16 +3644,119 @@ private View clubAboutTile(){
     LinearLayout group=tileGroup("Über den Verein",null);
     LinearLayout about=card();
     about.setOrientation(LinearLayout.VERTICAL);
-    about.addView(txt("Seit 1896 auf dem Rhein",18,TEXT,true));
-    TextView text=txt("Beim Pontonierfahren verbinden sich präzise Bootsführung, Kraft, Technik und Teamarbeit. Der PFVR trainiert auf dem Rhein in Rheinfelden, nimmt an Wettfahren teil und pflegt zugleich ein aktives Vereinsleben sowie die Ausbildung des Nachwuchses.",14,MUTED,false);
+    ClubPageRepository.Content cached=cachedClubPage(ClubPageRepository.Page.ABOUT);
+    TextView text=cached==null?txt(clubPageStatus(ClubPageRepository.Page.ABOUT),14,MUTED,false):txtRaw(cached.preview(),14,TEXT,false);
     text.setPadding(0,dp(7),0,dp(10));
     about.addView(text);
-    TextView history=txt("Geschichte und Meilensteine öffnen  →",12,WATER,true);
+    if(cached!=null)about.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.ABOUT),11,MUTED,false));
+    TextView history=txt("Mehr erfahren  →",12,WATER,true);
     history.setGravity(Gravity.END);
-    history.setOnClickListener(v->openInApp(HISTORY,"Geschichte"));
+    history.setOnClickListener(v->openClubPage(ClubPageRepository.Page.ABOUT));
     about.addView(history);
     group.addView(about,new LinearLayout.LayoutParams(-1,-2));
     return group;
+}
+
+private View clubSocialFooter(){
+    LinearLayout row=new LinearLayout(this);
+    row.setGravity(Gravity.CENTER);
+    row.setPadding(0,dp(12),0,dp(16));
+    addClubSocialLogo(row,R.drawable.ic_instagram,"Instagram",PublicLinks.INSTAGRAM);
+    addClubSocialLogo(row,R.drawable.ic_facebook,"Facebook",PublicLinks.FACEBOOK);
+    return row;
+}
+
+private void addClubSocialLogo(LinearLayout row,int drawable,String name,String url){
+    ImageView logo=new ImageView(this);
+    logo.setImageResource(drawable);
+    logo.setPadding(dp(10),dp(10),dp(10),dp(10));
+    logo.setContentDescription(name);
+    logo.setFocusable(true);
+    logo.setOnClickListener(v->external(url));
+    LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(48),dp(48));
+    params.setMargins(dp(5),0,dp(5),0);
+    row.addView(logo,params);
+}
+
+private void openClubPage(ClubPageRepository.Page page){
+    clubPage=page;
+    navigate(Screen.CLUB_DETAIL);
+}
+
+private ClubPageRepository.Content cachedClubPage(ClubPageRepository.Page page){
+    try{return ClubPageRepository.parse(page,prefs.getString(page.cacheKey(),""));}
+    catch(Exception ignored){return null;}
+}
+
+private String clubPageStatus(ClubPageRepository.Page page){
+    long updated=prefs.getLong(page.updatedKey(),0L);
+    if(cachedClubPage(page)==null)return ui(clubFailed.contains(page)?"Vereinsinfos konnten gerade nicht geladen werden.":"Vereinsinfos werden geladen …");
+    String time=java.time.Instant.ofEpochMilli(updated).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+    return "pfvr.ch · "+ui("Stand")+" "+time+(clubFailed.contains(page)?" · "+ui("Gespeicherter Stand"):"");
+}
+
+private View clubPageScreen(){
+    ScrollView scroll=new ScrollView(this);
+    LinearLayout body=body();scroll.addView(body);
+    ClubPageRepository.Page page=clubPage;
+    ClubPageRepository.Content cached=cachedClubPage(page);
+    body.addView(txtRaw(cached==null?ui(page.label):cached.title(),22,TEXT,true));
+    body.addView(txtRaw(clubPageStatus(page),11,MUTED,false));
+    if(cached!=null){
+        TextView text=txtRaw("",15,TEXT,false);
+        text.setPadding(0,dp(12),0,dp(12));
+        text.setLineSpacing(dp(3),1f);
+        android.text.SpannableStringBuilder rich=new android.text.SpannableStringBuilder(android.text.Html.fromHtml(cached.html(),android.text.Html.FROM_HTML_MODE_LEGACY));
+        for(android.text.style.URLSpan link:rich.getSpans(0,rich.length(),android.text.style.URLSpan.class)){
+            int start=rich.getSpanStart(link),end=rich.getSpanEnd(link);String url=link.getURL();rich.removeSpan(link);
+            rich.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){
+                ClubPageRepository.Page target=ClubPageRepository.pageForUrl(url);
+                if(target!=null)openClubPage(target);
+                else if(PROGRAM.equals(url))navigate(Screen.EVENTS);
+                else external(url);
+            }},start,end,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        text.setText(rich);
+        text.setLinkTextColor(themeText(WATER));
+        text.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+        body.addView(text,new LinearLayout.LayoutParams(-1,-2));
+    }
+    Button refresh=btn("Aktualisieren",Color.rgb(232,240,244),NAVY);
+    refresh.setEnabled(!clubLoading.contains(page));
+    refresh.setOnClickListener(v->{refreshClubPage(page,true);refresh.setEnabled(false);});
+    body.addView(refresh,margin(-1,dp(46),0,dp(10),0,dp(10)));
+    if(page==ClubPageRepository.Page.CONTACT){
+        Button form=btn("Kontaktformular öffnen",NAVY,Color.WHITE);
+        form.setOnClickListener(v->external(page.url));body.addView(form,margin(-1,dp(46),0,0,0,dp(8)));
+    }
+    TextView source=txt("Quelle: pfvr.ch  →",12,WATER,false);
+    source.setPadding(0,dp(12),0,dp(12));source.setOnClickListener(v->external(page.url));body.addView(source);
+    refreshClubPage(page,false);
+    return scroll;
+}
+
+private void refreshClubPage(ClubPageRepository.Page page,boolean force){
+    if(clubLoading.contains(page))return;
+    if(!force&&(clubFailed.contains(page)||(cachedClubPage(page)!=null&&System.currentTimeMillis()-prefs.getLong(page.updatedKey(),0L)<ClubPageRepository.CACHE_AGE_MS)))return;
+    clubLoading.add(page);clubFailed.remove(page);
+    new Thread(()->{
+        String raw=null;
+        try{String fetched=ClubPageRepository.fetchRaw(page);ClubPageRepository.parse(page,fetched);raw=fetched;}
+        catch(Exception ignored){}
+        final String result=raw;
+        runOnUiThread(()->{
+            clubLoading.remove(page);
+            if(result!=null)prefs.edit().putString(page.cacheKey(),result).putLong(page.updatedKey(),System.currentTimeMillis()).apply();
+            else clubFailed.add(page);
+            if(isDestroyed()||isFinishing())return;
+            if((current==Screen.CLUB&&page==ClubPageRepository.Page.ABOUT)||(current==Screen.CLUB_DETAIL&&clubPage==page)){
+                View old=content.getChildAt(0);int y=old==null?0:old.getScrollY();
+                View updated=current==Screen.CLUB?club():clubPageScreen();
+                content.removeAllViews();content.addView(updated);
+                updated.post(()->updated.scrollTo(0,y));
+            }
+        });
+    },"pfvr-public-page").start();
 }
 
 private View clubActionTile(String title,String detail,View.OnClickListener listener){
@@ -4036,7 +4151,7 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     }
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
-    private void handleBack(){if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
+    private void handleBack(){if(current==Screen.CLUB_DETAIL){navigate(Screen.CLUB);return;}if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
     @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 

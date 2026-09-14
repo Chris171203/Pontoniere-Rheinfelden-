@@ -88,11 +88,7 @@ final class TileLayoutStore {
                 spec(Area.CLUB, "club_board", "Vorstand", Width.COMPACT, false),
                 spec(Area.CLUB, "club_history", "Geschichte", Width.COMPACT, false),
                 spec(Area.CLUB, "club_depot", "Depot & Route", Width.COMPACT, false),
-                spec(Area.CLUB, "club_phone", "Telefon", Width.COMPACT, false),
-                spec(Area.CLUB, "club_email", "E-Mail", Width.COMPACT, false),
-                spec(Area.CLUB, "club_contact", "Kontaktseite", Width.COMPACT, false),
-                spec(Area.CLUB, "club_instagram", "Instagram", Width.COMPACT, false),
-                spec(Area.CLUB, "club_facebook", "Facebook", Width.COMPACT, false)
+                spec(Area.CLUB, "club_contact", "Kontakt", Width.COMPACT, false)
         ));
     }
 

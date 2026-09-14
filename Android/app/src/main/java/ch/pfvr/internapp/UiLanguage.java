@@ -437,6 +437,26 @@ final class UiLanguage {
         put("Direkter QR-Import wurde von dieser App nicht angeboten – Zahlungsdaten wurden kopiert.", "Direkte QR-Import wird vo dere App nöd aabote – Zahligsdate sind kopiert worde.");
         put("Zahlungsdaten kopiert – QR-Datei bei Bedarf in der Banking-App auswählen.", "Zahligsdate kopiert – QR-Datei bi Bedarf i de Banking-App uswähle.");
 
+
+        // Public pages and weather additions in 0.12.7
+        put("Wetter zum nächsten Termin", "Wätter zum nöchschte Termin");
+        put("NÄCHSTER TERMIN", "NÖCHSCHTE TERMIN");
+        put("Vereinstermin", "Vereinstermin");
+        put("Für diesen Terminzeitraum liegen noch keine Stundenwerte vor.", "Für dä Terminziitruum git s no kei Stundewärt.");
+        put("Für diesen Veranstaltungstag liegen noch keine Stundenwerte vor.", "Für dä Aalass git s no kei Stundewärt.");
+        put("Mittag", "Mittag");
+        put("Abend", "Aabig");
+        put("Regen –", "Räge –");
+        put("Regenmenge", "Rägemängi");
+        put("Tag", "Tag");
+        put("Uhr", "Uhr");
+        put("Prozent", "Prozänt");
+        put("Kontaktformular öffnen", "Kontaktformular ufmache");
+        put("Telefon, E-Mail und Kontaktformular", "Telefon, E-Mail und Kontaktformular");
+        put("Quelle: pfvr.ch  →", "Quelle: pfvr.ch  →");
+        put("Vereinsinfos werden geladen …", "Vereinsinfos wärded glade …");
+        put("Vereinsinfos konnten gerade nicht geladen werden.", "D Vereinsinfos händ grad nöd chönne glade werde.");
+
         // Common dialog actions
         put("Speichern", "Speichere");
         put("Abbrechen", "Abbräche");
@@ -459,6 +479,7 @@ final class UiLanguage {
     }
 
     static String translate(String value, String mode) {
+        if ("Morgen (Tageszeit)".equals(value)) return isSwissGerman(mode) ? "Morge" : "Morgen";
         if (value == null || !isSwissGerman(mode)) return value;
         String direct = SWISS.get(value);
         if (direct != null) return direct;
