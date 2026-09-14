@@ -13,9 +13,9 @@ Stand: 2026-09-14 · Android-Testversion `0.15.0` (`versionCode 68`).
 
 1. Android 0.15.0 und Branch-Bereinigung abgeschlossen: 47 Branches entfernt, drei historische Vorstufen als Archiv-Tags erhalten. [Bereinigungsnachweis](docs/cleanup-0.15.0.md).
 2. iOS 0.15.0 / Build 2 im bestehenden PR #32: Quellenparser und Caches, direkte Trainingsübersicht, flache Themenartikel, Kontakt-/Social-Symbole, frühes Live-Refresh und gemeinsamer aktueller An-/Abmelderenderer implementiert; neue Prüfungen vorbereitet.
-3. iOS-Core-, WebKit-, Simulator- und Gerätearchivprüfungen ausführen und den tatsächlichen Umfang dokumentieren.
+3. iOS-Core, WebKit, fünf Live-Quellenfälle, Gerätearchiv und alle 14 iPad-UI-Fälle bestanden. Beide iPhones haben noch je einen fehlgeschlagenen Navigationstest. Der gemeinsame Scroll-Helfer ist korrigiert; der Nutzer hat Push und Bereinigung ausdrücklich freigegeben. Erneute Simulatorprüfung und Abschluss folgen. Tatsächliche Ergebnisse: [Abnahme 0.15.0](docs/checks-0.15.0.md).
 
-Die lokale Ausführungsumgebung ist am 2026-09-14 nicht erreichbar. Quelländerungen erfolgen über GitHub; Build und Laufzeitprüfungen über die bestehenden GitHub-Actions-Workflows.
+Die lokale Ausführungsumgebung war zunächst nicht erreichbar und ist inzwischen wieder verfügbar. iOS-Kompilierung und Simulatorprüfungen erfolgen weiterhin in GitHub Actions; die lokale Linux-Umgebung hat kein Xcode.
 
 ## Grenzen
 

@@ -77,8 +77,42 @@ final class PFVRUITests: XCTestCase {
 
     private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
         let button = app.buttons[id]
-        reveal(button, file: file, line: line)
+        if id.hasPrefix("club.") {
+            revealPageControl(button, file: file, line: line)
+        } else {
+            reveal(button, file: file, line: line)
+        }
         button.tap()
+    }
+
+    private func revealPageControl(_ item: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let scroll = app.scrollViews.firstMatch
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5), file: file, line: line)
+        let screen = app.frame
+        let navigation = app.navigationBars.firstMatch
+        let tabs = app.buttons["tab.club"]
+        let top = max(scroll.frame.minY, navigation.frame.maxY) + 8
+        let bottom = min(scroll.frame.maxY, tabs.exists ? tabs.frame.minY : screen.maxY - 16) - 8
+        let viewport = CGRect(x: scroll.frame.minX + 4, y: top,
+                              width: scroll.frame.width - 8, height: bottom - top)
+        XCTAssertGreaterThan(viewport.height, 100, file: file, line: line)
+        for _ in 0..<12 {
+            // SwiftUI can report rows underneath the tab bar as hittable.
+            // Require the whole control inside the page before sending one tap.
+            if item.exists && item.isHittable && viewport.contains(item.frame) { return }
+            let requested = item.exists && !item.frame.isEmpty
+                ? item.frame.midY - viewport.midY : viewport.height * 0.45
+            let distance = min(max(requested, -viewport.height * 0.45), viewport.height * 0.45)
+            let startY = distance >= 0 ? viewport.maxY - 20 : viewport.minY + 20
+            let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
+                CGVector(dx: viewport.minX + 4 - screen.minX, dy: startY - screen.minY))
+            // Short directed drags avoid skipping a row with a fast swipe, and
+            // also recover upward when a lazy row is already above the viewport.
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -distance)))
+        }
+        XCTAssertTrue(item.exists && item.isHittable && viewport.contains(item.frame),
+                      "Control must be visible between navigation and tabs: \(item.frame), viewport \(viewport)",
+                      file: file, line: line)
     }
 
     private func capture(_ name: String) {
