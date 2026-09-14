@@ -140,6 +140,25 @@ public class ClubPresentationTest {
         }
     }
 
+    @Test @Config(qualifiers="w320dp-h800dp-xhdpi")
+    public void articleSpacingIsConvertedToDevicePixelsOnlyOnce()throws Exception{
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=controller.get();SharedPreferences prefs=configure(a);
+            cache(prefs,ClubPageRepository.Page.ABOUT,ClubContentParserTest.ABOUT.replaceAll("<img[^>]*>",""));
+            set(a,"clubDestination",ClubContentPresentation.Destination.SPORT);
+            View view=screen(a);a.setContentView(view);
+            float density=a.getResources().getDisplayMetrics().density;assertEquals(2f,density,0.01f);
+            int width=Math.round(320*density),height=Math.round(800*density);
+            view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));view.layout(0,0,width,height);
+            TextView content=find(view,"340 kg");
+            assertEquals(Math.round(8*density),content.getPaddingTop());assertEquals(Math.round(8*density),content.getPaddingBottom());
+            View boat=(View)content.getParent();
+            var margins=(ViewGroup.MarginLayoutParams)boat.getLayoutParams();
+            assertEquals(Math.round(8*density),margins.topMargin);assertEquals(Math.round(4*density),margins.bottomMargin);
+            checkTextBounds(view);
+        }
+    }
+
     @Test public void youthUsesBoardSourceContactAndHistoryKeepsPdfExternal()throws Exception{
         try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=controller.get();SharedPreferences prefs=configure(a);prefs.edit().putString("ui_language","de").commit();

@@ -3622,12 +3622,12 @@ private View cashPaymentDetailsTile(){
     }
     hero.addView(txt("Pontonierfahrverein Rheinfelden",21,TEXT,true));
     if(cached!=null){TextView intro=txtRaw(ClubContentPresentation.overviewIntro(cached),14,TEXT,false);intro.setPadding(0,dp(8),0,dp(8));hero.addView(intro);}
-    body.addView(hero,margin(-1,-2,0,0,0,dp(12)));
+    body.addView(hero,margin(-1,-2,0,0,0,12));
     addClubTrainingOverview(body,cached);
     TextView discover=txt("Verein entdecken",18,TEXT,true);discover.setPadding(0,dp(16),0,dp(6));body.addView(discover);
     LinearLayout links=new LinearLayout(this);links.setOrientation(LinearLayout.VERTICAL);body.addView(links,new LinearLayout.LayoutParams(-1,-2));
     addConfiguredTiles(links,TileLayoutStore.Area.CLUB,this::clubTileView);
-    body.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.ABOUT),11,MUTED,false),margin(-1,-2,0,dp(14),0,0));
+    body.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.ABOUT),11,MUTED,false),margin(-1,-2,0,14,0,0));
     Button refresh=addClubAction(body,"Aktualisieren",()->refreshClubPage(ClubPageRepository.Page.ABOUT,true));
     refresh.setEnabled(!clubLoading.contains(ClubPageRepository.Page.ABOUT));
     refresh.setOnClickListener(v->{refresh.setEnabled(false);refreshClubPage(ClubPageRepository.Page.ABOUT,true);});
@@ -3654,7 +3654,7 @@ private void addClubTrainingOverview(LinearLayout body,ClubPageRepository.Conten
                 place.setContentDescription(ui("Treffpunkt auf Karte")+": "+training.location());
                 place.setOnClickListener(v->openClubLocation(training.location()));row.addView(place,new LinearLayout.LayoutParams(-1,-2));
             }
-            body.addView(row,margin(-1,-2,0,dp(8),0,0));
+            body.addView(row,margin(-1,-2,0,8,0,0));
         }
         if(ClubContentPresentation.training(cached).isEmpty())body.addView(txt("Trainingszeiten stehen im Originaltext.",13,MUTED,false));
     }else body.addView(txt(clubPageStatus(ClubPageRepository.Page.ABOUT),13,MUTED,false));
@@ -3794,7 +3794,7 @@ private Button addClubAction(LinearLayout parent,String label,Runnable action){
     button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));
     button.setPadding(dp(12),dp(10),dp(12),dp(10));
     button.setOnClickListener(v->action.run());
-    parent.addView(button,margin(-1,-2,0,dp(8),0,dp(8)));
+    parent.addView(button,margin(-1,-2,0,8,0,8));
     return button;
 }
 
@@ -3833,7 +3833,7 @@ private void addClubArticleSection(LinearLayout parent,ClubContentParser.Section
         return;
     }
     LinearLayout card=card();card.setOrientation(LinearLayout.VERTICAL);
-    parent.addView(card,margin(-1,-2,0,dp(8),0,dp(4)));
+    parent.addView(card,margin(-1,-2,0,8,0,4));
     TextView heading=txtRaw(title,17,TEXT,true);heading.setPadding(0,0,0,dp(6));card.addView(heading);
     if(section.photo()!=null)addClubPhoto(card,section.photo());
     if(!section.html().isBlank())card.addView(clubRichText(section.html()));
@@ -3843,7 +3843,7 @@ private void addClubArticleSection(LinearLayout parent,ClubContentParser.Section
 private void addClubOriginal(LinearLayout parent,String html){
     ClubContentPresentation.Destination destination=clubDestination;
     LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);
-    parent.addView(box,margin(-1,-2,0,dp(16),0,0));
+    parent.addView(box,margin(-1,-2,0,16,0,0));
     LinearLayout toggle=new LinearLayout(this);toggle.setGravity(Gravity.CENTER_VERTICAL);toggle.setMinimumHeight(dp(48));toggle.setFocusable(true);
     TextView label=txt("Vollständiger Quelltext",13,MUTED,false);toggle.addView(label,new LinearLayout.LayoutParams(0,-2,1));
     TextView symbol=txtRaw("",20,WATER,false);symbol.setGravity(Gravity.CENTER);toggle.addView(symbol,new LinearLayout.LayoutParams(dp(32),-2));
@@ -3868,7 +3868,7 @@ private void addClubPhoto(LinearLayout parent,ClubContentParser.Photo photo){
     };image.setScaleType(ImageView.ScaleType.FIT_CENTER);
     image.setContentDescription(photo.caption().isBlank()?ui("Foto von pfvr.ch"):photo.caption());
     // FIT_CENTER preserves entire boats and portraits instead of cropping the source.
-    parent.addView(image,margin(-1,-2,0,dp(6),0,0));
+    parent.addView(image,margin(-1,-2,0,6,0,0));
     TextView status=txt("Bild wird geladen …",11,MUTED,false);parent.addView(status);
     if(!photo.caption().isBlank())parent.addView(txtRaw(photo.caption(),11,MUTED,false));
     if(clubImages==null)clubImages=new ClubImageLoader(this);
