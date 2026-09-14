@@ -38,7 +38,7 @@ final class ClubImageLoader implements AutoCloseable {
     void bind(ImageView target,TextView status,String url,String unavailable) {
         WeakReference<ImageView> image=new WeakReference<>(target);
         WeakReference<TextView> label=new WeakReference<>(status);
-        target.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener(){
+        View.OnAttachStateChangeListener attach=new View.OnAttachStateChangeListener(){
             @Override public void onViewDetachedFromWindow(View view) {}
             @Override public void onViewAttachedToWindow(View view) {
                 view.removeOnAttachStateChangeListener(this);
@@ -51,7 +51,10 @@ final class ClubImageLoader implements AutoCloseable {
                     if(loaded!=null||cached==null)show(image,label,loaded,unavailable,requested);
                 });
             }
-        });
+        };
+        target.addOnAttachStateChangeListener(attach);
+        // Lazy accordion content may already be attached when its image is bound.
+        if(target.isAttachedToWindow())attach.onViewAttachedToWindow(target);
     }
     private void show(WeakReference<ImageView> image,WeakReference<TextView> label,Bitmap bitmap,String unavailable,int requested) {
         main.post(()->{

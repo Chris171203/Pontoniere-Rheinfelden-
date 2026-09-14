@@ -53,4 +53,21 @@ public class ClubImageLoaderTest {
             assertFalse(download.isAlive());assertNull(images.read(URL));
         }
     }
+    @Test public void imagesLoadBothOnInitialAttachAndWhenAddedToOpenSection()throws Exception {
+        byte[] photo=samplePhoto();var dir=Files.createTempDirectory("club-image-test").toFile();
+        try(var controller=org.robolectric.Robolectric.buildActivity(android.app.Activity.class).setup();var images=new ClubImageLoader(dir,url->photo)){
+            var activity=controller.get();var parent=new android.widget.LinearLayout(activity);activity.setContentView(parent);
+            var initial=new android.widget.ImageView(activity);var initialStatus=new android.widget.TextView(activity);
+            images.bind(initial,initialStatus,URL,"unavailable");parent.addView(initial);parent.addView(initialStatus);
+            var opened=new android.widget.ImageView(activity);var openedStatus=new android.widget.TextView(activity);
+            parent.addView(opened);parent.addView(openedStatus);assertTrue(opened.isAttachedToWindow());
+            images.bind(opened,openedStatus,URL,"unavailable");
+            var field=ClubImageLoader.class.getDeclaredField("worker");field.setAccessible(true);
+            var executor=(java.util.concurrent.ExecutorService)field.get(images);executor.shutdown();assertTrue(executor.awaitTermination(5,TimeUnit.SECONDS));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            assertNotNull(initial.getDrawable());assertNotNull(opened.getDrawable());
+            assertEquals(android.view.View.GONE,openedStatus.getVisibility());
+            images.clear();
+        }
+    }
 }
