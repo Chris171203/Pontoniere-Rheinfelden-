@@ -51,7 +51,8 @@ public class ClubPresentationTest {
             assertNotNull(text.getText().toString(),text.getLayout());
             int last=text.getLayout().getLineCount()-1;
             assertEquals(text.getText().toString(),text.getText().length(),text.getLayout().getLineEnd(last));
-            for(int i=0;i<=last;i++){assertEquals(0,text.getLayout().getEllipsisCount(i));assertTrue(text.getText().toString(),text.getLayout().getLineWidth(i)<=text.getWidth()-text.getPaddingLeft()-text.getPaddingRight()+1);}
+            // getLineMax excludes trailing spaces; getLineWidth includes them beyond the wrap point.
+            for(int i=0;i<=last;i++){assertEquals(0,text.getLayout().getEllipsisCount(i));assertTrue(text.getText().toString(),text.getLayout().getLineMax(i)<=text.getWidth()-text.getPaddingLeft()-text.getPaddingRight()+1);}
             assertTrue(text.getText().toString(),text.getLayout().getHeight()<=text.getHeight()-text.getPaddingTop()-text.getPaddingBottom()+1);
         }
         if(view instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++)checkTextBounds(group.getChildAt(i));
@@ -75,7 +76,7 @@ public class ClubPresentationTest {
                 String summer=language.equals("gsw")?"Summertraining":"Sommertraining";
                 find(view,summer+"  +").performClick();layout(view);
                 assertNotNull(find(view,"18:30"));assertNotNull(find(view,"Homepage"));
-                checkTextBounds(view);capture(view,"training-320-large-"+theme+"-"+language);
+                capture(view,"training-320-large-"+theme+"-"+language);checkTextBounds(view);
                 view=screen(a);a.setContentView(view);layout(view);
                 assertNotNull(find(view,summer+"  −"));assertNotNull(find(view,"18:30"));
                 find(view,language.equals("gsw")?"Träffpunkt uf de Charte":"Treffpunkt auf Karte").performClick();
