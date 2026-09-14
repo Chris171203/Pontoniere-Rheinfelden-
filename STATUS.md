@@ -1,12 +1,16 @@
 # Status
 
-Stand: `0.12.8` in Prüfung (Basis `0.12.7`) · aktualisiert 2026-09-14.
+Stand: Testversion `0.12.8` (`versionCode 65`) · aktualisiert 2026-09-14.
 
 ## Ergänzung 0.12.8
 
 - Telefon, Navigation zum Depot und E-Mail werden zusammen mit Instagram/Facebook als fünf Symbole unten mittig angezeigt. Die bisherigen drei Aktionskacheln entfallen; gespeicherte Layouts werden normalisiert.
 - [Übernahmeplan für Vereinsinhalte](docs/verein-inhaltsplan.md): zuerst Training, Boote und Vereinsleben strukturieren; danach Nachwuchs, Fahrtechnik, Porträts und belegte Meilensteine. Alte Mitgliederzahlen (2021) und ungeprüfte Kategorien nicht als aktuell darstellen. Der Ausbau ist in diesem Schritt nur geplant.
-- Prüfung und neue Test-APK folgen.
+- Abnahme: [CI 34813161712](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34813161712) erfolgreich; 106 Tests ohne Fehler/Skips, vier Browser-Szenarien, Release-Lint, Debug-APK, Release-AAB sowie Paket-/Signatur-/Berechtigungsprüfung bestanden.
+- Der native UI-Test prüft fünf Footer-Symbole und die tatsächlichen Ziel-Intents für Wähldialog, Depotnavigation und E-Mail. Die Layoutnormalisierung entfernt die drei alten IDs auch aus gespeicherten Ausblendungen. Vektorformen in Hell/Dunkel separat angesehen.
+- Geprüfter Quellcommit `902b83ad`, APK aus PR-Merge `2c863b6855d6ed860d64d4f42425564b6eb8dcf9`; identischer Quellbaum `ef84c48868b5e9333283a4811e745760acf409ef` geprüft. Danach nur dieser Abschlussvermerk.
+- Test-APK: `PFVR-Rheinfelden-test-0.12.8-debug.apk`, 3’534’708 Byte, SHA-256 `d9b3b6905e1438d7126b251ded0513bd04bc10048b24edb0102e23bb15695a65`; nach Download mit CI-Hash und bisherigem Testzertifikat abgeglichen.
+- Keine physische Geräteprüfung und keine realen Anrufe, E-Mails oder Navigationsfahrten ausgeführt. Die Browser-Anmeldung bleibt ein synthetischer Test.
 
 ## Aktuelles Arbeitspaket 0.12.7
 
