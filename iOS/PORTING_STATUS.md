@@ -1,5 +1,11 @@
 # iOS-Portierung – Arbeitsstand
 
+## Abgleich 0.15.0 · 2026-09-14
+
+In Umsetzung: freigegebene Android-Vereinsübersicht mit direktem Training, native Themenartikel, Kontakt-/Social-Footer, früher Live-Refresh und aktuelle gemeinsame An-/Abmeldelogik. WordPress-Parser, Tagescache, begrenzter Bildcache und Deutsch/Schweizerdeutsch ergänzt. Quellen- und Abrufdatum bleiben getrennt; die Originaltexte werden nicht übersetzt. Versionsziel 0.15.0 / Build 2. Die nachfolgenden 0.12.6-Nachweise sind historisch; die neue Abnahme wird getrennt dokumentiert.
+
+## Historischer Ausgangsstand 0.12.6
+
 Aktualisiert: 2026-09-10. Android-Referenz: 0.12.6, Commit `c617bae7c1f00fbb1136621166387ed814652794`.
 
 ## Ergebnis

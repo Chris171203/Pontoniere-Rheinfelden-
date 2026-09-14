@@ -26,8 +26,8 @@ for file in files where file.pathExtension == "json" {
     if let data = try? Data(contentsOf: file), let object = try? JSONSerialization.jsonObject(with: data) { collect(object) }
 }
 let desired = profile == "tablet"
-    ? ["system-share-ui", "system-calendar-ui", "failure"]
-    : ["screen-home", "screen-river", "screen-events", "screen-internal", "screen-cash", "screen-club", "payment-swiss-qr", "river-graph-2091", "river-graph-2289"]
+    ? ["club-training-de", "club-sport-de", "club-training-gsw-large", "club-sport-gsw-large", "club-footer-gsw", "club-youth", "system-share-ui", "system-calendar-ui", "failure"]
+    : ["club-training-de", "club-sport-de", "club-training-gsw-large", "club-sport-gsw-large", "club-footer-gsw", "club-youth", "screen-home", "screen-internal", "screen-cash"]
 var chosen: [(String, NSImage)] = []
 for name in desired {
     guard let file = files.first(where: { candidate in

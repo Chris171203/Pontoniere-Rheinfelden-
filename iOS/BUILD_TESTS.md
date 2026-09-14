@@ -1,6 +1,6 @@
 # iOS bauen und prüfen
 
-Stand 2026-09-10. Die erste iOS-Portierung bleibt Testversion `0.12.6`, Bundle-ID `ch.pfvr.app.test`, Mindestversion iOS/iPadOS 17. Das Xcode-Projekt wird ohne Quellcodeänderungen aus `project.yml` erzeugt. SwiftPM verwendet Tools 5.9 und Swift-Sprachmodus 5.
+Stand 2026-09-14. Aktuelle iOS-Testversion `0.15.0`, Bundle-ID `ch.pfvr.app.test`, Mindestversion iOS/iPadOS 17. Das Xcode-Projekt wird ohne Quellcodeänderungen aus `project.yml` erzeugt. SwiftPM verwendet Tools 5.9 und Swift-Sprachmodus 5.
 
 ## Ausführung
 
@@ -30,7 +30,7 @@ Vor den Swift-Tests prüft die CI den JavaScript-Export bytegenau gegen den echt
 
 Der Workflow `iOS CI` läuft auf `main`, `codex/ios-port-*`, Pull Requests nach `main` und manuell. PR-/Push-Läufe derselben Branch und desselben Quellcommits teilen eine Concurrency-Gruppe; ein neuer Commit bricht einen älteren noch laufenden Prüfnachweis nicht ab. Tests laufen ohne automatische Wiederholung fehlgeschlagener Fälle. Ein Abschluss-Gate verlangt tatsächlich bestandene XCTest-Fälle und den erfolgreichen Abschluss jedes vorgesehenen Test-Bundles; bloße Build-Ergebnisse oder leere Testauswahlen genügen nicht. Beide Simulatorgrößen werden auch dann unabhängig geprüft, wenn eine fehlschlägt. Compact kompiliert zusätzlich die Release-Konfiguration, damit auch die Grenzen der Debug-Testhilfen durch den Compiler geprüft werden.
 
-Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact und tablet laufen hell, large dunkel. `tablet` wählt ein passendes iPad und führt alle elf UI-Tests einschließlich der echten Systemdialoge aus. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
+Die Simulatorauswahl verwendet die neueste vorhandene iOS-Runtime ab Version 17, die höchstens der Simulator-SDK-Version des ausgewählten Xcode entspricht und zwei unterschiedliche iPhone-Größen bietet. Dadurch werden von anderen Xcode-Versionen installierte, inkompatibel neuere Runtimes ausgeschlossen. `compact` bevorzugt SE/mini, sonst ein Standard-iPhone; `large` verwendet Max/Plus. Konkretes Gerät, Runtime und Toolchain werden pro Lauf protokolliert. Compact und tablet laufen hell, large dunkel. `tablet` wählt ein passendes iPad und führt alle vierzehn UI-Tests einschließlich der echten Systemdialoge aus. Das belegt keine Ausführung auf iOS 17, wenn diese Runtime im Runner fehlt.
 
 Ein separater Core-Schritt führt mit `PFVR_LIVE_SMOKE=1` den `LiveSourceSmokeTests`-Vertragstest gegen die öffentlichen Datenquellen aus. Er prüft echte Antworten und verwendet keinen persönlichen Serverzugang. Ein externer Ausfall blockiert die deterministische Prüfung nicht (`continue-on-error`); das eigene Log `live-source-smoke.log` muss deshalb ausdrücklich bewertet werden.
 

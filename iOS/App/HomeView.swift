@@ -22,10 +22,11 @@ struct HomeView: View {
             }
             ForEach(state.visibleTiles(.home), id: \.id) { tile in
                 switch tile.id {
-                case "home_weather": EventWeatherTile()
-                case "home_weather_3day": ThreeDayWeatherTile()
-                case "home_river_summary": RiverSummaryTile()
+                case "home_weather": EventWeatherTile(showRefresh: tile.id == state.firstLiveTile)
+                case "home_weather_3day": ThreeDayWeatherTile(showRefresh: tile.id == state.firstLiveTile)
+                case "home_river_summary": RiverSummaryTile(showRefresh: tile.id == state.firstLiveTile)
                 case "home_river_charts":
+                    if tile.id == state.firstLiveTile { HStack { Spacer(); LiveRefreshButton() } }
                     ForEach(state.activeStations) { station in RiverChartCard(station: station) }
                 case "home_events":
                     PFVRCard(state.ui("Als Nächstes")) {
@@ -48,8 +49,10 @@ struct HomeView: View {
 
 struct EventWeatherTile: View {
     @EnvironmentObject private var state: AppState
+    var showRefresh = false
     var body: some View {
-        PFVRCard(state.ui("Wetter zum nächsten Termin")) {
+        PFVRCard {
+            HStack { Text(state.ui("Wetter zum nächsten Termin")).font(.headline); Spacer(); if showRefresh { LiveRefreshButton() } }
             if let event = state.nextWeatherEvent {
                 let forecast = WeatherForecast.event(hours: state.weather?.value ?? [], event: event)
                 Text(event.fromCalendar ? event.title : state.ui(event.title)).font(.headline)
@@ -78,8 +81,10 @@ struct EventWeatherTile: View {
 
 struct ThreeDayWeatherTile: View {
     @EnvironmentObject private var state: AppState
+    var showRefresh = false
     var body: some View {
-        PFVRCard(state.ui("3-Tage-Wetter")) {
+        PFVRCard {
+            HStack { Text(state.ui("3-Tage-Wetter")).font(.headline); Spacer(); if showRefresh { LiveRefreshButton() } }
             let days = WeatherForecast.days(hours: state.weather?.value ?? [], firstDay: state.now)
             ForEach(days) { day in
                 VStack(alignment: .leading, spacing: 12) {
@@ -163,5 +168,15 @@ enum WeatherSymbols {
         case 95...99: return "cloud.bolt.rain.fill"
         default: return "cloud"
         }
+    }
+}
+
+struct LiveRefreshButton: View {
+    @EnvironmentObject private var state: AppState
+    var body: some View {
+        Button { Task { await state.refresh(force: true) } } label: {
+            Image(systemName: "arrow.clockwise").frame(width: 44, height: 44)
+        }.disabled(state.loading).accessibilityLabel(state.ui("Rhein und Wetter aktualisieren"))
+            .accessibilityIdentifier("home.refresh")
     }
 }

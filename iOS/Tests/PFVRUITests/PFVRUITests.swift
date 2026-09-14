@@ -371,4 +371,78 @@ final class PFVRUITests: XCTestCase {
         XCTAssertFalse(app.buttons["tab.events"].label.contains("Termine"))
     }
 
+    func testClubOverviewShowsTrainingAndNativeArticleWithoutExpanding() {
+        launch()
+        tap("tab.club")
+        let summer = element("club.training.summer")
+        reveal(summer)
+        XCTAssertTrue(summer.label.contains("18:30–20:00"))
+        let winter = element("club.training.winter")
+        reveal(winter)
+        XCTAssertTrue(winter.label.contains("19:30"))
+        XCTAssertFalse(element("club.original").exists)
+        capture("club-training-de")
+        tap("club.row.sport")
+        XCTAssertTrue(element("club.detail.sport").waitForExistence(timeout: 5))
+        let weidling = element("club.section.boat-weidling")
+        reveal(weidling); XCTAssertTrue(weidling.label.contains("340 kg"))
+        let boot = element("club.section.boat-boot")
+        reveal(boot); XCTAssertTrue(boot.label.contains("460 kg"))
+        capture("club-sport-de")
+        let racing = element("club.section.section-racing")
+        reveal(racing); XCTAssertTrue(racing.label.contains("zusammen"))
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "38 Mitglieder")).firstMatch.exists)
+        let original = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Vollständiger Quelltext")).firstMatch
+        reveal(original); original.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "38 Mitglieder")).firstMatch.waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(element("screen.club").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["club.row.sport"].isHittable, "Returning keeps the overview at the selected topic")
+    }
+
+    func testClubSwissGermanLargeTextAndCenteredFooter() {
+        app.launchArguments = ["-ui-testing","-ui-test-reset","-ui-test-unlocked","-AppleLanguages","(de)","-AppleLocale","de_CH",
+                               "-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityM"]
+        app.launch()
+        XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 10))
+        tap("settings.open"); tap("settings.language.gsw"); tap("settings.done")
+        tap("tab.club")
+        let summer = element("club.training.summer")
+        reveal(summer)
+        XCTAssertTrue(summer.label.contains("Mäntig- und Mittwuchaabig"))
+        XCTAssertTrue(summer.label.contains("18:30–20:00"))
+        capture("club-training-gsw-large")
+        tap("club.row.sport")
+        XCTAssertTrue(app.navigationBars.staticTexts["Boot & Sport"].waitForExistence(timeout: 5))
+        let source = element("club.section.boat-weidling")
+        reveal(source)
+        XCTAssertTrue(source.label.contains("Ein Weidling wiegt 340 kg."), "Source paragraphs remain verbatim")
+        capture("club-sport-gsw-large")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let footer = element("club.footer.facebook")
+        reveal(footer)
+        let ids = ["phone","navigation","email","instagram","facebook"].map { element("club.footer." + $0) }
+        for item in ids { XCTAssertTrue(item.exists && item.isHittable) }
+        XCTAssertLessThan(abs(ids[0].frame.midY - ids[4].frame.midY), 3)
+        XCTAssertLessThan(abs((ids[0].frame.minX + ids[4].frame.maxX) / 2 - app.frame.midX), 3)
+        capture("club-footer-gsw")
+    }
+
+    func testClubCalendarAndFirstLiveRefreshAreNativeAndReachable() {
+        launch()
+        XCTAssertTrue(app.buttons["home.refresh"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["home.refresh"].isHittable)
+        tap("tab.club")
+        tap("club.calendar")
+        XCTAssertTrue(element("screen.events").waitForExistence(timeout: 5))
+        tap("tab.club")
+        tap("club.row.youth")
+        let youth = element("club.section.youth-training")
+        reveal(youth); XCTAssertTrue(youth.label.contains("Knoten"))
+        let contact = element("club.section.board-Jungpontonier-Leiter")
+        reveal(contact); XCTAssertTrue(contact.label.contains("JP Testkontakt"))
+        XCTAssertFalse(youth.label.contains("21 Jahre"))
+        capture("club-youth")
+    }
+
 }

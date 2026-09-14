@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
     private static final String NEWS = "https://www.pfvr.ch/verein/newsarchiv/";
     private static final String CLUB = "https://www.pfvr.ch/verein/";
     private static final String BOARD = "https://www.pfvr.ch/verein/vorstand/";
-    private static final String HISTORY = "https://www.pfvr.ch/verein/geschichte/";
+    private static final String HISTORY = "https://www.pfvr.ch/geschichte/";
     private static final String PROGRAM = "https://www.pfvr.ch/verein/jahresprogramm/";
     private static final String CONTACT = "https://www.pfvr.ch/kontakt/";
     private static final String ICS = "https://calendar.google.com/calendar/ical/a8mtko83nd27vsvp4i1cnpt3gs%40group.calendar.google.com/public/basic.ics";
@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
     private static final int STATUS_WARN = Color.rgb(242,201,76);
     private static final int STATUS_ALARM = Color.rgb(200,55,55);
 
-    private enum Screen { HOME, EVENTS, CASH, CLUB, NEWS, SETTINGS, TILE_SETTINGS, INTERNAL }
+    private enum Screen { HOME, EVENTS, CASH, CLUB, CLUB_DETAIL, NEWS, SETTINGS, TILE_SETTINGS, INTERNAL }
 
     private enum SettingsTab {
         GENERAL("Allgemein"),
@@ -216,6 +216,15 @@ public class MainActivity extends Activity {
     private List<NewsRepository.Article> news = new ArrayList<>();
     private long newsUpdated = 0L;
     private volatile boolean newsLoading = false;
+    private ClubContentPresentation.Destination clubDestination=ClubContentPresentation.Destination.LIFE;
+    private final Set<ClubContentPresentation.Destination> clubSourceExpanded=new LinkedHashSet<>();
+    private record ClubReturn(ClubContentPresentation.Destination destination,int scrollY) {}
+    private final java.util.Deque<ClubReturn> clubHistory=new java.util.ArrayDeque<>();
+    private int clubOverviewScrollY;
+    private int clubDetailScrollY;
+    private ClubImageLoader clubImages;
+    private final Set<ClubPageRepository.Page> clubLoading=new LinkedHashSet<>();
+    private final Set<ClubPageRepository.Page> clubFailed=new LinkedHashSet<>();
     private Bitmap pendingQrBitmap;
     private final Map<String,Integer> cashCart = new LinkedHashMap<>();
     private final Map<String,TextView> cashQuantityViews = new HashMap<>();
@@ -492,11 +501,13 @@ public class MainActivity extends Activity {
     }
 
     private void navigate(Screen screen) {
+        if(current==Screen.CLUB&&screen!=Screen.CLUB&&content!=null&&content.getChildCount()>0)clubOverviewScrollY=content.getChildAt(0).getScrollY();
+        if(screen!=Screen.CLUB_DETAIL)clubHistory.clear();
         current = screen; activeWebView = null;
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
         if(screen!=Screen.TILE_SETTINGS)tileSettingsScroll=null;
         if (headerBack != null) headerBack.setVisibility((screen == Screen.HOME || screen == Screen.INTERNAL) ? View.GONE : View.VISIBLE);
-        Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen;
+        Screen selectedNavigation=screen==Screen.TILE_SETTINGS?Screen.SETTINGS:screen==Screen.CLUB_DETAIL?Screen.CLUB:screen;
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==selectedNavigation;
             e.getValue().setTextColor(selected?Color.WHITE:themeText(Color.rgb(65,82,96)));
@@ -509,6 +520,7 @@ public class MainActivity extends Activity {
             case EVENTS: headerSubtitle.setText(ui("Jahresprogramm")); content.addView(eventScreen()); break;
             case CASH: headerSubtitle.setText(ui("Vereinsbeiz bezahlen")); content.addView(cash()); break;
             case CLUB: headerSubtitle.setText(ui("Verein & Kontakt")); content.addView(club()); break;
+            case CLUB_DETAIL: headerSubtitle.setText(ui(clubDestination.label)); content.addView(clubPageScreen()); break;
             case NEWS: headerSubtitle.setText(ui("Vereinsnews")); content.addView(newsScreen()); break;
             case SETTINGS: headerSubtitle.setText(ui("Einstellungen")); content.addView(settings()); break;
             case TILE_SETTINGS: headerSubtitle.setText(ui("Kacheln anordnen")); content.addView(tileSettingsScreen()); break;
@@ -604,6 +616,11 @@ private LinearLayout tileGroup(String title,String subtitle){
 private void populateHomeTileStack(LinearLayout stack){
     stack.removeAllViews();
     addConfiguredTiles(stack,TileLayoutStore.Area.HOME,this::homeTileView);
+    // One refresh at the first visible live block, also for customised/hidden weather layouts.
+    for(int i=0;i<stack.getChildCount();i++){
+        View tile=stack.getChildAt(i);
+        if("home-live".equals(tile.getTag())){addHomeLiveRefreshAction((LinearLayout)tile);break;}
+    }
 }
 
 private View homeTileView(TileLayoutStore.Spec spec){
@@ -620,19 +637,21 @@ private View homeTileView(TileLayoutStore.Spec spec){
 
 private View homeWeatherTile(){
     LinearLayout group=tileGroup("Wetter zum nächsten Termin",null);
+    group.setTag("home-live");
     group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeThreeDayWeatherTile(){
     LinearLayout group=tileGroup("3-Tage-Wetter",null);
+    group.setTag("home-live");
     group.addView(threeDayWeatherCard(),new LinearLayout.LayoutParams(-1,-2));
     return group;
 }
 
 private View homeRiverSummaryTile(){
     LinearLayout group=tileGroup("Rhein aktuell",null);
-    addHomeLiveRefreshAction(group);
+    group.setTag("home-live");
     group.addView(riverSummaryRow(),new LinearLayout.LayoutParams(-1,-2));
     TextView safety=txt("BAFU-Rohdaten, ungeprüft. Schifffahrtslage nur zur Orientierung – verbindlich sind die Schweizerischen Rheinhäfen.  →",10,MUTED,false);
     safety.setPadding(dp(2),dp(7),dp(2),dp(3));
@@ -666,6 +685,7 @@ private void addHomeLiveRefreshAction(LinearLayout group){
 
 private View homeRiverChartsTile(){
     LinearLayout group=tileGroup("Rhein-Grafiken","Abfluss und Pegel je Station; Temperatur separat");
+    group.setTag("home-live");
     TextView rangeLabel=txt("ZEITRAUM",10,MUTED,true);
     rangeLabel.setPadding(dp(2),0,0,dp(5));
     group.addView(rangeLabel);
@@ -932,12 +952,12 @@ private void rebuildHomePreservingScroll(){
         TextView rain=txt(ui("Regen")+" "+hour.precipitationProbability+" %",9,MUTED,false);
         rain.setGravity(Gravity.CENTER);
         box.addView(rain);
-        box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" Prozent");
+        box.setContentDescription(time+", "+weatherCode(hour.weatherCode)+", "+temperature+", "+ui("Regen")+" "+hour.precipitationProbability+" "+ui("Prozent"));
         return box;
     }
 
     private String weatherDaypartLabel(int hour){
-        if(hour<11)return ui("Morgen");
+        if(hour<11)return ui("Morgen (Tageszeit)");
         if(hour<17)return ui("Mittag");
         return ui("Abend");
     }
@@ -2426,6 +2446,10 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     private void clearDataCache(){
         SharedPreferences.Editor editor=prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).remove(NewsRepository.PREF_CACHE).remove(NewsRepository.PREF_UPDATED).remove(PREF_WEATHER_CACHE).remove(PREF_WEATHER_UPDATED);
         for(HydroStation station:HydroStation.values())editor.remove(station.liveCacheKey()).remove(station.liveUpdatedKey()).remove(station.fineCacheKey()).remove(station.fineUpdatedKey()).remove(station.historyCacheKey()).remove(station.historyUpdatedKey());
+        for(ClubPageRepository.Page page:ClubPageRepository.Page.values())editor.remove(page.cacheKey()).remove(page.updatedKey());
+        clubFailed.clear();
+        if(clubImages!=null)clubImages.clear();
+        else {try(ClubImageLoader images=new ClubImageLoader(this)){images.clear();}}
         editor.apply();
         events=new ArrayList<>();eventsUpdated=0L;news=new ArrayList<>();newsUpdated=0L;
         Toast.makeText(this,ui("Daten-Cache geleert. Neue Daten werden nachgeladen."),Toast.LENGTH_SHORT).show();
@@ -3588,77 +3612,320 @@ private View cashPaymentDetailsTile(){
 
     private View club() {
     ScrollView scroll=new ScrollView(this);
-    LinearLayout body=body();
-    scroll.addView(body);
-
-    LinearLayout hero=card();
-    hero.setGravity(Gravity.CENTER_VERTICAL);
-    ImageView logo=new ImageView(this);
-    logo.setImageResource(R.drawable.pfvr_logo);
-    logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
-    hero.addView(logo,new LinearLayout.LayoutParams(dp(82),dp(82)));
-    LinearLayout info=new LinearLayout(this);
-    info.setOrientation(LinearLayout.VERTICAL);
-    info.setPadding(dp(15),0,0,0);
-    info.addView(txt("Pontonierfahrverein Rheinfelden",19,TEXT,true));
-    info.addView(txt("Gegründet 1896 · Sport und Vereinsleben am Rhein",13,MUTED,false));
-    hero.addView(info,new LinearLayout.LayoutParams(0,-2,1));
-    body.addView(hero,margin(-1,-2,0,4,0,14));
-    LinearLayout tiles=new LinearLayout(this);
-    tiles.setOrientation(LinearLayout.VERTICAL);
-    body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));
-    addConfiguredTiles(tiles,TileLayoutStore.Area.CLUB,this::clubTileView);
+    LinearLayout body=body();scroll.addView(body);
+    ClubPageRepository.Content cached=cachedClubPage(ClubPageRepository.Page.ABOUT);
+    LinearLayout hero=new LinearLayout(this);hero.setOrientation(LinearLayout.VERTICAL);
+    if(cached!=null&&cached.layout().hero()!=null)addClubPhoto(hero,cached.layout().hero());
+    else {
+        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.pfvr_logo);logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        hero.addView(logo,new LinearLayout.LayoutParams(-1,dp(82)));
+    }
+    hero.addView(txt("Pontonierfahrverein Rheinfelden",21,TEXT,true));
+    if(cached!=null){TextView intro=txtRaw(ClubContentPresentation.overviewIntro(cached),14,TEXT,false);intro.setPadding(0,dp(8),0,dp(8));hero.addView(intro);}
+    body.addView(hero,margin(-1,-2,0,0,0,12));
+    addClubTrainingOverview(body,cached);
+    TextView discover=txt("Verein entdecken",18,TEXT,true);discover.setPadding(0,dp(16),0,dp(6));body.addView(discover);
+    LinearLayout links=new LinearLayout(this);links.setOrientation(LinearLayout.VERTICAL);body.addView(links,new LinearLayout.LayoutParams(-1,-2));
+    addConfiguredTiles(links,TileLayoutStore.Area.CLUB,this::clubTileView);
+    body.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.ABOUT),11,MUTED,false),margin(-1,-2,0,14,0,0));
+    Button refresh=addClubAction(body,"Aktualisieren",()->refreshClubPage(ClubPageRepository.Page.ABOUT,true));
+    refresh.setEnabled(!clubLoading.contains(ClubPageRepository.Page.ABOUT));
+    refresh.setOnClickListener(v->{refresh.setEnabled(false);refreshClubPage(ClubPageRepository.Page.ABOUT,true);});
+    body.addView(clubFooter(),new LinearLayout.LayoutParams(-1,-2));
+    scroll.post(()->scroll.scrollTo(0,clubOverviewScrollY));
+    refreshClubPage(ClubPageRepository.Page.ABOUT,false);
     return scroll;
+}
+
+private void addClubTrainingOverview(LinearLayout body,ClubPageRepository.Content cached){
+    body.addView(txt("Training",18,TEXT,true));
+    if(cached!=null){
+        for(ClubContentPresentation.Training training:ClubContentPresentation.training(cached)){
+            LinearLayout row=card();row.setOrientation(LinearLayout.VERTICAL);
+            row.addView(txt(training.label(),16,TEXT,true));
+            if(!training.season().isBlank())row.addView(txtRaw(training.season(),12,MUTED,false));
+            if(training.fallback().isBlank()){
+                TextView schedule=txtRaw(ui(training.days())+" · "+training.time()+" "+ui("Uhr"),15,TEXT,true);
+                schedule.setPadding(0,dp(6),0,dp(4));row.addView(schedule);
+            }else row.addView(txtRaw(training.fallback(),14,TEXT,false));
+            if(!training.location().isBlank()){
+                TextView place=txtRaw(training.location()+"  ↗",13,WATER,false);
+                place.setMinHeight(dp(48));place.setGravity(Gravity.CENTER_VERTICAL);place.setFocusable(true);
+                place.setContentDescription(ui("Treffpunkt auf Karte")+": "+training.location());
+                place.setOnClickListener(v->openClubLocation(training.location()));row.addView(place,new LinearLayout.LayoutParams(-1,-2));
+            }
+            body.addView(row,margin(-1,-2,0,8,0,0));
+        }
+        if(ClubContentPresentation.training(cached).isEmpty())body.addView(txt("Trainingszeiten stehen im Originaltext.",13,MUTED,false));
+    }else body.addView(txt(clubPageStatus(ClubPageRepository.Page.ABOUT),13,MUTED,false));
+    TextView note=txt("Zeiten laut Homepage. Aktuelle Termine im Kalender.",11,MUTED,false);note.setPadding(0,dp(8),0,0);body.addView(note);
+    addClubAction(body,"Termine im Kalender",()->navigate(Screen.EVENTS));
+    body.addView(clubNavigationRow("Trainingsinfos","Ablauf und Trainingsinhalte",v->openClubDestination(ClubContentPresentation.Destination.TRAINING)));
 }
 
 private View clubTileView(TileLayoutStore.Spec spec){
     switch(spec.id){
-        case "club_about":return clubAboutTile();
-        case "club_news":return clubActionTile("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
-        case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->openInApp(PROGRAM,"Jahresprogramm"));
-        case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openInApp(BOARD,"Vorstand"));
-        case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openInApp(HISTORY,"Geschichte"));
-        case "club_depot":return clubActionTile("Depot & Route","Rheinweg 42",v->openMap());
-        case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
-        case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
-        case "club_contact":return clubActionTile("Kontaktseite","Weitere Ansprechwege",v->openInApp(CONTACT,"Kontakt"));
-        case "club_instagram":return clubActionTile("Instagram","@pontoniererheinfelden",v->external(PublicLinks.INSTAGRAM));
-        case "club_facebook":return clubActionTile("Facebook","Pontoniere Rheinfelden",v->external(PublicLinks.FACEBOOK));
+        case "club_about":return clubNavigationRow("Vereinsleben","Gemeinsam unterwegs",v->openClubDestination(ClubContentPresentation.Destination.LIFE));
+        case "club_sport":return clubNavigationRow("Boote & Sport","Weidling, Boot und Fahrtechnik",v->openClubDestination(ClubContentPresentation.Destination.SPORT));
+        case "club_news":return clubNavigationRow("Vereinsnews","Aktuelle Meldungen",v->navigate(Screen.NEWS));
+        case "club_youth":return clubNavigationRow("Jungpontoniere","Fahren, Knoten und Lager",v->openClubPage(ClubPageRepository.Page.YOUTH));
+        case "club_board":return clubNavigationRow("Vorstand","Funktionen und Kontakte",v->openClubPage(ClubPageRepository.Page.BOARD));
+        case "club_history":return clubNavigationRow("Geschichte","Seit 1896 auf dem Rhein",v->openClubPage(ClubPageRepository.Page.HISTORY));
+        case "club_contact":return clubNavigationRow("Kontakt","Weitere Ansprechwege",v->openClubPage(ClubPageRepository.Page.CONTACT));
         default:return null;
     }
 }
 
-private View clubAboutTile(){
-    LinearLayout group=tileGroup("Über den Verein",null);
-    LinearLayout about=card();
-    about.setOrientation(LinearLayout.VERTICAL);
-    about.addView(txt("Seit 1896 auf dem Rhein",18,TEXT,true));
-    TextView text=txt("Beim Pontonierfahren verbinden sich präzise Bootsführung, Kraft, Technik und Teamarbeit. Der PFVR trainiert auf dem Rhein in Rheinfelden, nimmt an Wettfahren teil und pflegt zugleich ein aktives Vereinsleben sowie die Ausbildung des Nachwuchses.",14,MUTED,false);
-    text.setPadding(0,dp(7),0,dp(10));
-    about.addView(text);
-    TextView history=txt("Geschichte und Meilensteine öffnen  →",12,WATER,true);
-    history.setGravity(Gravity.END);
-    history.setOnClickListener(v->openInApp(HISTORY,"Geschichte"));
-    about.addView(history);
-    group.addView(about,new LinearLayout.LayoutParams(-1,-2));
-    return group;
+private View clubNavigationRow(String title,String detail,View.OnClickListener action){
+    LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setMinimumHeight(dp(60));row.setPadding(dp(4),dp(10),dp(4),dp(10));row.setFocusable(true);row.setOnClickListener(action);
+    LinearLayout text=new LinearLayout(this);text.setOrientation(LinearLayout.VERTICAL);
+    text.addView(txt(title,16,TEXT,true));text.addView(txt(detail,12,MUTED,false));
+    row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
+    TextView arrow=txtRaw("›",24,WATER,false);arrow.setGravity(Gravity.CENTER);arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    row.addView(arrow,new LinearLayout.LayoutParams(dp(32),-2));
+    row.setContentDescription(ui(title)+" · "+ui(detail));
+    return row;
 }
 
-private View clubActionTile(String title,String detail,View.OnClickListener listener){
-    LinearLayout tile=card();
-    tile.setOrientation(LinearLayout.VERTICAL);
-    tile.setMinimumHeight(dp(118));
-    tile.setOnClickListener(listener);
-    TextView heading=txt(title,16,TEXT,true);
-    tile.addView(heading);
-    TextView description=txt(detail,12,MUTED,false);
-    description.setPadding(0,dp(5),0,0);
-    tile.addView(description);
-    tile.addView(new View(this),new LinearLayout.LayoutParams(1,0,1));
-    TextView open=txt("Öffnen  →",12,WATER,true);
-    open.setGravity(Gravity.END);
-    tile.addView(open);
-    return tile;
+private View clubFooter(){
+    LinearLayout row=new LinearLayout(this);
+    row.setGravity(Gravity.CENTER);
+    row.setPadding(0,dp(12),0,dp(16));
+    addClubFooterIcon(row,R.drawable.ic_phone,"Telefon",true,v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
+    addClubFooterIcon(row,R.drawable.ic_navigation,"Navigation",true,v->openMap());
+    addClubFooterIcon(row,R.drawable.ic_email,"E-Mail",true,v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
+    addClubFooterIcon(row,R.drawable.ic_instagram,"Instagram",false,v->external(PublicLinks.INSTAGRAM));
+    addClubFooterIcon(row,R.drawable.ic_facebook,"Facebook",false,v->external(PublicLinks.FACEBOOK));
+    return row;
+}
+
+private void addClubFooterIcon(LinearLayout row,int drawable,String name,boolean tint,View.OnClickListener action){
+    ImageView logo=new ImageView(this);
+    logo.setImageResource(drawable);
+    if(tint)logo.setColorFilter(themeText(WATER));
+    logo.setPadding(dp(10),dp(10),dp(10),dp(10));
+    logo.setContentDescription(ui(name));
+    logo.setTooltipText(ui(name));
+    logo.setFocusable(true);
+    logo.setOnClickListener(action);
+    LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(48),dp(48));
+    params.setMargins(dp(2),0,dp(2),0);
+    row.addView(logo,params);
+}
+
+private void openClubPage(ClubPageRepository.Page page){
+    openClubDestination(ClubContentPresentation.Destination.forPage(page));
+}
+
+private void openClubDestination(ClubContentPresentation.Destination destination){
+    if(current==Screen.CLUB_DETAIL&&clubDestination!=destination){
+        int y=content.getChildCount()>0?content.getChildAt(0).getScrollY():0;
+        clubHistory.push(new ClubReturn(clubDestination,y));
+    }else if(current!=Screen.CLUB_DETAIL)clubHistory.clear();
+    clubDestination=destination;clubDetailScrollY=0;navigate(Screen.CLUB_DETAIL);
+}
+
+private ClubPageRepository.Content cachedClubPage(ClubPageRepository.Page page){
+    try{return ClubPageRepository.parse(page,prefs.getString(page.cacheKey(),""));}
+    catch(Exception ignored){return null;}
+}
+
+private String clubPageStatus(ClubPageRepository.Page page){
+    long updated=prefs.getLong(page.updatedKey(),0L);
+    ClubPageRepository.Content cached=cachedClubPage(page);
+    if(cached==null)return ui(clubFailed.contains(page)?"Vereinsinfos konnten gerade nicht geladen werden.":"Vereinsinfos werden geladen …");
+    String time=java.time.Instant.ofEpochMilli(updated).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+    String source=cached.modified().isBlank()?ui("Quellenstand unbekannt"):ui("Homepage geändert am")+" "+java.time.LocalDate.parse(cached.modified()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    return "pfvr.ch · "+source+"\n"+ui("Abgerufen")+" "+time+(clubFailed.contains(page)?" · "+ui("Gespeicherter Stand"):"");
+}
+
+private View clubPageScreen(){
+    ScrollView scroll=new ScrollView(this);
+    LinearLayout body=body();scroll.addView(body);
+    ClubPageRepository.Page page=clubDestination.page;
+    ClubPageRepository.Content cached=cachedClubPage(page);
+    body.addView(txt(clubDestination.label,22,TEXT,true));
+    body.addView(txtRaw(clubPageStatus(page),11,MUTED,false));
+    Button refresh=addClubAction(body,"Aktualisieren",()->{
+        refreshClubPage(page,true);
+        if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,true);
+        if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,true);
+    });
+    refresh.setEnabled(!clubLoading.contains(page));
+    refresh.setOnClickListener(v->{
+        refresh.setEnabled(false);refreshClubPage(page,true);
+        if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,true);
+        if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,true);
+    });
+    if(cached!=null){
+        java.util.List<ClubContentParser.Section> sections=ClubContentPresentation.sections(cached,clubDestination);
+        boolean structured=!sections.isEmpty()||(page==ClubPageRepository.Page.HISTORY&&!cached.layout().milestones().isEmpty())||(clubDestination==ClubContentPresentation.Destination.LIFE&&!cached.layout().intro().isBlank());
+        if(clubDestination==ClubContentPresentation.Destination.LIFE){
+            if(!cached.layout().intro().isBlank())body.addView(clubRichText(cached.layout().intro()));
+        }
+        if(clubDestination==ClubContentPresentation.Destination.TRAINING){
+            body.addView(txt("Zeiten laut Homepage. Aktuelle Termine im Kalender.",12,MUTED,false));
+            addClubAction(body,"Termine im Kalender",()->navigate(Screen.EVENTS));
+        }
+        if(page==ClubPageRepository.Page.HISTORY)addClubHistory(body,cached);
+        for(ClubContentParser.Section section:sections){
+            if(page==ClubPageRepository.Page.HISTORY)addClubAction(body,section.title(),()->openClubLink(section.id()));
+            else addClubArticleSection(body,section);
+        }
+        if(page==ClubPageRepository.Page.YOUTH){
+            body.addView(txt("Alters- und Wettkampfkategorien stehen im datierten Originaltext. Aktuelle Voraussetzungen beim JP-Leiter erfragen.",12,MUTED,false));
+            addYouthContact(body);
+        }
+        if(structured)addClubOriginal(body,cached.html());
+        else body.addView(clubRichText(cached.html()));
+    }
+    if(page==ClubPageRepository.Page.CONTACT)addClubAction(body,"Kontaktformular öffnen",()->external(page.url));
+    addClubAction(body,"Quelle: pfvr.ch  →",()->external(page.url));
+    scroll.post(()->scroll.scrollTo(0,clubDetailScrollY));
+    refreshClubPage(page,false);
+    if(page==ClubPageRepository.Page.YOUTH)refreshClubPage(ClubPageRepository.Page.BOARD,false);
+    if(page==ClubPageRepository.Page.HISTORY)refreshClubPage(ClubPageRepository.Page.ABOUT,false);
+    return scroll;
+}
+
+private Button addClubAction(LinearLayout parent,String label,Runnable action){
+    Button button=btn(label,Color.rgb(232,240,244),NAVY);
+    button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));
+    button.setPadding(dp(12),dp(10),dp(12),dp(10));
+    button.setOnClickListener(v->action.run());
+    parent.addView(button,margin(-1,-2,0,8,0,8));
+    return button;
+}
+
+private TextView clubRichText(String html){
+    TextView text=txtRaw("",15,TEXT,false);
+    text.setPadding(0,dp(8),0,dp(8));text.setLineSpacing(dp(3),1f);
+    android.text.SpannableStringBuilder rich=new android.text.SpannableStringBuilder(android.text.Html.fromHtml(html,android.text.Html.FROM_HTML_MODE_LEGACY));
+    // Html adds trailing paragraph breaks; the native container already supplies spacing.
+    while(rich.length()>0&&Character.isWhitespace(rich.charAt(rich.length()-1)))rich.delete(rich.length()-1,rich.length());
+    for(android.text.style.URLSpan link:rich.getSpans(0,rich.length(),android.text.style.URLSpan.class)){
+        int start=rich.getSpanStart(link),end=rich.getSpanEnd(link);String url=link.getURL();rich.removeSpan(link);
+        rich.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){openClubLink(url);}},start,end,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+    text.setText(rich);text.setLinkTextColor(themeText(WATER));
+    text.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    return text;
+}
+
+private void openClubLink(String url){
+    ClubPageRepository.Page target=ClubPageRepository.pageForUrl(url);
+    if(target!=null)openClubPage(target);
+    else if(PROGRAM.equals(url))navigate(Screen.EVENTS);
+    else if(url.startsWith("tel:")){
+        try{startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse(url.replaceAll("[\\s\\u00a0]",""))));}catch(Exception e){external(url);}
+    }else if(url.startsWith("mailto:")){
+        try{startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse(url)));}catch(Exception e){external(url);}
+    }else external(url);
+}
+
+private void addClubArticleSection(LinearLayout parent,ClubContentParser.Section section){
+    String title=section.appTitle()?ui(section.title()):section.title();
+    if(!section.children().isEmpty()){
+        TextView heading=txtRaw(title,18,TEXT,true);heading.setPadding(0,dp(16),0,dp(6));parent.addView(heading);
+        if(!section.html().isBlank())parent.addView(clubRichText(section.html()));
+        for(ClubContentParser.Section child:section.children())addClubArticleSection(parent,child);
+        return;
+    }
+    LinearLayout card=card();card.setOrientation(LinearLayout.VERTICAL);
+    parent.addView(card,margin(-1,-2,0,8,0,4));
+    TextView heading=txtRaw(title,17,TEXT,true);heading.setPadding(0,0,0,dp(6));card.addView(heading);
+    if(section.photo()!=null)addClubPhoto(card,section.photo());
+    if(!section.html().isBlank())card.addView(clubRichText(section.html()));
+    if(!section.location().isBlank())addClubAction(card,"Treffpunkt auf Karte",()->openClubLocation(section.location()));
+}
+
+private void addClubOriginal(LinearLayout parent,String html){
+    ClubContentPresentation.Destination destination=clubDestination;
+    LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);
+    parent.addView(box,margin(-1,-2,0,16,0,0));
+    LinearLayout toggle=new LinearLayout(this);toggle.setGravity(Gravity.CENTER_VERTICAL);toggle.setMinimumHeight(dp(48));toggle.setFocusable(true);
+    TextView label=txt("Vollständiger Quelltext",13,MUTED,false);toggle.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+    TextView symbol=txtRaw("",20,WATER,false);symbol.setGravity(Gravity.CENTER);toggle.addView(symbol,new LinearLayout.LayoutParams(dp(32),-2));
+    box.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
+    LinearLayout details=new LinearLayout(this);details.setOrientation(LinearLayout.VERTICAL);box.addView(details,new LinearLayout.LayoutParams(-1,-2));
+    Runnable update=()->{
+        boolean open=clubSourceExpanded.contains(destination);
+        if(open&&details.getChildCount()==0)details.addView(clubRichText(html));
+        details.setVisibility(open?View.VISIBLE:View.GONE);symbol.setText(open?"−":"+");
+        toggle.setContentDescription(ui("Vollständiger Quelltext")+" · "+ui(open?"Zuklappen":"Aufklappen"));
+    };
+    toggle.setOnClickListener(v->{if(!clubSourceExpanded.remove(destination))clubSourceExpanded.add(destination);update.run();});update.run();
+}
+
+private void addClubPhoto(LinearLayout parent,ClubContentParser.Photo photo){
+    ImageView image=new ImageView(this){
+        @Override protected void onMeasure(int widthSpec,int heightSpec){
+            int width=View.MeasureSpec.getSize(widthSpec);
+            int height=photo.width()>0&&photo.height()>0?(int)(width*(double)photo.height()/photo.width()):dp(180);
+            super.onMeasure(widthSpec,View.MeasureSpec.makeMeasureSpec(Math.max(dp(64),Math.min(dp(220),height)),View.MeasureSpec.EXACTLY));
+        }
+    };image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    image.setContentDescription(photo.caption().isBlank()?ui("Foto von pfvr.ch"):photo.caption());
+    // FIT_CENTER preserves entire boats and portraits instead of cropping the source.
+    parent.addView(image,margin(-1,-2,0,6,0,0));
+    TextView status=txt("Bild wird geladen …",11,MUTED,false);parent.addView(status);
+    if(!photo.caption().isBlank())parent.addView(txtRaw(photo.caption(),11,MUTED,false));
+    if(clubImages==null)clubImages=new ClubImageLoader(this);
+    clubImages.bind(image,status,photo.url(),ui("Bild momentan nicht verfügbar."));
+}
+
+private void openClubLocation(String query){
+    try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?q="+Uri.encode(query))));}
+    catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode(query));}
+}
+
+private void addYouthContact(LinearLayout body){
+    ClubPageRepository.Content board=cachedClubPage(ClubPageRepository.Page.BOARD);
+    body.addView(txt("Kontakt zum JP-Leiter",17,TEXT,true));
+    body.addView(txtRaw(clubPageStatus(ClubPageRepository.Page.BOARD),11,MUTED,false));
+    if(board!=null)for(ClubContentParser.Section section:board.layout().sections()){
+        String title=section.title().toLowerCase(Locale.ROOT);
+        if(title.contains("jungpontonier")||title.contains("jp-leiter")){addClubArticleSection(body,section);return;}
+    }
+    addClubAction(body,"Vorstand",()->openClubPage(ClubPageRepository.Page.BOARD));
+}
+
+private void addClubHistory(LinearLayout body,ClubPageRepository.Content history){
+    ClubPageRepository.Content about=cachedClubPage(ClubPageRepository.Page.ABOUT);
+    java.util.List<ClubContentParser.Section> timeline=new ArrayList<>();
+    if(about!=null)timeline.addAll(about.layout().milestones());
+    timeline.addAll(history.layout().milestones());
+    timeline.sort(java.util.Comparator.comparing(s->s.title().substring(Math.max(0,s.title().length()-4))));
+    for(ClubContentParser.Section station:timeline){
+        addClubArticleSection(body,station);
+        ClubPageRepository.Page source=station.id().equals("book")?ClubPageRepository.Page.HISTORY:ClubPageRepository.Page.ABOUT;
+        body.addView(txtRaw(clubPageStatus(source),11,MUTED,false));
+    }
+}
+
+private void refreshClubPage(ClubPageRepository.Page page,boolean force){
+    if(clubLoading.contains(page))return;
+    if(!force&&(clubFailed.contains(page)||(cachedClubPage(page)!=null&&System.currentTimeMillis()-prefs.getLong(page.updatedKey(),0L)<ClubPageRepository.CACHE_AGE_MS)))return;
+    clubLoading.add(page);clubFailed.remove(page);
+    new Thread(()->{
+        String raw=null;
+        try{String fetched=ClubPageRepository.fetchRaw(page);ClubPageRepository.parse(page,fetched);raw=fetched;}
+        catch(Exception ignored){}
+        final String result=raw;
+        runOnUiThread(()->{
+            clubLoading.remove(page);
+            if(result!=null)prefs.edit().putString(page.cacheKey(),result).putLong(page.updatedKey(),System.currentTimeMillis()).apply();
+            else clubFailed.add(page);
+            if(isDestroyed()||isFinishing())return;
+            if((current==Screen.CLUB&&page==ClubPageRepository.Page.ABOUT)||(current==Screen.CLUB_DETAIL&&(clubDestination.page==page||(clubDestination.page==ClubPageRepository.Page.YOUTH&&page==ClubPageRepository.Page.BOARD)||(clubDestination.page==ClubPageRepository.Page.HISTORY&&page==ClubPageRepository.Page.ABOUT)))){
+                View old=content.getChildAt(0);int y=old==null?0:old.getScrollY();
+                View updated=current==Screen.CLUB?club():clubPageScreen();
+                content.removeAllViews();content.addView(updated);
+                updated.post(()->updated.scrollTo(0,y));
+            }
+        });
+    },"pfvr-public-page").start();
 }
 
     private View internal() {
@@ -4036,9 +4303,14 @@ private View clubActionTile(String title,String detail,View.OnClickListener list
     }
     private void openMap(){Uri u=Uri.parse("geo:0,0?q="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){external("https://www.google.com/maps/search/?api=1&query="+Uri.encode("Rheinweg 42, 4310 Rheinfelden, Schweiz"));}}
 
-    private void handleBack(){if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
+    private void handleBack(){if(current==Screen.CLUB_DETAIL){
+        if(!clubHistory.isEmpty()){
+            ClubReturn previous=clubHistory.pop();clubDestination=previous.destination();clubDetailScrollY=previous.scrollY();navigate(Screen.CLUB_DETAIL);
+        }else navigate(Screen.CLUB);
+        return;
+    }if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
-    @Override protected void onDestroy(){if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){if(clubImages!=null)clubImages.close();if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
 
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}

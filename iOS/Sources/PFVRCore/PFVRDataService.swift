@@ -104,7 +104,7 @@ public actor PFVRDataService {
     private func get(_ url: URL, body: Data? = nil, accept: String = "application/json") async throws -> Data {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         request.setValue(accept, forHTTPHeaderField: "Accept")
-        request.setValue("PFVR-iOS/0.12.6", forHTTPHeaderField: "User-Agent")
+        request.setValue("PFVR-iOS/0.15.0", forHTTPHeaderField: "User-Agent")
         if let body { request.httpMethod = "POST"; request.httpBody = body; request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, response) = try await transport.data(for: request)
         guard (200..<300).contains(response.statusCode) else { throw PFVRDataError.httpStatus(response.statusCode) }

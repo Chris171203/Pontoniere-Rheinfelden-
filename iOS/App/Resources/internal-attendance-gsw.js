@@ -91,8 +91,8 @@
   html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}
   body{margin:0!important;padding:10px 10px 34px!important;box-sizing:border-box!important;background:${COLORS.background}!important;color:${COLORS.text}!important;font-family:Arial,sans-serif!important;font-size:16px!important;}
   header,nav,footer,.navbar,.site-header,.site-footer{display:none!important;}
-  p,span,div,label,strong{color:${COLORS.text}!important;}small{color:${COLORS.muted}!important;}a{color:${COLORS.link}!important;}
-  select,input[type=text],input[type=number]{background:${COLORS.soft}!important;color:${COLORS.text}!important;border:1px solid ${COLORS.border}!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;box-sizing:border-box!important;}
+  p:not(.btn),span:not(.btn),div:not(.btn),label,strong{color:${COLORS.text}!important;}small{color:${COLORS.muted}!important;}a:not(.btn){color:${COLORS.link}!important;}
+  input[type=text],input[type=number]{background:${COLORS.soft}!important;color:${COLORS.text}!important;border:1px solid ${COLORS.border}!important;border-radius:12px!important;padding:10px!important;min-height:44px!important;box-sizing:border-box!important;}
   button,input[type=submit],input[type=button],a.btn,.btn{min-height:46px!important;border:0!important;border-radius:12px!important;padding:9px 12px!important;font-size:15px!important;font-weight:700!important;line-height:1.25!important;box-shadow:none!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;}
 
   .pfvr-attendance-source{display:none!important;}
@@ -196,26 +196,30 @@
     return el.innerText||el.value||el.textContent||'';
   };
   var formatAttendanceChoiceLabel=function(el,matched){
-    if(!el||!matched||el.tagName==='SELECT')return;
+    if(!el)return;
+    if(!matched||el.tagName==='SELECT'||(matched!==statusDefs[0]&&matched!==statusDefs[1])){
+      if(el.classList.contains('pfvr-attendance-display-label'))el.classList.remove('pfvr-attendance-display-label');
+      if(el.hasAttribute('data-pfvr-display-label'))el.removeAttribute('data-pfvr-display-label');
+      return;
+    }
     if(matched!==statusDefs[0]&&matched!==statusDefs[1])return;
     var label=controlValue(el);
     if(norm(label).indexOf('komme')<0)return;
     var formatted=label.replace(/, *(mit +essen|ohne +essen)/i,',\n$1');
     if(formatted===label)return;
     if(el.tagName==='BUTTON'||el.tagName==='A'||(el.classList&&el.classList.contains('btn'))){
-      el.classList.add('pfvr-attendance-display-label');
-      el.setAttribute('data-pfvr-display-label',formatted);
+      if(!el.classList.contains('pfvr-attendance-display-label'))el.classList.add('pfvr-attendance-display-label');
+      if(el.getAttribute('data-pfvr-display-label')!==formatted)el.setAttribute('data-pfvr-display-label',formatted);
     }
   };
   var styleInteractive=function(root){
     (root||document).querySelectorAll('button,input[type=submit],input[type=button],a.btn,.btn,select').forEach(function(el){
       if(el.closest&&el.closest('.pfvr-person-tools'))return;
       var matched=statusForValue(controlValue(el));
-      if(matched){formatAttendanceChoiceLabel(el,matched);paint(el,matched.background,matched.foreground);return;}
-      if(el.tagName==='SELECT'){
-        paint(el,COLORS.soft,COLORS.text);
-        el.style.setProperty('border-color',COLORS.border,'important');
-      }else if(el.closest&&el.closest('.pfvr-person-control'))paint(el,COLORS.link,'#FFFFFF');
+      formatAttendanceChoiceLabel(el,matched);
+      // These are the real website controls. Their labels describe actions,
+      // not the selected state. Preserve website classes and inline colours
+      // so asynchronous server responses remain visible without reloading.
     });
   };
   var refreshInteractiveSoon=function(root){

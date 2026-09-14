@@ -21,16 +21,13 @@ struct RiverView: View {
 
 struct RiverSummaryTile: View {
     @EnvironmentObject private var state: AppState
+    var showRefresh = true
     var body: some View {
         PFVRCard {
             HStack {
                 Text(state.ui("Rhein aktuell")).font(.headline)
                 Spacer()
-                Button { Task { await state.refresh(force: true) } } label: {
-                    Image(systemName: "arrow.clockwise").rotationEffect(.degrees(state.loading ? 360 : 0))
-                        .animation(state.loading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: state.loading)
-                        .frame(width: 44, height: 44)
-                }.accessibilityLabel(state.ui("Rhein und Wetter aktualisieren")).accessibilityIdentifier("river.refresh")
+                if showRefresh { LiveRefreshButton().accessibilityIdentifier("river.refresh") }
             }
             HStack(alignment: .top, spacing: 16) {
                 ForEach(state.activeStations) { station in

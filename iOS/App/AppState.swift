@@ -33,6 +33,12 @@ final class AppState: ObservableObject {
     private var service: PFVRDataService?
     private var cartStore: CashCartStore?
     private var tiles: TileLayoutStore?
+    @Published private(set) var clubPages: [ClubPage: Loaded<ClubContent>] = [:]
+    @Published private(set) var clubLoading: Set<ClubPage> = []
+    @Published private(set) var clubFailed: Set<ClubPage> = []
+    private var clubRepository: ClubRepository?
+    private var clubGeneration = 0
+    private var clearingClubCache = false
     private var activated = false
 
     init() {
@@ -131,18 +137,51 @@ final class AppState: ObservableObject {
         rivers[.baselRheinhalle] = await baselRequest
     }
 
+    func loadClub(_ page: ClubPage, force: Bool = false) async {
+        guard unlocked, !clearingClubCache, !clubLoading.contains(page) else { return }
+        #if DEBUG
+        if testing { return }
+        #endif
+        if clubRepository == nil {
+            let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("PFVR/ClubPages", isDirectory: true)
+            clubRepository = ClubRepository(cacheDirectory: directory)
+        }
+        guard let repository = clubRepository else { return }
+        let epoch = clubGeneration
+        clubLoading.insert(page)
+        defer { if epoch == clubGeneration { clubLoading.remove(page) } }
+        if let cached = await repository.cached(page), epoch == clubGeneration { clubPages[page] = cached }
+        do {
+            let loaded = try await repository.load(page, force: force)
+            guard epoch == clubGeneration else { return }
+            clubPages[page] = loaded; clubFailed.remove(page)
+        } catch {
+            guard epoch == clubGeneration else { return }
+            clubFailed.insert(page)
+        }
+    }
+
     func clearPublicCache() async {
         guard unlocked, !loading else { return }
         loading = true
+        clearingClubCache = true
+        defer { clearingClubCache = false }
+        clubGeneration += 1
         await BackgroundRefresh.shared.cancelAndWait()
         do {
             if let service { try await service.clearCache() }
+            if let clubRepository { try await clubRepository.clear() }
+            try await ClubImageStore.shared.clear()
+            clubPages = [:]; clubLoading = []; clubFailed = []
             weather = nil; events = nil; news = nil; rivers = [:]; failures = []
             #if DEBUG
             if testing { seedFixtures(); loading = false; return }
             #endif
             loading = false
             await refresh(force: true)
+            clearingClubCache = false
+            await loadClub(.about, force: true)
         } catch {
             loading = false
             failures = [ui("Der Daten-Cache konnte nicht gelöscht werden.")]
@@ -176,6 +215,9 @@ final class AppState: ObservableObject {
         if let cartStore { cart = cartStore.state }
         showPaymentConfirmation = false
     }
+    var firstLiveTile: String? {
+        visibleTiles(.home).first { ["home_weather","home_weather_3day","home_river_summary","home_river_charts"].contains($0.id) }?.id
+    }
     func orderedTiles(_ area: TileArea) -> [TileSpec] { tiles?.ordered(area) ?? TileLayoutStore.specs(area) }
     func visibleTiles(_ area: TileArea) -> [TileSpec] { orderedTiles(area).filter { tiles?.isVisible($0) ?? true } }
     func tileVisible(_ tile: TileSpec) -> Bool { tiles?.isVisible(tile) ?? true }
@@ -185,6 +227,7 @@ final class AppState: ObservableObject {
 
     #if DEBUG
     private func seedFixtures() {
+        clubPages = ClubPreviewData.pages(now: now)
         let start = AppDates.zurich.startOfDay(for: now)
         var weatherHours: [WeatherHour] = []
         for index in 0..<192 {

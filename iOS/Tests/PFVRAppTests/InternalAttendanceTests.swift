@@ -227,4 +227,24 @@ final class InternalAttendanceTests: XCTestCase {
         let injected = try await bool("window.fixtureInjected===true")
         XCTAssertFalse(injected)
     }
+    func testDelayedWebsiteClassAndInlineColoursRemainAuthoritative() async throws {
+        try load(language: "gsw", dark: true)
+        try await ready()
+        _ = try await webView.evaluateJavaScript("""
+            var colourStyle=document.createElement('style');
+            colourStyle.textContent='.fixture-waiting{background-color:rgb(210,30,40);color:rgb(255,255,255)}.fixture-attending{background-color:rgb(20,140,70);color:rgb(255,255,255)}';
+            document.head.appendChild(colourStyle);
+            fixtureOriginalSubmit.className='fixture-waiting';
+            fixtureOriginalSubmit.addEventListener('click',function(){setTimeout(function(){fixtureOriginalSubmit.className='fixture-attending'},650)});
+            fixtureOriginalInput.style.backgroundColor='rgb(210,30,40)';
+            fixtureOriginalInput.addEventListener('click',function(){setTimeout(function(){fixtureOriginalInput.style.backgroundColor='rgb(20,140,70)'},650)});
+            fixtureOriginalSubmit.click();fixtureOriginalInput.click();null;
+            """)
+        try await waitFor {
+            try await self.bool("getComputedStyle(fixtureOriginalSubmit).backgroundColor==='rgb(20, 140, 70)' && getComputedStyle(fixtureOriginalInput).backgroundColor==='rgb(20, 140, 70)'")
+        }
+        let preserved = try await bool("fixture.submissions.length===1 && fixture.inputClicks===1 && fixtureOriginalSubmit.textContent==='Ich komme, mit Essen'")
+        XCTAssertTrue(preserved, "The actual source events and label must survive the delayed colour update")
+    }
+
 }

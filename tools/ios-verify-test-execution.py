@@ -7,6 +7,9 @@ import sys
 
 
 TABLET_UI_TESTS = frozenset({
+    'testClubOverviewShowsTrainingAndNativeArticleWithoutExpanding',
+    'testClubSwissGermanLargeTextAndCenteredFooter',
+    'testClubCalendarAndFirstLiveRefreshAreNativeAndReachable',
     'testFirstLaunchRemainsLockedAfterInvalidCode',
     'testEveryTabIsReachableAndCapturesScreenshots',
     'testRiverRendersActualFixtureReadingsAndBothGraphs',

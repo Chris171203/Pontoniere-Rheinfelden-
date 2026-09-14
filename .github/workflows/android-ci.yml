@@ -84,6 +84,15 @@ jobs:
         working-directory: Android
         run: gradle --no-daemon --stacktrace testDebugUnitTest lintRelease assembleDebug bundleRelease
 
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-test-reports-${{ github.run_number }}
+          path: |
+            Android/app/build/reports/tests/
+            Android/app/build/test-results/
+            Android/app/build/reports/club-ui/
+
       - name: Verify packages, permissions and build artifacts
         shell: bash
         run: |
@@ -164,3 +173,32 @@ jobs:
           name: PFVR-Android-test-${{ github.run_number }}
           path: dist/
           if-no-files-found: error
+
+  attendance-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile real attendance renderer and export JavaScript
+        run: |
+          mkdir -p "$RUNNER_TEMP/skin-classes" browser-results
+          javac -d "$RUNNER_TEMP/skin-classes" Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java tools/ExportAttendanceSkin.java
+          java -cp "$RUNNER_TEMP/skin-classes" ch.pfvr.internapp.ExportAttendanceSkin browser-results
+      - name: Install browser test runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pfvr-browser" playwright@1.51.1
+          node "$RUNNER_TEMP/pfvr-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Verify delayed website colour changes in both themes and languages
+        run: NODE_PATH="$RUNNER_TEMP/pfvr-browser/node_modules" node tools/attendance-browser-test.cjs browser-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Attendance-browser-${{ github.run_number }}
+          path: browser-results/

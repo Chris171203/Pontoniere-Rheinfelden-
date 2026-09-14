@@ -26,14 +26,15 @@ public final class TileLayoutStore {
         case .cash: rows = [("cash_cart", "Warenkorb"), ("cash_drinks", "Trinken"), ("cash_food", "Essen"),
                            ("cash_celebrations", "Feiern"), ("cash_free_amount", "Freier Betrag"),
                            ("cash_twint", "TWINT"), ("cash_payment_details", "Zahlungsdaten")]
-        case .club: rows = [("club_about", "Über den Verein"), ("club_news", "Vereinsnews"),
-                           ("club_program", "Jahresprogramm"), ("club_board", "Vorstand"), ("club_history", "Geschichte"),
-                           ("club_depot", "Depot & Route"), ("club_phone", "Telefon"), ("club_email", "E-Mail"),
-                           ("club_contact", "Kontaktseite"), ("club_instagram", "Instagram"), ("club_facebook", "Facebook")]
+        case .club: rows = [("club_sport", "Boote & Sport"), ("club_youth", "Jungpontoniere"),
+                           ("club_board", "Vorstand"), ("club_history", "Geschichte"),
+                           ("club_about", "Vereinsleben"), ("club_news", "Vereinsnews"), ("club_contact", "Kontakt")]
         }
-        return rows.map { TileSpec(id: $0.0, area: area, label: $0.1, width: area == .club && $0.0 != "club_about" ? .compact : .wide, pinned: $0.0 == "cash_cart") }
+        return rows.map { TileSpec(id: $0.0, area: area, label: $0.1, width: .wide, pinned: $0.0 == "cash_cart") }
     }
     public static func normalizeOrder(area: TileArea, requested: [String]) -> [String] {
+        let oldClub = ["club_about","club_news","club_program","club_board","club_history","club_depot","club_phone","club_email","club_contact","club_instagram","club_facebook"]
+        let requested = area == .club && requested == oldClub ? [] : requested
         let catalog = specs(area)
         let known = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
         let supplied = Set(requested)
