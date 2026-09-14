@@ -62,12 +62,29 @@ public class ClubAndHomeUiTest {
             View club=(View)call(activity,"club");
             assertTrue(text(club).contains("Morgen im Verein (Stand 2021)"));
             assertEquals(0,count(club,WebView.class));
-            assertEquals(3,count(club,ImageView.class)); // Vereinslogo plus two brand logos.
+            assertEquals(6,count(club,ImageView.class)); // Vereinslogo plus five footer actions.
             ViewGroup body=(ViewGroup)((ViewGroup)club).getChildAt(0);
             LinearLayout footer=(LinearLayout)body.getChildAt(body.getChildCount()-1);
             assertEquals(android.view.Gravity.CENTER,footer.getGravity());
-            assertEquals("Instagram",footer.getChildAt(0).getContentDescription());
-            assertEquals("Facebook",footer.getChildAt(1).getContentDescription());
+            assertEquals(5,footer.getChildCount());
+            assertEquals("Telefon",footer.getChildAt(0).getContentDescription());
+            assertEquals("Navigation",footer.getChildAt(1).getContentDescription());
+            assertEquals("E-Mail",footer.getChildAt(2).getContentDescription());
+            footer.getChildAt(0).performClick();
+            android.content.Intent dial=org.robolectric.Shadows.shadowOf(activity).getNextStartedActivity();
+            assertEquals(android.content.Intent.ACTION_DIAL,dial.getAction());
+            assertEquals("tel:+41762091896",dial.getDataString());
+            footer.getChildAt(1).performClick();
+            android.content.Intent map=org.robolectric.Shadows.shadowOf(activity).getNextStartedActivity();
+            assertEquals(android.content.Intent.ACTION_VIEW,map.getAction());
+            assertEquals("geo",map.getData().getScheme());
+            assertTrue(android.net.Uri.decode(map.getDataString()).contains("Rheinweg 42, 4310 Rheinfelden"));
+            footer.getChildAt(2).performClick();
+            android.content.Intent email=org.robolectric.Shadows.shadowOf(activity).getNextStartedActivity();
+            assertEquals(android.content.Intent.ACTION_SENDTO,email.getAction());
+            assertEquals("mailto:info@pfvr.ch",email.getDataString());
+            assertEquals("Instagram",footer.getChildAt(3).getContentDescription());
+            assertEquals("Facebook",footer.getChildAt(4).getContentDescription());
         }
     }
 

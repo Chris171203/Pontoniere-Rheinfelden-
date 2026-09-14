@@ -75,11 +75,17 @@ public class TileLayoutStoreTest {
     @Test public void clubCatalogDropsRetiredTilesAndPreservesRemainingLayout(){
         List<String> normalized=TileLayoutStore.normalizeOrder(
                 TileLayoutStore.Area.CLUB,
-                List.of("club_about","club_join","club_instagram","club_facebook","club_phone","club_email","club_news","club_contact")
+                List.of("club_about","club_join","club_instagram","club_facebook","club_phone","club_email","club_depot","club_news","club_contact")
         );
         assertFalse(normalized.contains("club_join"));
         assertFalse(normalized.contains("club_instagram"));
         assertFalse(normalized.contains("club_facebook"));
+        assertFalse(normalized.contains("club_phone"));
+        assertFalse(normalized.contains("club_email"));
+        assertFalse(normalized.contains("club_depot"));
+        assertEquals(List.of("club_about","club_news","club_contact"),normalized.subList(0,3));
+        assertTrue(TileLayoutStore.sanitizeHidden(TileLayoutStore.Area.CLUB,
+                Set.of("club_phone","club_email","club_depot")).isEmpty());
         assertEquals(TileLayoutStore.specs(TileLayoutStore.Area.CLUB).size(),normalized.size());
     }
 }

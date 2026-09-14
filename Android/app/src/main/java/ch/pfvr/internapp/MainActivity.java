@@ -3622,7 +3622,7 @@ private View cashPaymentDetailsTile(){
     tiles.setOrientation(LinearLayout.VERTICAL);
     body.addView(tiles,new LinearLayout.LayoutParams(-1,-2));
     addConfiguredTiles(tiles,TileLayoutStore.Area.CLUB,this::clubTileView);
-    body.addView(clubSocialFooter(),new LinearLayout.LayoutParams(-1,-2));
+    body.addView(clubFooter(),new LinearLayout.LayoutParams(-1,-2));
     refreshClubPage(ClubPageRepository.Page.ABOUT,false);
     return scroll;
 }
@@ -3634,9 +3634,6 @@ private View clubTileView(TileLayoutStore.Spec spec){
         case "club_program":return clubActionTile("Jahresprogramm","Termine und Kalender",v->navigate(Screen.EVENTS));
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openClubPage(ClubPageRepository.Page.BOARD));
         case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openClubPage(ClubPageRepository.Page.HISTORY));
-        case "club_depot":return clubActionTile("Depot & Route","Rheinweg 42",v->openMap());
-        case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
-        case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
         case "club_contact":return clubActionTile("Kontakt","Weitere Ansprechwege",v->openClubPage(ClubPageRepository.Page.CONTACT));
         default:return null;
     }
@@ -3659,24 +3656,29 @@ private View clubAboutTile(){
     return group;
 }
 
-private View clubSocialFooter(){
+private View clubFooter(){
     LinearLayout row=new LinearLayout(this);
     row.setGravity(Gravity.CENTER);
     row.setPadding(0,dp(12),0,dp(16));
-    addClubSocialLogo(row,R.drawable.ic_instagram,"Instagram",PublicLinks.INSTAGRAM);
-    addClubSocialLogo(row,R.drawable.ic_facebook,"Facebook",PublicLinks.FACEBOOK);
+    addClubFooterIcon(row,R.drawable.ic_phone,"Telefon",true,v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
+    addClubFooterIcon(row,R.drawable.ic_navigation,"Navigation",true,v->openMap());
+    addClubFooterIcon(row,R.drawable.ic_email,"E-Mail",true,v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
+    addClubFooterIcon(row,R.drawable.ic_instagram,"Instagram",false,v->external(PublicLinks.INSTAGRAM));
+    addClubFooterIcon(row,R.drawable.ic_facebook,"Facebook",false,v->external(PublicLinks.FACEBOOK));
     return row;
 }
 
-private void addClubSocialLogo(LinearLayout row,int drawable,String name,String url){
+private void addClubFooterIcon(LinearLayout row,int drawable,String name,boolean tint,View.OnClickListener action){
     ImageView logo=new ImageView(this);
     logo.setImageResource(drawable);
+    if(tint)logo.setColorFilter(themeText(WATER));
     logo.setPadding(dp(10),dp(10),dp(10),dp(10));
-    logo.setContentDescription(name);
+    logo.setContentDescription(ui(name));
+    logo.setTooltipText(ui(name));
     logo.setFocusable(true);
-    logo.setOnClickListener(v->external(url));
+    logo.setOnClickListener(action);
     LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(48),dp(48));
-    params.setMargins(dp(5),0,dp(5),0);
+    params.setMargins(dp(2),0,dp(2),0);
     row.addView(logo,params);
 }
 

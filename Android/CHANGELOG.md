@@ -1,5 +1,11 @@
 # Android Changelog
 
+## 0.12.8
+- Telefon, Navigation und E-Mail als Symbole zusammen mit Instagram/Facebook unten mittig auf der Vereinsseite.
+- Bisherige Telefon-/Depot-/E-Mail-Kacheln entfallen; gespeicherte Reihenfolgen und ausgeblendete IDs werden bereinigt.
+- 48-dp-Tapflächen, zugängliche Beschriftung und Tooltips; Telefon öffnet den Wähldialog, Navigation das Depot, E-Mail einen Entwurf.
+- Weiterer Ausbau der Vereinsinhalte aus der Homepage geplant: `docs/verein-inhaltsplan.md`.
+
 ## 0.12.7
 - An-/Abmeldung: Website-Zustandsfarben werden nicht mehr durch aus der Beschriftung abgeleitete App-Farben überschrieben. Verzögerte Klassen-/Inline-Änderungen bleiben ohne Reload sichtbar. Alte visuelle Buttonbeschriftungen werden bei Statuswechsel entfernt.
 - Verein/Sport, Vorstand, Geschichte und Kontakt aus WordPress als native, lokal gecachte Textansichten; Kontaktlinks bleiben anklickbar. Jahresprogramm öffnet den App-Kalender. Formulare und PDF-Bücher bleiben extern nutzbar.

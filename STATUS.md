@@ -1,6 +1,12 @@
 # Status
 
-Stand: Testversion `0.12.7` (`versionCode 64`) · aktualisiert 2026-09-14.
+Stand: `0.12.8` in Prüfung (Basis `0.12.7`) · aktualisiert 2026-09-14.
+
+## Ergänzung 0.12.8
+
+- Telefon, Navigation zum Depot und E-Mail werden zusammen mit Instagram/Facebook als fünf Symbole unten mittig angezeigt. Die bisherigen drei Aktionskacheln entfallen; gespeicherte Layouts werden normalisiert.
+- [Übernahmeplan für Vereinsinhalte](docs/verein-inhaltsplan.md): zuerst Training, Boote und Vereinsleben strukturieren; danach Nachwuchs, Fahrtechnik, Porträts und belegte Meilensteine. Alte Mitgliederzahlen (2021) und ungeprüfte Kategorien nicht als aktuell darstellen. Der Ausbau ist in diesem Schritt nur geplant.
+- Prüfung und neue Test-APK folgen.
 
 ## Aktuelles Arbeitspaket 0.12.7
 

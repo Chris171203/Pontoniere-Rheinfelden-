@@ -52,7 +52,7 @@ public class LandingPageSourceTest {
         String activity = source("src/main/java/ch/pfvr/internapp/MainActivity.java");
         String unlocked = unlockedSource(activity);
         assertFalse(unlocked.contains("joinInfo.setOnClickListener(v->external(PublicLinks.JOIN))"));
-        assertTrue(unlocked.contains("body.addView(clubSocialFooter()"));
+        assertTrue(unlocked.contains("body.addView(clubFooter()"));
         assertFalse(unlocked.contains("case \"club_join\":return clubActionTile"));
 
 
