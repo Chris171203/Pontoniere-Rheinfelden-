@@ -56,4 +56,23 @@ final class LiveSourceSmokeTests: XCTestCase {
             print("PUBLIC-SMOKE BAFU \(station.rawValue): live=\(result.live?.value.count ?? 0), fine=\(result.fine?.value.count ?? 0), history=\(result.history?.value.count ?? 0)")
         }
     }
+    func testPublicClubPagesProduceNativeSections() async throws {
+        let repository = ClubRepository(cacheDirectory: directory.appendingPathComponent("club"))
+        for page in ClubPage.allCases {
+            let result = try await repository.load(page, force: true)
+            XCTAssertFalse(result.metadata.isStale)
+            XCTAssertFalse(result.value.text.isEmpty)
+            switch page {
+            case .about:
+                XCTAssertEqual(ClubTraining.summaries(result.value).count, 2)
+                XCTAssertFalse(ClubDestination.sport.sections(in: result.value).isEmpty)
+                XCTAssertNotNil(result.value.hero)
+            case .board: XCTAssertFalse(result.value.sections.isEmpty)
+            case .youth: XCTAssertFalse(result.value.sections.isEmpty)
+            case .history: XCTAssertFalse(result.value.milestones.isEmpty)
+            case .contact: XCTAssertFalse(result.value.links.isEmpty)
+            }
+            print("PUBLIC-SMOKE club \(page.rawValue): sections=\(result.value.sections.count), sourceDate=\(result.value.modified != nil), hero=\(result.value.hero != nil)")
+        }
+    }
 }

@@ -11,7 +11,7 @@ Stand: 2026-09-14 · Android-Testversion `0.15.0` (`versionCode 68`).
 
 ## Aktuelle Arbeiten
 
-1. Android 0.15.0 abgeschlossen; verbliebene abgeschlossene Branches prüfen und bereinigen.
+1. Android 0.15.0 und Branch-Bereinigung abgeschlossen: 47 Branches entfernt, drei historische Vorstufen als Archiv-Tags erhalten. [Bereinigungsnachweis](docs/cleanup-0.15.0.md).
 2. iOS 0.15.0 / Build 2 im bestehenden PR #32: Quellenparser und Caches, direkte Trainingsübersicht, flache Themenartikel, Kontakt-/Social-Symbole, frühes Live-Refresh und gemeinsamer aktueller An-/Abmelderenderer implementiert; neue Prüfungen vorbereitet.
 3. iOS-Core-, WebKit-, Simulator- und Gerätearchivprüfungen ausführen und den tatsächlichen Umfang dokumentieren.
 

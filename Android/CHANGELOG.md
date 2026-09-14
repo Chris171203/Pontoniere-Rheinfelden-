@@ -1,5 +1,12 @@
 # Android Changelog
 
+## 0.15.0
+- Freigegebener Funktionsstand 0.12.10 als neuer Testmeilenstein, Versionscode 68.
+- Vereinsübersicht mit direkt sichtbaren Sommer-/Winterzeiten, Treffpunkten und Kalender; kompakte Navigation zu normalen Themenseiten ohne fachliche Aufklappmenüs.
+- Originaltexte/-bilder aus WordPress, lokale Caches und klare Quellenstände; neue App-Beschriftungen und Wochentage auf Schweizerdeutsch.
+- Aktuelle README und Statusdatei konsolidiert; ältere Statusgeschichte unverändert archiviert.
+
+
 ## 0.12.8
 - Telefon, Navigation und E-Mail als Symbole zusammen mit Instagram/Facebook unten mittig auf der Vereinsseite.
 - Bisherige Telefon-/Depot-/E-Mail-Kacheln entfallen; gespeicherte Reihenfolgen und ausgeblendete IDs werden bereinigt.
