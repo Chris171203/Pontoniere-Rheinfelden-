@@ -1,40 +1,45 @@
 # Abnahme 0.15.0
 
-Stand: 2026-09-14. Android abgeschlossen; iOS-Abnahme noch offen.
+Stand: 2026-09-14. Android und iOS abgeschlossen und nach `main` übernommen.
 
-## Android und Repository
+## Android
 
-Der freigegebene Funktionsstand 0.12.10 wurde als **0.15.0 / Versionscode 68** mit erhaltener Test-ID und Signatur gebaut. [CI 34825587615](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615) ist erfolgreich; PR #33 ist in main integriert. [Test-APK](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615/artifacts/10340042643). Der Android-Lauf [34828648912](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34828648912) ist auch auf dem aktuellen integrierten iOS-Branch erfolgreich.
+Freigegebener Funktionsstand 0.12.10 als **0.15.0 / Versionscode 68**, Paket `ch.pfvr.app.test`, festes Testzertifikat erhalten. [CI 34825587615 / Lauf 199](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615) erfolgreich: Android-Tests, vier Browser-Szenarien, Lint, Debug-APK, unsigned Release-AAB und Paket-/Signaturprüfung. PR #33 wurde nach main übernommen (`f8487c0965f377ff61db3822154a73d6a804dd71`).
 
-47 alte Branches wurden entfernt; drei abweichende Vorstufen vorher als Archiv-Tags erhalten. [Bereinigungsnachweis](cleanup-0.15.0.md). Remote bleiben main und der noch offene iOS-PR #32.
+[Android-Test-APK 0.15.0](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615/artifacts/10340042643). Die Funktions- und Screenshotnachweise des unveränderten Android-Produktcodes stehen in [checks-0.12.10.md](checks-0.12.10.md). Der integrierte iOS-Branch besteht zusätzlich [Android-CI 34869645363 / Lauf 204](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34869645363); gegenüber dem freigegebenen Android-Stand ist nur dessen CHANGELOG ergänzt.
 
 ## iOS 0.15.0 / Build 2
 
-Implementiert: direkte Trainingsübersicht, kompakte Themenzeilen, vollständig lesbare native Artikel, öffentliche WordPress-Inhalte mit Tagescache, begrenzter Bildcache, zentrierte Kontakt-/Social-Symbole, früher Live-Refresh, Deutsch/Schweizerdeutsch und bytegleicher aktueller Android-An-/Abmelderenderer. Originaltexte bleiben unverändert.
+Direkte Sommer-/Winterzeiten und Treffpunkte, App-Kalender, kompakte Themenzeilen und vollständig lesbare native Artikel entsprechen dem freigegebenen Vereinskonzept. Öffentliche WordPress-Inhalte und ausgewählte Bilder werden lokal gecacht. Originaltexte bleiben unverändert; app-eigene Beschriftungen sind auf Deutsch/Schweizerdeutsch gepflegt. Fünf zentrierte Kontakt-/Social-Symbole, früher Live-Refresh und der bytegleiche aktuelle Android-An-/Abmelderenderer sind integriert.
 
-Geprüfter Remote-Quellstand: `5c229139a57d7f661aba505096578ddfa836f4c0`, [CI 34828648798, Lauf 32](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34828648798). PR-Testmerge und Quellbranch haben denselben Baum `d82edfdca90b8dba8a4371dffa77f717150f1ac7`.
+Vollständig bestanden: Quellstand `1a7dd5adf231cbbe1875ca4d35108f72327a7b47`, [iOS-CI 34869645361 / Lauf 36, Versuch 2](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34869645361). Ausschliesslich die beiden fehlgeschlagenen iPhone-Jobs wurden einmal unverändert wiederholt; die drei erfolgreichen Jobs des ersten Versuchs blieben erhalten. Bereits [Lauf 34](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34868088132) bestand vollständig. Die letzte Änderung verschärft allein den Footer-Sichtnachweis.
 
-| Prüfung | Tatsächliches Ergebnis |
+PR #32 ist mit `f938403b5f5ef925dc15a6436721c3701ed86b74` nach `main` übernommen. Quellstand, PR-Testmerge `85e2fabef9397bbe1da888383461fd0a563de754` und tatsächlicher Merge haben denselben Baum: `5287043a395ac2bc2a13d44799f31a86f0cc22af`. Anschliessende Bereinigungs- und Dokumentationscommits ändern keinen App-Produktcode.
+
+| Prüfung | Tatsächlich bestanden in Lauf 36 |
 |---|---|
-| Foundation | 61 deterministische Tests bestanden; fünf Live-Tests separat ausgeführt und bestanden |
-| Öffentliche Quellen | Wetter, Kalender, News, beide BAFU-Stationen und fünf Vereinsseiten erfolgreich gelesen |
-| iPhone compact | 61 Core + 22 Hosted bestanden; 13 von 14 UI-Fällen bestanden |
-| iPhone large | 61 Core + 22 Hosted bestanden; 13 von 14 UI-Fällen bestanden |
-| iPad tablet | Alle 14 UI-Fälle bestanden, keine Skips |
-| Gerätearchiv | Unsigniertes arm64-iPhoneOS-Release-Archiv inklusive Version 0.15.0 / Build 2 und AppIcon bestanden |
+| Foundation | 61 deterministische Tests; fünf Live-Tests separat ausgeführt |
+| iPhone SE 3, hell | 61 Core + 22 Hosted + 14 UI = 97 Tests |
+| iPhone 16 Pro Max, dunkel | 61 Core + 22 Hosted + 14 UI = 97 Tests |
+| iPad Air 11 Zoll M2, hell | Alle 14 UI-Fälle, keine Skips |
+| Gerätearchiv | Release für iPhoneOS/arm64, Version 0.15.0 / Build 2, AppIcon und Produktmetadaten |
 
-Die fünf Live-Fälle werden im deterministischen Core-Schritt absichtlich übersprungen und zählen dort nicht als bestanden. Xcode 16.4 / iOS 18.5. Kontaktbögen der drei Profile aus den echten CI-Logs wurden angesehen; das ist keine vollständige Prüfung aller Original-PNGs.
+Umgebung: Xcode 16.4 / iOS 18.5. Alle ausgewiesenen Tests ohne Fehler. Die fünf Live-Fälle werden im deterministischen Core-Schritt absichtlich übersprungen und zählen dort nicht als ausgeführt. Separat wurden Wetter, Kalender, News, beide BAFU-Stationen und fünf öffentliche Vereinsseiten tatsächlich erfolgreich gelesen. Compact besteht zusätzlich den Release-Build.
 
-## Verbleibende Korrektur und Fortsetzung
+Neue Prüfungen decken Quellenparser, Layoutmigration, Cache-Persistenz und Löschbarrieren, native Bildaufbereitung sowie verzögerte Website-Farbänderungen im echten WKWebView ab. Die UI-Fälle prüfen direkt sichtbare Trainingszeiten, native Artikel ohne Aufklappen, Kalenderwechsel, frühen Refresh, Nachwuchskontakt, Schweizerdeutsch, grosse Schrift und zentrierte Kontakt-/Social-Symbole.
 
-Large scheitert beim Öffnen der Sportseite: Der bisherige Helfer akzeptiert die Zeile als antippbar, obwohl die vorherige Aufnahme sie unterhalb des sichtbaren Inhalts zeigt. Compact scheitert mit grosser Schweizerdeutsch-Schrift beim Erreichen derselben Zeile; der Helfer wischt ausschliesslich nach oben und kann eine übersprungene Zeile nicht zurückholen. Die vorherige reine Selektorkorrektur reicht damit nicht aus.
+## Korrekturen und Sichtprüfung
 
-Lokaler Commit `50059cfc97e8141883ddb767b2ce5f2684d299b0` ergänzt für Vereinsaktionen kurze gerichtete Scrollbewegungen und verlangt die vollständige Zeile zwischen Navigation und Tabs. Alle fachlichen Assertions bleiben erhalten. `git diff --check` und der lokale Plist-/Konfigurationsaudit sind bestanden; der neue XCUITest-Code ist noch nicht kompiliert oder ausgeführt.
+Frühere UI-Läufe fanden zunächst verdeckte oder vererbte SwiftUI-Kennungen nicht. Sichtbare Beschriftungen behoben die Refresh-Abfrage. Die Sportnavigation erforderte zusätzlich eine geometrische Prüfung: SwiftUI meldet teilweise unter der Tab-Leiste liegende Elemente bereits als antippbar. Kurze gerichtete Scrollbewegungen bringen die vollständige Zeile zwischen Navigation und Tabs; sie können auch nach oben zurückscrollen. Die fachlichen Assertions wurden beibehalten.
 
-Der Push wurde durch die automatische Freigabeprüfung abgelehnt. Origin wurde danach als `https://github.com/Chris171203/Pontoniere-Rheinfelden-.git` verifiziert und mit dem bestehenden PR #32 abgeglichen; auch der erneute Versuch wurde mangels ausdrücklicher Push-Freigabe abgelehnt. Keine Umgehung oder alternative Remote-Schreiboperation durchgeführt.
+Die Sichtprüfung von Lauf 34 zeigte dieselbe Schwäche noch bei der Footer-Aufnahme auf dem iPad. Der letzte Commit verwendet deshalb auch dort die vollständige Sichtbarkeitsprüfung. Er ändert genau eine Testzeile und keinen App-Produktcode.
 
-Der Nutzer hat danach Push und Bereinigung ausdrücklich freigegeben. Der lokale Git-Client hat keine Schreibanmeldung; die vorbereiteten Änderungen werden über die verbundene GitHub-Integration übertragen. Danach tatsächliche Simulatorergebnisse prüfen und verbleibende Fehler beheben. Erst nach erfolgreicher Abnahme PR #32 integrieren, den dann abgeschlossenen Branch entfernen und die einmaligen Bereinigungsdateien aus dem aktuellen Baum nehmen. Diesen Bericht und STATUS anschliessend auf den endgültigen Stand aktualisieren.
+Kontaktbögen aus tatsächlichen CI-Logs wurden für Training, native Sport-/Nachwuchsartikel, Schweizerdeutsch mit grosser Schrift, Home und Systemdialoge angesehen. Die abschliessenden Footer-Kontaktbögen aus Lauf 36 wurden auf allen drei Profilen angesehen: fünf vollständig sichtbare, zentrierte Symbole. Alle neuen Vereinsfälle bestehen. Im ersten Versuch von Lauf 36 überschritt auf beiden iPhones ein App-Start/Neustart das 60-Sekunden-Budget des Warenkorbtests; die Logs zeigen rund 42 Sekunden Verzögerung beim Start beziehungsweise bei der Einrichtung der Testautomatisierung. Auf dem grossen iPhone wurde zusätzlich die native Teilen-Ansicht erst nach Ablauf der Abfrage erkannt; das AX-Protokoll enthält danach die tatsächlichen Aktionen. Ausschliesslich die beiden fehlgeschlagenen iPhone-Jobs wurden einmal unverändert wiederholt und bestanden vollständig. Der Warenkorbtest benötigte dabei 31,4 Sekunden (compact) beziehungsweise 39,7 Sekunden (large); die Systemdialoge bestanden in 36,8 beziehungsweise 51,2 Sekunden. Diese Wiederholung ist ausdrücklich dokumentiert; es gibt keine automatische Wiederholung einzelner Testfälle und keine gelockerten Assertions oder Zeitlimits. Das ist keine vollständige Prüfung sämtlicher Original-PNGs oder aller Gerätekonfigurationen.
+
+## Repository
+
+48 abgeschlossene Branches wurden entfernt, drei abweichende historische Vorstufen vor dem Löschen als Archiv-Tags erhalten. Android PR #33 und iOS PR #32 sind integriert. Nach dem letzten erfolgreichen Bereinigungslauf bleibt ausschliesslich `main`, ohne offene Pull Requests. Die drei einmaligen Bereinigungsdateien sind entfernt; aktuelle Statusdateien sind gekürzt und historische Nachweise erhalten. [Bereinigungsnachweis](cleanup-0.15.0.md).
 
 ## Grenzen
 
-Das Gerätearchiv ist keine installierbare IPA; Geräteinstallation/TestFlight braucht Apple-Signierung und Provisionierung. Keine physischen Geräte, iOS-17-Runtime, persönlichen produktiven Intern-Aktionen oder realen Zahlungen geprüft.
+Die iOS-Kompilierung und Laufzeitprüfung erfolgten in GitHub Actions. Die lokale Linux-Umgebung hat kein Xcode. Das Gerätearchiv ist unsigniert und keine installierbare IPA; Geräteinstallation/TestFlight benötigt Apple-Signierung und Provisionierung. Physische Geräte, iOS 17 zur Laufzeit, iPad-Querformat/Multitasking, persönliche produktive Intern-Aktionen und reale Zahlungen sind nicht Teil dieser Abnahme.
