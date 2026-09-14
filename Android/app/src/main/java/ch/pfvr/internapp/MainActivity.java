@@ -3635,7 +3635,9 @@ private View clubTileView(TileLayoutStore.Spec spec){
         case "club_board":return clubActionTile("Vorstand","Funktionen und Kontakte",v->openClubPage(ClubPageRepository.Page.BOARD));
         case "club_history":return clubActionTile("Geschichte","Seit 1896 auf dem Rhein",v->openClubPage(ClubPageRepository.Page.HISTORY));
         case "club_depot":return clubActionTile("Depot & Route","Rheinweg 42",v->openMap());
-        case "club_contact":return clubActionTile("Kontakt","Telefon, E-Mail und Kontaktformular",v->openClubPage(ClubPageRepository.Page.CONTACT));
+        case "club_phone":return clubActionTile("Telefon","076 209 18 96",v->startActivity(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:+41762091896"))));
+        case "club_email":return clubActionTile("E-Mail","info@pfvr.ch",v->startActivity(new Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:info@pfvr.ch"))));
+        case "club_contact":return clubActionTile("Kontakt","Weitere Ansprechwege",v->openClubPage(ClubPageRepository.Page.CONTACT));
         default:return null;
     }
 }

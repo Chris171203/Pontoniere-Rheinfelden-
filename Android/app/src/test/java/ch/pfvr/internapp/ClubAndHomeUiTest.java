@@ -55,11 +55,12 @@ public class ClubAndHomeUiTest {
         try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity activity=controller.get();configure(activity);
             SharedPreferences prefs=(SharedPreferences)field(activity,"prefs");
+            prefs.edit().putString("ui_language","gsw").commit();
             var page=ClubPageRepository.Page.ABOUT;
-            prefs.edit().putString(page.cacheKey(),ClubPageRepositoryTest.response(page,"<p>Original Vereinsinhalt 2021</p>"))
+            prefs.edit().putString(page.cacheKey(),ClubPageRepositoryTest.response(page,"<p>Morgen im Verein (Stand 2021)</p>"))
                     .putLong(page.updatedKey(),System.currentTimeMillis()).commit();
             View club=(View)call(activity,"club");
-            assertTrue(text(club).contains("Original Vereinsinhalt 2021"));
+            assertTrue(text(club).contains("Morgen im Verein (Stand 2021)"));
             assertEquals(0,count(club,WebView.class));
             assertEquals(3,count(club,ImageView.class)); // Vereinslogo plus two brand logos.
             ViewGroup body=(ViewGroup)((ViewGroup)club).getChildAt(0);

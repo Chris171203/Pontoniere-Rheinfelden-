@@ -6,7 +6,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ClubPageRepositoryTest {
-    static String response(ClubPageRepository.Page page,String html){
+    static String response(ClubPageRepository.Page page,String html) throws Exception {
         return new JSONArray().put(new JSONObject().put("slug",page.slug).put("link",page.url)
                 .put("title",new JSONObject().put("rendered",page.label))
                 .put("content",new JSONObject().put("rendered",html))).toString();
