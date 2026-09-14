@@ -454,7 +454,7 @@ final class PFVRUITests: XCTestCase {
         capture("club-sport-gsw-large")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let footer = element("club.footer.facebook")
-        reveal(footer)
+        revealPageControl(footer)
         let ids = ["phone","navigation","email","instagram","facebook"].map { element("club.footer." + $0) }
         for item in ids { XCTAssertTrue(item.exists && item.isHittable) }
         XCTAssertLessThan(abs(ids[0].frame.midY - ids[4].frame.midY), 3)
