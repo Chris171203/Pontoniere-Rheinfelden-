@@ -27,6 +27,7 @@ final class PFVRUITests: XCTestCase {
         if let weatherDay {
             app.launchArguments.append("-ui-test-weather-day")
             if weatherDay == "evening" { app.launchArguments.append("-ui-test-weather-evening") }
+            if weatherDay == "same-time" { app.launchArguments.append("-ui-test-weather-same-time") }
         }
         if swissGerman { app.launchArguments.append("-ui-test-swiss-german") }
         app.launch()
@@ -124,14 +125,24 @@ final class PFVRUITests: XCTestCase {
         launch(weatherDay: "both", swissGerman: true)
         XCTAssertTrue(app.staticTexts["Wätter zu de nöchschte Termin"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Mittagsanlass"].firstMatch.exists)
-        let midday = app.staticTexts["28–28 °C"].firstMatch
-        revealPageControl(midday)
-        capture("weather-midday-gsw")
-        let evening = app.staticTexts["14–14 °C"].firstMatch
-        revealPageControl(evening)
         XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        revealPageControl(app.staticTexts["28 °C"].firstMatch)
+        XCTAssertTrue(app.staticTexts["14 °C"].exists)
         XCTAssertFalse(app.staticTexts["40–40 °C"].exists)
-        capture("weather-evening-gsw")
+        XCTAssertFalse(app.staticTexts["28–28 °C"].exists)
+        XCTAssertFalse(app.staticTexts["14–14 °C"].exists)
+        capture("weather-shared-gsw")
+    }
+
+    func testHomeSameTimeEventsShareOneForecast() {
+        launch(weatherDay: "same-time", swissGerman: true)
+        XCTAssertTrue(app.staticTexts["Wätter zu de nöchschte Termin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Zweiter Anlass"].firstMatch.exists)
+        revealPageControl(app.staticTexts["14–14 °C"].firstMatch)
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "14–14 °C")).count, 1)
+        XCTAssertFalse(app.staticTexts["Mittagsanlass"].exists)
+        capture("weather-shared-same-time")
     }
 
     func testHomeWithOnlyEveningOmitsMiddayWeather() {

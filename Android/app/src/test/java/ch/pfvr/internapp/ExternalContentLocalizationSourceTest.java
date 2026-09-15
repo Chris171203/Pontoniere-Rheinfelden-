@@ -36,7 +36,7 @@ public class ExternalContentLocalizationSourceTest {
 
     @Test public void externalTrainingTitleAndCanonicalPaymentDataStayUntouched() throws Exception {
         String source = source();
-        assertTrue(source.contains("txtRaw(x[1],15,MUTED,true)"));
+        assertTrue(source.contains("txtRaw(event.fromCalendar?event.title:ui(event.title),16,TEXT,true)"));
         assertTrue(source.contains("txtRaw(amountLine+\"\\n\"+CLUB_PAYEE+\"\\n\"+CLUB_IBAN+\"\\n\"+CLUB_PAYMENT_NOTE"));
     }
     @Test public void appOwnedWeatherFallbacksAreLocalizedBeforeRawRendering() throws Exception {

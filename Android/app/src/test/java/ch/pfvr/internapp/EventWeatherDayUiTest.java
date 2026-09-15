@@ -30,6 +30,7 @@ public class EventWeatherDayUiTest {
     private static Object call(MainActivity app,String method,String now) throws Exception {Method m=MainActivity.class.getDeclaredMethod(method,ZonedDateTime.class);m.setAccessible(true);return m.invoke(app,time(now));}
     private static List<?> selected(MainActivity app,String now) throws Exception {return (List<?>)call(app,"nextWeatherSlots",now);}
     private static String text(View v){String s=v instanceof TextView?((TextView)v).getText().toString():"";if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)s+="\n"+text(((ViewGroup)v).getChildAt(i));return s;}
+    private static int forecasts(View v){int count="event-weather-forecast".equals(v.getTag())?1:0;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)count+=forecasts(((ViewGroup)v).getChildAt(i));return count;}
     private static String weather() throws Exception {
         JSONObject hourly=new JSONObject();String[] keys={"time","temperature_2m","precipitation_probability","precipitation","weather_code","wind_speed_10m","wind_gusts_10m","uv_index"};
         for(String key:keys)hourly.put(key,new JSONArray());
@@ -39,17 +40,31 @@ public class EventWeatherDayUiTest {
         }
         return new JSONObject().put("hourly",hourly).toString();
     }
-    @Test public void middayAndEveningHaveSeparateWeatherAndSwissGermanHeading() throws Exception {
+    @Test public void middayAndEveningShareOneForecastWithSwissGermanHeading() throws Exception {
         try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity app=controller.get();
             Object noon=event("Mittagsanlass","2026-09-15T12:30","2026-09-15T14:00",false), evening=event("Abendanlass","2026-09-15T18:30","2026-09-15T20:00",false);
             events(app,evening,noon);
             SharedPreferences prefs=(SharedPreferences)field(app,"prefs");prefs.edit().putString((String)field(app,"PREF_WEATHER_CACHE"),weather()).putString("ui_language","gsw").commit();
-            ViewGroup tile=(ViewGroup)call(app,"homeWeatherTile","2026-09-15T09:00");String rendered=text(tile);
+            ViewGroup tile=(ViewGroup)call(app,"homeWeatherTile","2026-09-15T09:00");String rendered=text(tile);assertEquals(1,forecasts(tile));
             assertTrue(rendered,rendered.contains("Wätter zu de nöchschte Termin"));assertTrue(rendered.contains("Mittagsanlass"));assertTrue(rendered.contains("Abendanlass"));assertTrue(rendered.indexOf("Mittagsanlass")<rendered.indexOf("Abendanlass"));
             assertTrue(rendered.contains("12:30–14:00"));assertTrue(rendered.contains("18:30–20:00"));assertTrue(rendered.contains("28 °C"));assertTrue(rendered.contains("14 °C"));
             events(app,evening);String only=text((View)call(app,"homeWeatherTile","2026-09-15T09:00"));
             assertFalse(only.contains("Mittagsanlass"));assertFalse(only.contains("28 °C"));assertFalse(only.contains("99 km/h"));assertTrue(only.contains("14 °C"));
+        }
+    }
+    @Test public void simultaneousEventsShareForecastAndRainIsCountedOnce() throws Exception {
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity app=controller.get();
+            events(app,event("Abend A","2026-09-15T18:30","2026-09-15T20:00",false),event("Abend B","2026-09-15T18:30","2026-09-15T20:00",false));
+            JSONObject data=new JSONObject(weather());
+            JSONArray rain=data.getJSONObject("hourly").getJSONArray("precipitation");
+            for(int h=0;h<24;h++)rain.put(h,1);
+            SharedPreferences prefs=(SharedPreferences)field(app,"prefs");prefs.edit().putString((String)field(app,"PREF_WEATHER_CACHE"),data.toString()).putString("ui_language","de").commit();
+            View tile=(View)call(app,"homeWeatherTile","2026-09-15T09:00");String rendered=text(tile);
+            assertEquals(1,forecasts(tile));assertTrue(rendered.contains("Abend A"));assertTrue(rendered.contains("Abend B"));
+            assertEquals(1,rendered.split("18 Uhr",-1).length-1);
+            assertTrue(rendered,rendered.contains("Regenmenge 2,0 mm"));assertFalse(rendered.contains("28 °C"));
         }
     }
     @Test public void runningCompletedCancelledAndSimultaneousEvents() throws Exception {

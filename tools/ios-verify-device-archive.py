@@ -48,7 +48,7 @@ def verify(archive):
     app = archive / 'Products' / relative
     info = plistlib.loads((app / 'Info.plist').read_bytes())
     expected = {'CFBundleIdentifier': 'ch.pfvr.app.test',
-                'CFBundleShortVersionString': '0.15.1',
+                'CFBundleShortVersionString': '0.15.2',
                 'CFBundlePackageType': 'APPL',
                 'CFBundleSupportedPlatforms': ['iPhoneOS'],
                 'UIDeviceFamily': [1, 2], 'MinimumOSVersion': '17.0'}
