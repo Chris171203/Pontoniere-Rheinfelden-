@@ -12,15 +12,14 @@ final class WeatherEventPolicy {
     static boolean usesThreePoints(boolean allDay,ZonedDateTime start,ZonedDateTime end){
         if(allDay)return true;
         if(start==null||end==null||!end.isAfter(start))return false;
-        if(!start.toLocalDate().equals(end.toLocalDate()))return true;
         return Duration.between(start,end).toMinutes()>=THREE_POINT_MINUTES;
     }
 
     static int[] targetHours(boolean allDay,ZonedDateTime start,ZonedDateTime end){
         if(!usesThreePoints(allDay,start,end))return new int[0];
-        if(allDay||start==null||end==null||!start.toLocalDate().equals(end.toLocalDate()))return new int[]{6,12,18};
+        if(allDay||start==null||end==null)return new int[]{6,12,18};
         long minutes=Duration.between(start,end).toMinutes();
         ZonedDateTime middle=start.plusMinutes(minutes/2L);
-        return new int[]{start.getHour(),middle.getHour(),end.getHour()};
+        return new int[]{start.getHour(),middle.getHour(),end.minusNanos(1).getHour()};
     }
 }

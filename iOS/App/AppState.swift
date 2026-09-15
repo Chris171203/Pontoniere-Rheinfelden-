@@ -52,6 +52,9 @@ final class AppState: ObservableObject {
         testing = false
         defaults = .standard
         #endif
+        #if DEBUG
+        if testing && ProcessInfo.processInfo.arguments.contains("-ui-test-swiss-german") { defaults.set("gsw", forKey: "ui_language") }
+        #endif
         unlocked = defaults.bool(forKey: "access_unlocked_v1")
         language = AppLanguage(rawValue: defaults.string(forKey: "ui_language") ?? "de") ?? .german
         theme = defaults.string(forKey: "theme_mode") ?? "system"
@@ -75,7 +78,7 @@ final class AppState: ObservableObject {
     }
     var total: CashMoney { catalog?.total(quantities: cart.quantities) ?? CashMoney(cents: 0) }
     var upcoming: [PFVREvent] { (events?.value ?? []).filter { $0.end > now }.sorted { $0.start < $1.start } }
-    var nextWeatherEvent: PFVREvent? { CalendarPolicy.nextWeatherEvent(events: events?.value ?? [], now: now) }
+    var nextWeatherEvents: [PFVREvent] { CalendarPolicy.nextWeatherEvents(events: events?.value ?? [], now: now) }
     func ui(_ label: String) -> String { Language.translate(label, mode: language) }
 
     func unlock(code: String) -> Bool {
@@ -248,6 +251,18 @@ final class AppState: ObservableObject {
             PFVREvent(id: "ui-event", title: "Endfahren", location: "Depot PFVR, Rheinfelden", details: "Vereinsanlass am Rhein.", start: PFVRDate.parseLocal("2026-09-12T00:00")!, end: PFVRDate.parseLocal("2026-09-13T00:00")!, allDay: true),
             PFVREvent(id: "ui-source-text", title: "Warenkorb", details: "Unveränderter externer Quelltext für den Sprachtest.", start: PFVRDate.parseLocal("2026-09-13T18:00")!, end: PFVRDate.parseLocal("2026-09-13T20:00")!)
         ], metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))
+        if ProcessInfo.processInfo.arguments.contains("-ui-test-weather-day") {
+            var selected = [PFVREvent(id: "ui-training", title: "Vereinstraining", start: PFVRDate.parseLocal("2026-09-10T18:30")!, end: PFVRDate.parseLocal("2026-09-10T20:00")!)]
+            if !ProcessInfo.processInfo.arguments.contains("-ui-test-weather-evening") {
+                selected.insert(PFVREvent(id: "ui-noon", title: "Mittagsanlass", start: PFVRDate.parseLocal("2026-09-10T12:30")!, end: PFVRDate.parseLocal("2026-09-10T14:00")!), at: 0)
+            }
+            events = Loaded(value: selected, metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))
+            let hours = (0..<24).map { hour in
+                WeatherHour(time: start.addingTimeInterval(Double(hour) * 3600), temperature: (12..<14).contains(hour) ? 28 : (18..<20).contains(hour) ? 14 : 40,
+                            precipitationProbability: 0, precipitation: 0, wind: 5, gust: 10, uv: 1, weatherCode: 0)
+            }
+            weather = Loaded(value: hours, metadata: CacheMetadata(source: "MeteoSwiss/Open-Meteo · Testdaten", updatedAt: now))
+        }
         news = Loaded(value: [NewsArticle(id: 1001, publishedAt: now, title: "Gemeinsam auf dem Rhein", excerpt: "Ein Rückblick auf das Vereinsleben und die nächste gemeinsame Ausfahrt.", url: PublicLinks.news)], metadata: CacheMetadata(source: "PFVR WordPress · Testdaten", updatedAt: now))
         for station in HydroStation.allCases {
             var samples: [HydroObservation] = []

@@ -7,6 +7,8 @@ import sys
 
 
 TABLET_UI_TESTS = frozenset({
+    'testHomeShowsMiddayAndEveningWeatherInSwissGerman',
+    'testHomeWithOnlyEveningOmitsMiddayWeather',
     'testClubOverviewShowsTrainingAndNativeArticleWithoutExpanding',
     'testClubSwissGermanLargeTextAndCenteredFooter',
     'testClubCalendarAndFirstLiveRefreshAreNativeAndReachable',

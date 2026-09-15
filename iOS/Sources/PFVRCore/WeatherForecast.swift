@@ -43,19 +43,17 @@ public enum WeatherForecast {
     }
     public static func event(hours: [WeatherHour], event: PFVREvent) -> WeatherEventForecast {
         let calendar = PFVRDate.calendar
-        let multipleDays = !calendar.isDate(event.start, inSameDayAs: event.end)
-        let threePoints = event.allDay || multipleDays || event.end.timeIntervalSince(event.start) >= 5 * 3600
+        let threePoints = event.allDay || event.end.timeIntervalSince(event.start) >= 5 * 3600
         let matching = hours.filter { $0.time.addingTimeInterval(3600) > event.start && $0.time < event.end }
         let targets: [Date]
-        if event.allDay || multipleDays {
+        if event.allDay {
             targets = [6,12,18].compactMap { calendar.date(bySettingHour: $0, minute: 0, second: 0, of: event.start) }
         } else if threePoints {
             // Android rounds start/middle/end to the containing hour for hourly forecasts.
-            targets = [event.start, event.start.addingTimeInterval(event.end.timeIntervalSince(event.start) / 2), event.end].compactMap { calendar.dateInterval(of: .hour, for: $0)?.start }
+            targets = [event.start, event.start.addingTimeInterval(event.end.timeIntervalSince(event.start) / 2), event.end.addingTimeInterval(-0.001)].compactMap { calendar.dateInterval(of: .hour, for: $0)?.start }
         } else { targets = [] }
-        let dayHours = hours.filter { calendar.isDate($0.time, inSameDayAs: event.start) }
-        let values = slots(hours: dayHours, targets: targets)
-        return WeatherEventForecast(event: event, slots: values, hours: matching, summary: summarize(threePoints ? dayHours : matching, day: calendar.startOfDay(for: event.start), slots: values))
+        let values = slots(hours: matching, targets: targets)
+        return WeatherEventForecast(event: event, slots: values, hours: matching, summary: summarize(matching, day: calendar.startOfDay(for: event.start), slots: values))
     }
     private static func summarize(_ hours: [WeatherHour], day: Date, slots: [WeatherSlot]) -> WeatherDay {
         func finite(_ values: [Double?]) -> [Double] { values.compactMap { $0 }.filter { $0.isFinite } }

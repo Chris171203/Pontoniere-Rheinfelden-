@@ -23,7 +23,7 @@ public class WeatherEventPolicyTest {
         ZonedDateTime start=ZonedDateTime.of(2026,9,12,8,0,0,0,ZONE);
         ZonedDateTime end=ZonedDateTime.of(2026,9,12,18,0,0,0,ZONE);
         assertTrue(WeatherEventPolicy.usesThreePoints(false,start,end));
-        assertArrayEquals(new int[]{8,13,18},WeatherEventPolicy.targetHours(false,start,end));
+        assertArrayEquals(new int[]{8,13,17},WeatherEventPolicy.targetHours(false,start,end));
     }
 
     @Test public void allDayEventUsesMorningNoonEvening(){

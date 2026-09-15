@@ -636,9 +636,19 @@ private View homeTileView(TileLayoutStore.Spec spec){
 }
 
 private View homeWeatherTile(){
-    LinearLayout group=tileGroup("Wetter zum nächsten Termin",null);
+    return homeWeatherTile(ZonedDateTime.now(ZoneId.of("Europe/Zurich")));
+}
+
+private View homeWeatherTile(ZonedDateTime now){
+    List<TrainingSlot> slots=nextWeatherSlots(now);
+    LinearLayout group=tileGroup(slots.size()>1?"Wetter zu den nächsten Terminen":"Wetter zum nächsten Termin",null);
     group.setTag("home-live");
-    group.addView(weatherCard(),new LinearLayout.LayoutParams(-1,-2));
+    for(TrainingSlot slot:slots){
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.setMargins(0,dp(6),0,0);
+        group.addView(weatherCard(slot),params);
+    }
+    if(slots.isEmpty())group.addView(txt("Kein nächster Termin verfügbar.",14,MUTED,false));
     return group;
 }
 
@@ -761,8 +771,7 @@ private void rebuildHomePreservingScroll(){
     }
 }
 
-    private LinearLayout weatherCard(){
-        TrainingSlot slot=nextWeatherSlot();
+    private LinearLayout weatherCard(TrainingSlot slot){
         if(WeatherEventPolicy.usesThreePoints(slot.allDay,slot.start,slot.end))return weatherMultiPointCard(slot);
         LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
         String[] x=weatherSummary(slot);
@@ -799,7 +808,10 @@ private void rebuildHomePreservingScroll(){
             return c;
         }
 
-        List<WeatherDaily.Hour> hours=weatherHours(raw);
+        List<WeatherDaily.Hour> hours=new ArrayList<>();
+        for(WeatherDaily.Hour hour:weatherHours(raw)){
+            if(weatherHourMatches(hour.time.toString(),slot))hours.add(hour);
+        }
         int[] targets=WeatherEventPolicy.targetHours(slot.allDay,slot.start,slot.end);
         List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,slot.start.toLocalDate(),targets);
         LinearLayout slots=new LinearLayout(this);
@@ -820,7 +832,7 @@ private void rebuildHomePreservingScroll(){
 
         List<WeatherDaily.Summary> summaries=WeatherDaily.summarize(hours,slot.start.toLocalDate(),1);
         if(!summaries.isEmpty()&&summaries.get(0).hasData()){
-            TextView details=txtRaw(weatherDayDetails(summaries.get(0)),10,MUTED,false);
+            TextView details=txtRaw(weatherDayDetails(summaries.get(0),slot.allDay?"Tag":"Zeitraum"),10,MUTED,false);
             details.setPadding(0,dp(8),0,0);
             c.addView(details);
         }else{
@@ -980,11 +992,13 @@ private void rebuildHomePreservingScroll(){
         return condition.isEmpty()?temperature:temperature+" · "+condition;
     }
 
-    private String weatherDayDetails(WeatherDaily.Summary summary){
+    private String weatherDayDetails(WeatherDaily.Summary summary){return weatherDayDetails(summary,"Tag");}
+
+    private String weatherDayDetails(WeatherDaily.Summary summary,String period){
         if(!summary.hasData())return ui("Für diesen Tag liegen noch keine Stundenwerte vor.");
         StringBuilder details=new StringBuilder();
         if(Double.isFinite(summary.minTemperature)&&Double.isFinite(summary.maxTemperature)){
-            details.append(ui("Tag")).append(' ').append(String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature));
+            details.append(ui(period)).append(' ').append(String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature));
         }
         if(Double.isFinite(summary.precipitationSum)){
             if(details.length()>0)details.append(" · ");
@@ -1549,25 +1563,32 @@ private void rebuildHomePreservingScroll(){
     private LocalTime regularTrainingStart(LocalDate day){return summerTraining(day)?LocalTime.of(18,30):LocalTime.of(19,30);}
     private LocalTime regularTrainingEnd(LocalDate day){return summerTraining(day)?LocalTime.of(20,0):LocalTime.of(21,0);}
 
-    private TrainingSlot nextWeatherSlot(){
+    private List<TrainingSlot> nextWeatherSlots(ZonedDateTime now){
         ZoneId zone=ZoneId.of("Europe/Zurich");
-        ZonedDateTime now=ZonedDateTime.now(zone);
-        TrainingSlot calendar=nextCalendarWeatherSlot(now);
-        TrainingSlot regular=nextRegularTraining(now,zone);
-        if(calendar==null)return regular;
-        if(regular==null)return calendar;
-        return !calendar.start.isAfter(regular.start)?calendar:regular;
-    }
-
-    private TrainingSlot nextCalendarWeatherSlot(ZonedDateTime now){
-        Event best=null;
+        now=now.withZoneSameInstant(zone);
+        List<TrainingSlot> candidates=new ArrayList<>();
         ZonedDateTime limit=now.plusDays(21);
         for(Event event:events){
             if(event.start==null||event.start.isAfter(limit)||isCancelledEvent(event))continue;
-            if(!eventEnd(event).isAfter(now))continue;
-            if(best==null||event.start.isBefore(best.start))best=event;
+            if(eventEnd(event).isAfter(now))candidates.add(weatherSlotFromEvent(event));
         }
-        return best==null?null:weatherSlotFromEvent(best);
+        TrainingSlot regular=nextRegularTraining(now,zone);
+        // An explicit training is already present, including its original all-day flag.
+        if(regular!=null&&!regular.fromCalendar)candidates.add(regular);
+        candidates.sort(Comparator.comparing((TrainingSlot slot)->slot.start).thenComparing(slot->slot.title));
+        if(candidates.isEmpty())return candidates;
+        LocalDate first=candidates.get(0).start.withZoneSameInstant(zone).toLocalDate();
+        if(first.isBefore(now.toLocalDate()))first=now.toLocalDate();
+        ZonedDateTime dayStart=first.atStartOfDay(zone),dayEnd=first.plusDays(1).atStartOfDay(zone);
+        List<TrainingSlot> selected=new ArrayList<>();
+        for(TrainingSlot slot:candidates){
+            if(!slot.start.isBefore(dayEnd)||!slot.end.isAfter(dayStart))continue;
+            // Weather on a running multi-day event belongs to the selected day.
+            ZonedDateTime start=slot.start.isBefore(dayStart)?dayStart:slot.start.withZoneSameInstant(zone);
+            ZonedDateTime end=slot.end.isAfter(dayEnd)?dayEnd:slot.end.withZoneSameInstant(zone);
+            selected.add(new TrainingSlot(start,end,slot.fromCalendar,slot.title,slot.allDay));
+        }
+        return selected;
     }
 
     private TrainingSlot weatherSlotFromEvent(Event event){
@@ -1616,9 +1637,7 @@ private void rebuildHomePreservingScroll(){
             ZonedDateTime end=day.atTime(regularTrainingEnd(day)).atZone(zone);
             if(end.isAfter(now))return new TrainingSlot(start,end,false,ui("Regelmässiges Training"));
         }
-        LocalDate fallback=first.plusDays(1);
-        while(!regularTrainingDay(fallback))fallback=fallback.plusDays(1);
-        return new TrainingSlot(fallback.atTime(regularTrainingStart(fallback)).atZone(zone),fallback.atTime(regularTrainingEnd(fallback)).atZone(zone),false,ui("Regelmässiges Training"));
+        return null;
     }
 
     private TrainingSlot trainingSlotFromEvent(Event event){

@@ -9,6 +9,10 @@ Stand: 2026-09-14 · Android **0.15.0 / Versionscode 68** · iOS **0.15.0 / Buil
 - Enthalten sind direkte An-/Abmeldefarben, Refresh beim ersten Live-Block sowie fünf zentrierte Kontakt-/Social-Symbole.
 - Android ist über PR #33, iOS über PR #32 nach `main` übernommen. Die iOS-Vereinsansicht bietet dieselben Inhalte in nativer SwiftUI-Navigation, einschliesslich öffentlicher Quellen, lokalem Bild-/Inhaltscache und gepflegtem Schweizerdeutsch.
 
+## Laufende Korrektur 0.15.1 · 2026-09-15
+
+Alle noch laufenden oder kommenden Termine am nächsten relevanten Tag gemeinsam anzeigen; Wetter je Terminzeitraum statt nur zum ersten Termin. Android und iOS werden gemeinsam angepasst. Abnahmefälle: Mittag plus Abend, nur Abend, Absagen, beendete Termine, reguläres Training ohne Duplikate und keine Wetterwerte ausserhalb eines zeitlich begrenzten Anlasses.
+
 ## Abnahme und Bereinigung
 
 - Android-Tests, Browser-Szenarien, Lint und Builds bestanden; feste Testidentität und Signatur erhalten. [Test-APK 0.15.0](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615/artifacts/10340042643).

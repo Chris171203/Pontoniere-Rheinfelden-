@@ -21,7 +21,7 @@ public class HomePolishSourceTest {
     @Test public void homeRemovesPrototypeStyleExplanatoryCopy() throws Exception {
         String activity=source();
         assertFalse(activity.contains("hero.addView(txt(\"Training, Wettfahren und Vereinsleben – alles Wichtige direkt griffbereit."));
-        assertTrue(activity.contains("tileGroup(\"Wetter zum nächsten Termin\",null)"));
+        assertTrue(activity.contains("\"Wetter zu den nächsten Terminen\":\"Wetter zum nächsten Termin\""));
         assertTrue(activity.contains("tileGroup(\"3-Tage-Wetter\",null)"));
         assertTrue(activity.contains("tileGroup(\"Rhein aktuell\",null)"));
         assertTrue(activity.contains("tileGroup(\"Als Nächstes\",null)"));

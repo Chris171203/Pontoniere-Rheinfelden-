@@ -1,5 +1,12 @@
 # Android Changelog
 
+## 0.15.1 · 2026-09-15
+
+- Alle noch laufenden oder kommenden Termine am nächsten relevanten Tag mit eigenem Wetterzeitraum anzeigen.
+- Mittag und Abend getrennt; bei einem einzelnen Abendtermin keine Mittagswerte. Keine doppelten Regeltrainings.
+- Wetterzusammenfassungen langer Termine auf deren Stunden begrenzen, laufende mehrtägige Termine auf den ausgewählten Tag beziehen.
+- Android Versionscode 69, iOS 0.15.1 / Build 3; Schweizerdeutsch ergänzt.
+
 ## 0.15.0
 - Freigegebener Funktionsstand 0.12.10 als neuer Testmeilenstein, Versionscode 68.
 - Vereinsübersicht mit direkt sichtbaren Sommer-/Winterzeiten, Treffpunkten und Kalender; kompakte Navigation zu normalen Themenseiten ohne fachliche Aufklappmenüs.

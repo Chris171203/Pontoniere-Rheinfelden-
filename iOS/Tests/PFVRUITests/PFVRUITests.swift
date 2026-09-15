@@ -19,11 +19,16 @@ final class PFVRUITests: XCTestCase {
         app.terminate()
     }
 
-    private func launch(reset: Bool = true, unlocked: Bool = true, pending: Bool = false) {
+    private func launch(reset: Bool = true, unlocked: Bool = true, pending: Bool = false, weatherDay: String? = nil, swissGerman: Bool = false) {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(de)", "-AppleLocale", "de_CH"]
         if reset { app.launchArguments.append("-ui-test-reset") }
         if unlocked { app.launchArguments.append("-ui-test-unlocked") }
         if pending { app.launchArguments.append("-ui-test-pending-payment") }
+        if let weatherDay {
+            app.launchArguments.append("-ui-test-weather-day")
+            if weatherDay == "evening" { app.launchArguments.append("-ui-test-weather-evening") }
+        }
+        if swissGerman { app.launchArguments.append("-ui-test-swiss-german") }
         app.launch()
         if unlocked && !pending {
             XCTAssertTrue(app.buttons["tab.home"].waitForExistence(timeout: 10))
@@ -113,6 +118,30 @@ final class PFVRUITests: XCTestCase {
         XCTAssertTrue(item.exists && item.isHittable && viewport.contains(item.frame),
                       "Control must be visible between navigation and tabs: \(item.frame), viewport \(viewport)",
                       file: file, line: line)
+    }
+
+    func testHomeShowsMiddayAndEveningWeatherInSwissGerman() {
+        launch(weatherDay: "both", swissGerman: true)
+        XCTAssertTrue(app.staticTexts["Wätter zu de nöchschte Termin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Mittagsanlass"].firstMatch.exists)
+        let midday = app.staticTexts["28–28 °C"].firstMatch
+        revealPageControl(midday)
+        capture("weather-midday-gsw")
+        let evening = app.staticTexts["14–14 °C"].firstMatch
+        revealPageControl(evening)
+        XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["40–40 °C"].exists)
+        capture("weather-evening-gsw")
+    }
+
+    func testHomeWithOnlyEveningOmitsMiddayWeather() {
+        launch(weatherDay: "evening")
+        XCTAssertTrue(app.staticTexts["Wetter zum nächsten Termin"].firstMatch.waitForExistence(timeout: 10))
+        revealPageControl(app.staticTexts["14–14 °C"].firstMatch)
+        XCTAssertFalse(app.staticTexts["Mittagsanlass"].exists)
+        XCTAssertFalse(app.staticTexts["28–28 °C"].exists)
+        XCTAssertFalse(app.staticTexts["40–40 °C"].exists)
+        capture("weather-only-evening")
     }
 
     private func capture(_ name: String) {
