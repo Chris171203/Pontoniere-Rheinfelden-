@@ -6,7 +6,7 @@ Der aktuelle Abgleich übernimmt die freigegebene Android-Vereinsansicht: direkt
 
 - [Aktueller Portierungs- und Prüfstand](PORTING_STATUS.md)
 - [Build und Tests](BUILD_TESTS.md)
-- [Abnahme 0.15.1](../docs/checks-0.15.1.md)
+- [Abnahme 0.15.2](../docs/checks-0.15.2.md)
 - [Historische Testergebnisse](TEST_RESULTS.md)
 - [Fachlicher Projektumfang](../PROJECT.md)
 

@@ -1,23 +1,20 @@
 # Status
 
-Stand: 2026-09-15 · Android **0.15.1 / Versionscode 69** · iOS **0.15.1 / Build 3**.
-
-## Korrektur 0.15.2 in Arbeit
-
-Eine gemeinsame Wettervorhersage pro ausgewähltem Tag. Alle Termine bleiben sichtbar; gleiche oder überlappende Zeiträume werden zusammengeführt. Getrennte Zeiträume liefern Punkte innerhalb derselben Vorhersage, ohne Wetter aus der Lücke oder doppelt gezählte Regenmengen. Android und iOS werden gemeinsam korrigiert.
+Stand: 2026-09-15 · Android **0.15.2 / Versionscode 70** · iOS **0.15.2 / Build 4**.
 
 ## Aktueller Stand
 
-- PR #34 ist nach `main` übernommen. Die Wetterkachel zeigt alle noch laufenden oder kommenden Termine am nächsten relevanten Tag chronologisch und mit Wetter je Terminzeitraum.
-- Mittag plus Abend erscheinen getrennt; bei einem einzelnen Abendtermin werden dort keine Mittagswerte angezeigt. Abgesagte und beendete Termine entfallen, explizite Trainings werden nicht verdoppelt. Laufende mehrtägige Anlässe verwenden den ausgewählten Tag in Europe/Zurich.
-- Auch längere Termine verwenden ausschliesslich passende Stundenwerte. Deutsch/Schweizerdeutsch gepflegt; öffentliche Termintitel bleiben unverändert. Kein zusätzlicher Wetterabruf je Termin.
-- Der freigegebene Vereinsstand aus 0.15.0 bleibt enthalten: direkte Trainingsübersicht, native Themenartikel, Kontakt-/Social-Symbole, früher Refresh und unmittelbare An-/Abmeldefarben.
+- PR #35 ist nach `main` übernommen. Eine gemeinsame Wettervorhersage zeigt alle laufenden oder kommenden Termine des nächsten relevanten Tages mit ihren Titeln und Uhrzeiten.
+- Gleiche und überlappende Zeiträume werden einmal ausgewertet. Mittag und Abend erscheinen als Punkte innerhalb derselben Vorhersage; Lückenstunden und doppelte Regenmengen entfallen. Bei einem einzelnen Abendtermin werden keine Mittagswerte angezeigt.
+- Kalenderauswahl, Absagefilter und Regeltraining-Ergänzung bleiben bestehen. Deutsch/Schweizerdeutsch gepflegt; öffentliche Titel unverändert. Kein zusätzlicher Wetterabruf je Termin.
+- Die freigegebene Vereinsansicht aus 0.15.0 bleibt enthalten: direktes Training, native Themenartikel, Kontakt-/Social-Symbole, früher Refresh und unmittelbare An-/Abmeldefarben.
 
-## Abnahme
+## Prüfstand
 
-- Android: 133 Tests ohne Fehler/Skips, vier Browser-Szenarien, Lint, Builds und Paket-/Versions-/Signaturprüfung bestanden. [Test-APK 0.15.1](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34943818340/artifacts/10386039139).
-- iOS: je iPhone 105 Tests, iPad alle 16 UI-Fälle, fünf separate Live-Quellenfälle, Compact-Release-Build und unsigniertes arm64-Gerätearchiv bestanden. Die geprüften iOS-Dateien sind identisch zum integrierten Stand. Wetter-Screenshots beider Varianten auf allen drei Simulatorprofilen angesehen.
-- Details, Commitbezug und Build-Korrekturen: [Abnahme 0.15.1](docs/checks-0.15.1.md). Die bisherigen [0.15.0-Nachweise](docs/checks-0.15.0.md) bleiben historisch erhalten.
+- Android: 135 Tests ohne Fehler/Skips, vier Browserfälle, Lint, Builds und Paket-/Versions-/Signaturprüfung bestanden. [Test-APK 0.15.2](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34952967257/artifacts/10390386143).
+- iOS: Wettertests auf beiden iPhone-Grössen und iPad bestanden; gemeinsame Ansichten auf allen drei Profilen angesehen. Compact: 107 bestanden; iPad: alle 17 UI-Fälle bestanden. Core, fünf separate Live-Fälle, Compact-Release-Build und Gerätearchiv bestanden.
+- Der grosse iPhone-Gesamtlauf bleibt wegen eines Timeouts im bestehenden Warenkorb-Neustarttest nach langsamem Simulatorstart rot (106 bestanden, ein Timeout). Derselbe Fall besteht auf den anderen Profilen und im vorherigen Large-Lauf. Keine Änderung der Warenkorblogik in diesem Fix. Details und genaue Nachweise: [Prüfbericht 0.15.2](docs/checks-0.15.2.md).
+- Historisch: [0.15.1](docs/checks-0.15.1.md), [0.15.0](docs/checks-0.15.0.md). Die in 0.15.1 getrennten Wetteranzeigen waren eine Fehlinterpretation und sind in 0.15.2 zusammengeführt.
 
 ## Historie und Grenzen
 

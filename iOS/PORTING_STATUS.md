@@ -6,13 +6,15 @@ Die freigegebene Android-Vereinsansicht ist in SwiftUI umgesetzt: direkt sichtba
 
 Öffentliche WordPress-Inhalte und ausgewählte Bilder werden lokal gecacht. Quellenänderung und Abrufdatum bleiben getrennt; Fehler ersetzen keinen erfolgreichen Datenstand. Die Originaltexte bleiben unverändert, app-eigene Beschriftungen sind auf Deutsch/Schweizerdeutsch gepflegt. Telefon, Navigation, E-Mail, Instagram und Facebook stehen als fünf zentrierte Symbole unten. Der Refresh sitzt beim ersten sichtbaren Live-Block. Die interne An-/Abmeldung verwendet den bytegleichen aktuellen Android-Renderer, einschliesslich verzögerter Website-Farbänderungen.
 
-Korrektur 0.15.2: eine gemeinsame Vorhersage pro Termintag mit vollständiger Terminliste. Gleiche/überlappende Zeiten werden einmal ausgewertet; Mittag und Abend bleiben innerhalb derselben Vorhersage. Abnahme für diesen Stand noch ausstehend.
+Korrektur 0.15.2: eine gemeinsame Vorhersage pro Termintag mit vollständiger Terminliste. Gleiche/überlappende Zeiten werden einmal ausgewertet; Mittag und Abend bleiben innerhalb derselben Vorhersage.
 
 ## Abnahme
 
-PR #34 ist nach `main` übernommen. Alle laufenden oder kommenden Termine am nächsten relevanten Tag erhalten eigenes Wetter für ihre Uhrzeiten; Mittag und Abend werden getrennt dargestellt. Absagen, beendete Termine und doppelte Regeltrainings werden ausgeschlossen. Zeitlich begrenzte lange Anlässe verwenden nur ihre betroffenen Stunden.
+PR #35 ist nach `main` übernommen. [CI 51](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34954762045) belegt die Wetterkorrektur auf allen drei Simulatorprofilen. Originalaufnahmen für identische Zeiten und Mittag/Abend wurden geprüft.
 
-[CI 39](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34943348505) besteht: je iPhone 67 Core + 22 Hosted + 16 UI = 105 Tests, iPad alle 16 UI-Fälle, fünf separate Live-Quellenfälle und das Gerätearchiv. Der vollständige iOS-Baum ist identisch zum integrierten Quellstand; spätere Änderungen betrafen Android und die Auswahl der Vorschauaufnahmen. Originale Wetter-Screenshots beider Varianten wurden auf allen drei Profilen angesehen. Tatsächliche Ergebnisse und Commitbezug: [Abnahme 0.15.1](../docs/checks-0.15.1.md). Vorheriger Stand: [Abnahme 0.15.0](../docs/checks-0.15.0.md). Reproduktion: [BUILD_TESTS.md](BUILD_TESTS.md).
+Compact: 68 Core + 22 Hosted + 17 UI = 107 bestanden; iPad: alle 17 UI-Fälle bestanden. Fünf öffentliche Live-Quellenfälle bestehen separat und werden im regulären Core-Lauf ausgelassen. Release-Simulator-Build und arm64-Gerätearchiv bestanden.
+
+Der Large-Gesamtlauf bleibt wegen eines Timeouts im bestehenden Warenkorb-Neustarttest nach langsamem Simulatorstart rot: 106 bestanden, ein Timeout. Alle Wetterfälle bestanden auch dort. Der Warenkorb-Fall besteht auf den anderen Profilen und im vorherigen Large-Lauf. Keine Änderung der Warenkorblogik oder Absenkung von Prüfvorgaben in diesem Wetterfix. Genaue Nachweise und Einschränkungen: [Prüfbericht 0.15.2](../docs/checks-0.15.2.md). Historisch: [0.15.1](../docs/checks-0.15.1.md), [0.15.0](../docs/checks-0.15.0.md). Reproduktion: [BUILD_TESTS.md](BUILD_TESTS.md).
 
 Die frühere Portierungsarbeit ist unverändert in [PORTING_HISTORY_0.12.6.md](PORTING_HISTORY_0.12.6.md) erhalten. Ihre Ergebnisse beschreiben den damaligen Stand. Weitere historische Laufprotokolle: [TEST_RESULTS.md](TEST_RESULTS.md).
 
