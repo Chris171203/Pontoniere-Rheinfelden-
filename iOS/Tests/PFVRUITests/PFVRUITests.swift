@@ -139,7 +139,7 @@ final class PFVRUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Vereinstraining"].firstMatch.exists)
         XCTAssertTrue(app.staticTexts["Zweiter Anlass"].firstMatch.exists)
         revealPageControl(app.staticTexts["14–14 °C"].firstMatch)
-        XCTAssertEqual(app.staticTexts["14–14 °C"].count, 1)
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "14–14 °C")).count, 1)
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "home.weather.summary").count, 1)
         XCTAssertFalse(app.staticTexts["Mittagsanlass"].exists)
         capture("weather-shared-same-time")
