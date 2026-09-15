@@ -1,0 +1,27 @@
+name: One-time reviewed workflow run cleanup
+on:
+  push:
+    branches: [main]
+    paths: ['tools/cleanup-actions-2026-09-15.json']
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: reviewed-actions-cleanup-2026-09-15
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete only reviewed completed runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/cleanup-actions-2026-09-15.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workflow-cleanup-result
+          path: cleanup-result.json
+          if-no-files-found: error
