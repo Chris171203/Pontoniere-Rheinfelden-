@@ -9,6 +9,13 @@ Stand: 2026-09-15 · Android **0.15.2 / Versionscode 70** · iOS **0.15.2 / Buil
 - Kalenderauswahl, Absagefilter und Regeltraining-Ergänzung bleiben bestehen. Deutsch/Schweizerdeutsch gepflegt; öffentliche Titel unverändert. Kein zusätzlicher Wetterabruf je Termin.
 - Die freigegebene Vereinsansicht aus 0.15.0 bleibt enthalten: direktes Training, native Themenartikel, Kontakt-/Social-Symbole, früher Refresh und unmittelbare An-/Abmeldefarben.
 
+## Workflow-Bereinigung 2026-09-15
+
+- Zusätzliche Push-Auslöser für `dev-*` und `codex/ios-port-*` entfernt. Entwicklungsänderungen werden über Pull Requests geprüft; `main` und manuelle Starts bleiben erhalten. Damit entfallen doppelte Push-/PR-Läufe.
+- Android CI, iOS CI und der manuelle Play-Store-Bundle-Workflow bleiben als benötigte Prüf-/Releasewege erhalten. Einmalige Bereinigungsworkflows waren bereits entfernt.
+- Neueste erfolgreiche Android-APK: [Build 217](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34956753704), 0.15.2 / 70, Quellstand `75fb0f6a46bd2be971eb63284f5b6da2a30f2708`. App-Code und Version bleiben bei dieser Bereinigung unverändert.
+- Prüfung der Bereinigung: YAML eingelesen; Trigger und sämtliche Jobdefinitionen gegen den vorherigen Stand verglichen. Keine Tests oder Buildschritte entfernt.
+
 ## Prüfstand
 
 - Android: 135 Tests ohne Fehler/Skips, vier Browserfälle, Lint, Builds und Paket-/Versions-/Signaturprüfung bestanden. [Test-APK 0.15.2](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34952967257/artifacts/10390386143).

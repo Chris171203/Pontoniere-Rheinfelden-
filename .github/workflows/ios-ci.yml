@@ -2,7 +2,7 @@ name: iOS CI
 
 on:
   push:
-    branches: [main, 'codex/ios-port-*']
+    branches: [main]
     paths: ['iOS/**', '!iOS/**/*.md', 'tools/ios-*', 'tools/internal-*', 'Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java', 'Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java', '.github/workflows/ios-ci.yml']
   pull_request:
     branches: [main]
@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
 
-# Deduplicate PR/push for the same source commit while preserving evidence from older running commits.
+# PRs are tested once; main is verified after merging. Keep evidence from older running commits.
 concurrency:
   group: ios-${{ github.head_ref || github.ref_name }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
