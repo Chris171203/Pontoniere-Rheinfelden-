@@ -2,6 +2,10 @@
 
 Stand: 2026-09-15 · Android **0.15.1 / Versionscode 69** · iOS **0.15.1 / Build 3**.
 
+## Korrektur 0.15.2 in Arbeit
+
+Eine gemeinsame Wettervorhersage pro ausgewähltem Tag. Alle Termine bleiben sichtbar; gleiche oder überlappende Zeiträume werden zusammengeführt. Getrennte Zeiträume liefern Punkte innerhalb derselben Vorhersage, ohne Wetter aus der Lücke oder doppelt gezählte Regenmengen. Android und iOS werden gemeinsam korrigiert.
+
 ## Aktueller Stand
 
 - PR #34 ist nach `main` übernommen. Die Wetterkachel zeigt alle noch laufenden oder kommenden Termine am nächsten relevanten Tag chronologisch und mit Wetter je Terminzeitraum.

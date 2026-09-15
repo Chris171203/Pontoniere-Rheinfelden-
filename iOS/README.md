@@ -1,6 +1,6 @@
 # PFVR für iOS
 
-Native SwiftUI-App für iPhone und iPad ab iOS 17. Testversion **0.15.1**, Build **3**.
+Native SwiftUI-App für iPhone und iPad ab iOS 17. Testversion **0.15.2**, Build **4**.
 
 Der aktuelle Abgleich übernimmt die freigegebene Android-Vereinsansicht: direkt sichtbares Training, normale Themenseiten, öffentliche WordPress-Inhalte und ausgewählte Bilder mit lokalem Cache, Kontakt-/Social-Symbole sowie Deutsch/Schweizerdeutsch. Die interne An-/Abmeldung nutzt denselben exportierten JavaScript-Renderer wie Android.
 

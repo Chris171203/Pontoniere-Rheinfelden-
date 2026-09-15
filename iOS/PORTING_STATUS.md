@@ -1,10 +1,12 @@
 # iOS-Portierung
 
-Stand: 2026-09-15 · **0.15.1 / Build 3** · iPhone und iPad ab iOS 17.
+Stand: 2026-09-15 · **0.15.2 / Build 4** · iPhone und iPad ab iOS 17.
 
 Die freigegebene Android-Vereinsansicht ist in SwiftUI umgesetzt: direkt sichtbare Sommer-/Winterzeiten und Treffpunkte, App-Kalender, kompakte Themenzeilen und vollständig lesbare native Unterseiten. Nur der vollständige Originaltext bleibt optional aufklappbar.
 
 Öffentliche WordPress-Inhalte und ausgewählte Bilder werden lokal gecacht. Quellenänderung und Abrufdatum bleiben getrennt; Fehler ersetzen keinen erfolgreichen Datenstand. Die Originaltexte bleiben unverändert, app-eigene Beschriftungen sind auf Deutsch/Schweizerdeutsch gepflegt. Telefon, Navigation, E-Mail, Instagram und Facebook stehen als fünf zentrierte Symbole unten. Der Refresh sitzt beim ersten sichtbaren Live-Block. Die interne An-/Abmeldung verwendet den bytegleichen aktuellen Android-Renderer, einschliesslich verzögerter Website-Farbänderungen.
+
+Korrektur 0.15.2: eine gemeinsame Vorhersage pro Termintag mit vollständiger Terminliste. Gleiche/überlappende Zeiten werden einmal ausgewertet; Mittag und Abend bleiben innerhalb derselben Vorhersage. Abnahme für diesen Stand noch ausstehend.
 
 ## Abnahme
 

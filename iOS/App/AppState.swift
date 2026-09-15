@@ -253,7 +253,9 @@ final class AppState: ObservableObject {
         ], metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))
         if ProcessInfo.processInfo.arguments.contains("-ui-test-weather-day") {
             var selected = [PFVREvent(id: "ui-training", title: "Vereinstraining", start: PFVRDate.parseLocal("2026-09-10T18:30")!, end: PFVRDate.parseLocal("2026-09-10T20:00")!)]
-            if !ProcessInfo.processInfo.arguments.contains("-ui-test-weather-evening") {
+            if ProcessInfo.processInfo.arguments.contains("-ui-test-weather-same-time") {
+                selected.append(PFVREvent(id: "ui-second", title: "Zweiter Anlass", start: selected[0].start, end: selected[0].end))
+            } else if !ProcessInfo.processInfo.arguments.contains("-ui-test-weather-evening") {
                 selected.insert(PFVREvent(id: "ui-noon", title: "Mittagsanlass", start: PFVRDate.parseLocal("2026-09-10T12:30")!, end: PFVRDate.parseLocal("2026-09-10T14:00")!), at: 0)
             }
             events = Loaded(value: selected, metadata: CacheMetadata(source: "PFVR Vereinskalender · Testdaten", updatedAt: now))

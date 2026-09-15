@@ -643,10 +643,10 @@ private View homeWeatherTile(ZonedDateTime now){
     List<TrainingSlot> slots=nextWeatherSlots(now);
     LinearLayout group=tileGroup(slots.size()>1?"Wetter zu den nächsten Terminen":"Wetter zum nächsten Termin",null);
     group.setTag("home-live");
-    for(TrainingSlot slot:slots){
+    if(!slots.isEmpty()){
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
         params.setMargins(0,dp(6),0,0);
-        group.addView(weatherCard(slot),params);
+        group.addView(sharedWeatherCard(slots),params);
     }
     if(slots.isEmpty())group.addView(txt("Kein nächster Termin verfügbar.",14,MUTED,false));
     return group;
@@ -771,28 +771,21 @@ private void rebuildHomePreservingScroll(){
     }
 }
 
-    private LinearLayout weatherCard(TrainingSlot slot){
-        if(WeatherEventPolicy.usesThreePoints(slot.allDay,slot.start,slot.end))return weatherMultiPointCard(slot);
-        LinearLayout c=card(); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(15),dp(16),dp(14));
-        String[] x=weatherSummary(slot);
-        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0,dp(5),0,dp(5)); c.addView(row);
-        TextView icon=txtRaw(x[5],38,themeText(TEXT),false); icon.setGravity(Gravity.CENTER); row.addView(icon,new LinearLayout.LayoutParams(dp(58),dp(58)));
-        LinearLayout info=new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL); info.setPadding(dp(7),0,0,0); row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
-        info.addView(txtRaw(x[1],15,MUTED,true));
-        TextView main=txtRaw(x[2],21,TEXT,true); main.setPadding(0,dp(2),0,0); info.addView(main);
-        TextView details=txtRaw(x[3],13,MUTED,false); details.setPadding(0,dp(5),0,0); c.addView(details);
-        TextView src=txtRaw(x[4],10,Color.rgb(126,140,150),false); src.setPadding(0,dp(8),0,0); c.addView(src);
-        return c;
-    }
-
-    private LinearLayout weatherMultiPointCard(TrainingSlot slot){
+    private LinearLayout sharedWeatherCard(List<TrainingSlot> events){
+        TrainingSlot slot=events.get(0);
+        List<WeatherEventPolicy.Interval> intervals=new ArrayList<>();
         LinearLayout c=card();
+        c.setTag("event-weather-forecast");
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(dp(14),dp(14),dp(14),dp(13));
-        TextView title=txtRaw(slot.title==null||slot.title.isBlank()?ui("Vereinstermin"):slot.title,16,TEXT,true);
-        title.setPadding(0,dp(5),0,dp(2));
-        c.addView(title);
-        c.addView(txtRaw(weatherSlotDateLabel(slot),12,MUTED,false));
+        for(TrainingSlot event:events){
+            intervals.add(new WeatherEventPolicy.Interval(event.start,event.end,event.allDay));
+            TextView title=txtRaw(event.fromCalendar?event.title:ui(event.title),16,TEXT,true);
+            title.setPadding(0,dp(5),0,dp(2));
+            c.addView(title);
+            c.addView(txtRaw(weatherSlotDateLabel(event),12,MUTED,false));
+        }
+        intervals=WeatherEventPolicy.merge(intervals);
 
         String raw=prefs.getString(PREF_WEATHER_CACHE,"");
         long updated=prefs.getLong(PREF_WEATHER_UPDATED,0L);
@@ -810,16 +803,25 @@ private void rebuildHomePreservingScroll(){
 
         List<WeatherDaily.Hour> hours=new ArrayList<>();
         for(WeatherDaily.Hour hour:weatherHours(raw)){
-            if(weatherHourMatches(hour.time.toString(),slot))hours.add(hour);
+            for(WeatherEventPolicy.Interval interval:intervals){
+                if(interval.containsHour(hour.time.atZone(ZoneId.of("Europe/Zurich")))){hours.add(hour);break;}
+            }
         }
-        int[] targets=WeatherEventPolicy.targetHours(slot.allDay,slot.start,slot.end);
+        int[] targets=WeatherEventPolicy.sharedTargetHours(intervals);
         List<WeatherDaily.Slot> values=WeatherDaily.slots(hours,slot.start.toLocalDate(),targets);
         LinearLayout slots=new LinearLayout(this);
         slots.setGravity(Gravity.TOP);
         slots.setBaselineAligned(false);
         slots.setPadding(0,dp(10),0,0);
         for(int index=0;index<values.size();index++){
-            if(index>0){
+            if(index>0&&index%3==0){
+                c.addView(slots,new LinearLayout.LayoutParams(-1,-2));
+                slots=new LinearLayout(this);
+                slots.setGravity(Gravity.TOP);
+                slots.setBaselineAligned(false);
+                slots.setPadding(0,dp(10),0,0);
+            }
+            if(index%3>0){
                 View divider=new View(this);
                 divider.setBackgroundColor(darkMode?Color.rgb(63,76,85):Color.rgb(216,226,232));
                 LinearLayout.LayoutParams dividerParams=new LinearLayout.LayoutParams(dp(1),dp(94));

@@ -55,6 +55,27 @@ public enum WeatherForecast {
         let values = slots(hours: matching, targets: targets)
         return WeatherEventForecast(event: event, slots: values, hours: matching, summary: summarize(matching, day: calendar.startOfDay(for: event.start), slots: values))
     }
+    /// One forecast for the union of this day's event intervals. Titles stay in the caller.
+    public static func events(hours: [WeatherHour], events: [PFVREvent]) -> WeatherDay? {
+        var merged: [PFVREvent] = []
+        for current in events.filter({ $0.end > $0.start }).sorted(by: { $0.start < $1.start }) {
+            if var previous = merged.last, current.start <= previous.end {
+                previous.end = max(previous.end, current.end)
+                previous.allDay = previous.allDay || current.allDay
+                merged[merged.count - 1] = previous
+            } else { merged.append(current) }
+        }
+        guard let first = merged.first else { return nil }
+        let matching = hours.filter { hour in merged.contains { hour.time.addingTimeInterval(3600) > $0.start && hour.time < $0.end } }
+        var targets: Set<Date> = []
+        for interval in merged {
+            let forecast = event(hours: matching, event: interval)
+            if forecast.slots.isEmpty {
+                if merged.count > 1, let start = PFVRDate.calendar.dateInterval(of: .hour, for: interval.start)?.start { targets.insert(start) }
+            } else { targets.formUnion(forecast.slots.map(\.target)) }
+        }
+        return summarize(matching, day: PFVRDate.calendar.startOfDay(for: first.start), slots: slots(hours: matching, targets: targets.sorted()))
+    }
     private static func summarize(_ hours: [WeatherHour], day: Date, slots: [WeatherSlot]) -> WeatherDay {
         func finite(_ values: [Double?]) -> [Double] { values.compactMap { $0 }.filter { $0.isFinite } }
         let temperatures = finite(hours.map(\.temperature))

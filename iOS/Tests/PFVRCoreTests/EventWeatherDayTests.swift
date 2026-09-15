@@ -58,4 +58,24 @@ final class EventWeatherDayTests: XCTestCase {
         let missing = WeatherForecast.event(hours: Array(hours.prefix(14)), event: event("missing", "2026-09-15T18:30", "2026-09-15T20:00"))
         XCTAssertEqual(missing.summary.count, 0)
     }
+    func testSharedForecastDeduplicatesSameTimeAndOverlapWithoutIncludingGap() throws {
+        let start = date("2026-09-15T00:00")
+        let hours = (0..<24).map { WeatherHour(time: start.addingTimeInterval(Double($0)*3600), temperature: Double($0), precipitation: 1) }
+        let noon = event("noon", "2026-09-15T12:30", "2026-09-15T14:00")
+        let evening = event("a", "2026-09-15T18:30", "2026-09-15T20:00")
+        let same = event("b", "2026-09-15T18:30", "2026-09-15T20:00")
+        let identical = try XCTUnwrap(WeatherForecast.events(hours: hours, events: [evening,same]))
+        XCTAssertEqual(identical.count, 2); XCTAssertEqual(identical.precipitationSum, 2)
+        XCTAssertTrue(identical.slots.isEmpty)
+        let overlap = event("c", "2026-09-15T19:00", "2026-09-15T21:00")
+        let shared = try XCTUnwrap(WeatherForecast.events(hours: hours, events: [same,noon,overlap,evening]))
+        XCTAssertEqual(shared.count, 5); XCTAssertEqual(shared.precipitationSum, 5)
+        XCTAssertEqual(shared.slots.map { PFVRDate.calendar.component(.hour, from: $0.target) }, [12,18])
+        XCTAssertEqual(shared.minTemperature, 12); XCTAssertEqual(shared.maxTemperature, 20)
+        let all = event("all", "2026-09-15T00:00", "2026-09-16T00:00", allDay: true)
+        let wholeDay = try XCTUnwrap(WeatherForecast.events(hours: hours, events: [all,evening]))
+        XCTAssertEqual(wholeDay.count, 24); XCTAssertEqual(wholeDay.precipitationSum, 24)
+        XCTAssertEqual(wholeDay.slots.count, 3)
+        XCTAssertNil(WeatherForecast.events(hours: hours, events: []))
+    }
 }

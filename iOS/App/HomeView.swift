@@ -55,22 +55,22 @@ struct EventWeatherTile: View {
             let events = state.nextWeatherEvents
             HStack { Text(state.ui(events.count > 1 ? "Wetter zu den nächsten Terminen" : "Wetter zum nächsten Termin")).font(.headline); Spacer(); if showRefresh { LiveRefreshButton() } }
             ForEach(events) { event in
-                if event.id != events.first?.id { Divider() }
-                let forecast = WeatherForecast.event(hours: state.weather?.value ?? [], event: event)
                 Text(event.fromCalendar ? event.title : state.ui(event.title)).font(.headline)
                 Text(eventTime(event)).font(.caption).foregroundStyle(.secondary)
-                if forecast.summary.count == 0 {
+            }
+            if let forecast = WeatherForecast.events(hours: state.weather?.value ?? [], events: events) {
+                if forecast.count == 0 {
                     Text(state.ui("Für diesen Termin liegt noch keine Wetterprognose vor.")).font(.subheadline).foregroundStyle(.secondary)
                 } else {
                     if !forecast.slots.isEmpty {
-                        WeatherSlots(slots: forecast.slots, dayparts: event.allDay)
+                        WeatherSlots(slots: forecast.slots, dayparts: events.contains { $0.allDay })
                     } else {
                         HStack {
-                            Image(systemName: WeatherSymbols.symbol(forecast.summary.weatherCode)).font(.largeTitle).symbolRenderingMode(.multicolor)
-                            Text(AppDates.number(forecast.summary.minTemperature) + "–" + AppDates.number(forecast.summary.maxTemperature) + " °C").font(.title2.weight(.semibold))
+                            Image(systemName: WeatherSymbols.symbol(forecast.weatherCode)).font(.largeTitle).symbolRenderingMode(.multicolor)
+                            Text(AppDates.number(forecast.minTemperature) + "–" + AppDates.number(forecast.maxTemperature) + " °C").font(.title2.weight(.semibold))
                         }
                     }
-                    WeatherSummary(summary: forecast.summary)
+                    WeatherSummary(summary: forecast).accessibilityElement(children: .contain).accessibilityIdentifier("home.weather.summary")
                 }
             }
             if events.isEmpty { Text(state.ui("Kein nächster Termin verfügbar.")).foregroundStyle(.secondary) }
@@ -111,7 +111,7 @@ struct WeatherSlots: View {
     let slots: [WeatherSlot]
     var dayparts = false
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: max(1, min(3, slots.count))), spacing: 12) {
             ForEach(slots) { slot in
                 VStack(spacing: 7) {
                     Text(label(slot.target)).font(.caption2).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)

@@ -30,14 +30,14 @@ public class WeatherEventSourceTest {
         assertTrue(selector.contains("eventEnd(event).isAfter(now)"));
         assertFalse(selector.contains("TrainingMatcher"));
         assertTrue(selector.contains("!regular.fromCalendar"));
-        assertTrue(activity.contains("for(TrainingSlot slot:slots)"));
+        assertTrue(activity.contains("group.addView(sharedWeatherCard(slots),params)"));
         assertTrue(activity.contains("new TrainingSlot(start,end,true,event.title,event.allDay)"));
     }
 
     @Test public void longAndAllDayEventsRenderThreeForecastPoints() throws Exception {
         String activity=source();
-        assertTrue(activity.contains("WeatherEventPolicy.usesThreePoints(slot.allDay,slot.start,slot.end)"));
-        assertTrue(activity.contains("WeatherEventPolicy.targetHours(slot.allDay,slot.start,slot.end)"));
+        assertTrue(activity.contains("WeatherEventPolicy.merge(intervals)"));
+        assertTrue(activity.contains("WeatherEventPolicy.sharedTargetHours(intervals)"));
         assertTrue(activity.contains("WeatherDaily.slots(hours,slot.start.toLocalDate(),targets)"));
         assertTrue(activity.contains("weatherDaySlotView(values.get(index))"));
         assertTrue(activity.contains("ui(\"NÄCHSTER TERMIN\")"));
