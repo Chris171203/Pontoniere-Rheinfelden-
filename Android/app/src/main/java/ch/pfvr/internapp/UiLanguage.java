@@ -487,6 +487,8 @@ final class UiLanguage {
 
 
         // Public pages and weather additions in 0.12.7
+        put("Wetter zu den nächsten Terminen", "Wätter zu de nöchschte Termin");
+        put("Kein nächster Termin verfügbar.", "Kei nöchschte Termin verfüegbar.");
         put("Wetter zum nächsten Termin", "Wätter zum nöchschte Termin");
         put("NÄCHSTER TERMIN", "NÖCHSCHTE TERMIN");
         put("Vereinstermin", "Vereinstermin");

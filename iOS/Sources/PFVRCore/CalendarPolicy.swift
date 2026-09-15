@@ -20,14 +20,25 @@ public enum CalendarPolicy {
         return score
     }
     public static func nextWeatherEvent(events: [PFVREvent], now: Date = Date()) -> PFVREvent? {
-        let limit = PFVRDate.calendar.date(byAdding: .day, value: 21, to: now)!
-        let scheduled = events.filter { !$0.isCancelled && $0.end > now && $0.start <= limit }.min { $0.start < $1.start }
-        let regular = nextRegularTraining(events: events, now: now)
-        switch (scheduled, regular) {
-        case let (event?, training?): return event.start <= training.start ? event : training
-        case let (event?, nil): return event
-        case let (nil, training?): return training
-        default: return nil
+        nextWeatherEvents(events: events, now: now).first
+    }
+    public static func nextWeatherEvents(events: [PFVREvent], now: Date = Date()) -> [PFVREvent] {
+        let calendar = PFVRDate.calendar
+        let limit = calendar.date(byAdding: .day, value: 21, to: now)!
+        var candidates = events.filter { !$0.isCancelled && $0.end > now && $0.start <= limit }
+        // Calendar replacements are already included; never duplicate an explicit training.
+        if let regular = nextRegularTraining(events: events, now: now), !regular.fromCalendar {
+            candidates.append(regular)
+        }
+        candidates.sort { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }
+        guard let first = candidates.first else { return [] }
+        let dayStart = calendar.startOfDay(for: max(now, first.start))
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        return candidates.filter { $0.start < dayEnd && $0.end > dayStart }.map { event in
+            var selected = event
+            selected.start = max(event.start, dayStart)
+            selected.end = min(event.end, dayEnd)
+            return selected
         }
     }
     public static func nextRegularTraining(events: [PFVREvent], now: Date = Date()) -> PFVREvent? {

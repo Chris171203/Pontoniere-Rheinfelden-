@@ -27,7 +27,7 @@ def tablet_log(names, skipped=()):
 class TabletExecutionVerificationTests(unittest.TestCase):
     def test_accepts_all_required_ui_tests_once(self):
         counts = module.verify(tablet_log(sorted(module.TABLET_UI_TESTS)), 'tablet')
-        self.assertEqual(counts, {'PFVRUITests': {'passed': 14, 'skipped': 0}})
+        self.assertEqual(counts, {'PFVRUITests': {'passed': 16, 'skipped': 0}})
 
     def test_rejects_missing_required_ui_test(self):
         log = tablet_log(sorted(module.TABLET_UI_TESTS - {'testEveryTabIsReachableAndCapturesScreenshots'}))

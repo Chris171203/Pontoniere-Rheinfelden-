@@ -20,8 +20,8 @@ public class WeatherEventSourceTest {
 
     @Test public void weatherUsesNextGeneralClubEventBeforeRegularTraining() throws Exception {
         String activity=source();
-        assertTrue(activity.contains("tileGroup(\"Wetter zum nächsten Termin\",null)"));
-        int start=activity.indexOf("private TrainingSlot nextCalendarWeatherSlot");
+        assertTrue(activity.contains("\"Wetter zu den nächsten Terminen\":\"Wetter zum nächsten Termin\""));
+        int start=activity.indexOf("private List<TrainingSlot> nextWeatherSlots");
         int end=activity.indexOf("private TrainingSlot weatherSlotFromEvent",start);
         assertTrue(start>=0&&end>start);
         String selector=activity.substring(start,end);
@@ -29,7 +29,8 @@ public class WeatherEventSourceTest {
         assertTrue(selector.contains("isCancelledEvent(event)"));
         assertTrue(selector.contains("eventEnd(event).isAfter(now)"));
         assertFalse(selector.contains("TrainingMatcher"));
-        assertTrue(activity.contains("return !calendar.start.isAfter(regular.start)?calendar:regular;"));
+        assertTrue(selector.contains("!regular.fromCalendar"));
+        assertTrue(activity.contains("for(TrainingSlot slot:slots)"));
         assertTrue(activity.contains("new TrainingSlot(start,end,true,event.title,event.allDay)"));
     }
 

@@ -52,8 +52,10 @@ struct EventWeatherTile: View {
     var showRefresh = false
     var body: some View {
         PFVRCard {
-            HStack { Text(state.ui("Wetter zum nächsten Termin")).font(.headline); Spacer(); if showRefresh { LiveRefreshButton() } }
-            if let event = state.nextWeatherEvent {
+            let events = state.nextWeatherEvents
+            HStack { Text(state.ui(events.count > 1 ? "Wetter zu den nächsten Terminen" : "Wetter zum nächsten Termin")).font(.headline); Spacer(); if showRefresh { LiveRefreshButton() } }
+            ForEach(events) { event in
+                if event.id != events.first?.id { Divider() }
                 let forecast = WeatherForecast.event(hours: state.weather?.value ?? [], event: event)
                 Text(event.fromCalendar ? event.title : state.ui(event.title)).font(.headline)
                 Text(eventTime(event)).font(.caption).foregroundStyle(.secondary)
@@ -70,7 +72,8 @@ struct EventWeatherTile: View {
                     }
                     WeatherSummary(summary: forecast.summary)
                 }
-            } else { Text(state.ui("Kein nächster Termin verfügbar.")).foregroundStyle(.secondary) }
+            }
+            if events.isEmpty { Text(state.ui("Kein nächster Termin verfügbar.")).foregroundStyle(.secondary) }
             SourceStamp(source: state.weather?.metadata.source ?? "MeteoSwiss/Open-Meteo", updated: state.weather?.metadata.updatedAt, stale: state.weather?.metadata.isStale ?? false)
         }.accessibilityIdentifier("home.weather")
     }

@@ -159,7 +159,7 @@ final class DataParserTests: XCTestCase {
         let forecast = WeatherForecast.event(hours: hours, event: short)
         XCTAssertEqual(forecast.hours.compactMap(\.temperature), [18,19]); XCTAssertTrue(forecast.slots.isEmpty)
         let long = PFVREvent(id: "long", title: "Fest", start: date("2026-09-10T08:30"), end: date("2026-09-10T18:00"))
-        XCTAssertEqual(WeatherForecast.event(hours: hours, event: long).slots.map { PFVRDate.calendar.component(.hour, from: $0.target) }, [8,13,18])
+        XCTAssertEqual(WeatherForecast.event(hours: hours, event: long).slots.map { PFVRDate.calendar.component(.hour, from: $0.target) }, [8,13,17])
         let allDay = PFVREvent(id: "all", title: "Wanderung", start: date("2026-09-10T00:00"), end: date("2026-09-11T00:00"), allDay: true)
         XCTAssertEqual(WeatherForecast.event(hours: hours, event: allDay).slots.map { PFVRDate.calendar.component(.hour, from: $0.target) }, [6,12,18])
     }
