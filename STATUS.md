@@ -1,34 +1,27 @@
 # Status
 
-Stand: 2026-09-14 · Android **0.15.0 / Versionscode 68** · iOS **0.15.0 / Build 2**.
+Stand: 2026-09-15 · Android **0.15.1 / Versionscode 69** · iOS **0.15.1 / Build 3**.
 
-## Freigegebener Stand
+## Aktueller Stand
 
-- Der Nutzer hat Vereinsübersicht, direkte Trainingszeiten, native Themenseiten ohne fachliche Aufklappmenüs und Deutsch/Schweizerdeutsch freigegeben.
-- 0.15.0 übernimmt die geprüfte Funktion von 0.12.10; Paket-ID und festes Testzertifikat bleiben erhalten. Der Versionscode steigt von 67 auf 68.
-- Enthalten sind direkte An-/Abmeldefarben, Refresh beim ersten Live-Block sowie fünf zentrierte Kontakt-/Social-Symbole.
-- Android ist über PR #33, iOS über PR #32 nach `main` übernommen. Die iOS-Vereinsansicht bietet dieselben Inhalte in nativer SwiftUI-Navigation, einschliesslich öffentlicher Quellen, lokalem Bild-/Inhaltscache und gepflegtem Schweizerdeutsch.
+- PR #34 ist nach `main` übernommen. Die Wetterkachel zeigt alle noch laufenden oder kommenden Termine am nächsten relevanten Tag chronologisch und mit Wetter je Terminzeitraum.
+- Mittag plus Abend erscheinen getrennt; bei einem einzelnen Abendtermin werden dort keine Mittagswerte angezeigt. Abgesagte und beendete Termine entfallen, explizite Trainings werden nicht verdoppelt. Laufende mehrtägige Anlässe verwenden den ausgewählten Tag in Europe/Zurich.
+- Auch längere Termine verwenden ausschliesslich passende Stundenwerte. Deutsch/Schweizerdeutsch gepflegt; öffentliche Termintitel bleiben unverändert. Kein zusätzlicher Wetterabruf je Termin.
+- Der freigegebene Vereinsstand aus 0.15.0 bleibt enthalten: direkte Trainingsübersicht, native Themenartikel, Kontakt-/Social-Symbole, früher Refresh und unmittelbare An-/Abmeldefarben.
 
-## Laufende Korrektur 0.15.1 · 2026-09-15
+## Abnahme
 
-Alle noch laufenden oder kommenden Termine am nächsten relevanten Tag gemeinsam anzeigen; Wetter je Terminzeitraum statt nur zum ersten Termin. Android und iOS werden gemeinsam angepasst. Abnahmefälle: Mittag plus Abend, nur Abend, Absagen, beendete Termine, reguläres Training ohne Duplikate und keine Wetterwerte ausserhalb eines zeitlich begrenzten Anlasses.
+- Android: 133 Tests ohne Fehler/Skips, vier Browser-Szenarien, Lint, Builds und Paket-/Versions-/Signaturprüfung bestanden. [Test-APK 0.15.1](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34943818340/artifacts/10386039139).
+- iOS: je iPhone 105 Tests, iPad alle 16 UI-Fälle, fünf separate Live-Quellenfälle, Compact-Release-Build und unsigniertes arm64-Gerätearchiv bestanden. Die geprüften iOS-Dateien sind identisch zum integrierten Stand. Wetter-Screenshots beider Varianten auf allen drei Simulatorprofilen angesehen.
+- Details, Commitbezug und Build-Korrekturen: [Abnahme 0.15.1](docs/checks-0.15.1.md). Die bisherigen [0.15.0-Nachweise](docs/checks-0.15.0.md) bleiben historisch erhalten.
 
-## Abnahme und Bereinigung
+## Historie und Grenzen
 
-- Android-Tests, Browser-Szenarien, Lint und Builds bestanden; feste Testidentität und Signatur erhalten. [Test-APK 0.15.0](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34825587615/artifacts/10340042643).
-- iOS: je iPhone 61 Core + 22 Hosted + 14 UI = 97 Tests; iPad alle 14 UI-Fälle; fünf separate Live-Quellenfälle und unsigniertes arm64-Gerätearchiv bestanden. Die zwei iPhone-Jobs benötigten im letzten Lauf eine einmalige unveränderte Wiederholung wegen Simulator-Verzögerungen. Die tatsächlichen Ergebnisse und Sichtprüfungen stehen in [Abnahme 0.15.0](docs/checks-0.15.0.md).
-- 48 abgeschlossene Branches und drei einmalige Bereinigungsdateien entfernt; nur `main` bleibt, keine offenen Pull Requests. Drei Archiv-Tags sowie historische Status- und Prüfnachweise bleiben erhalten. [Bereinigungsnachweis](docs/cleanup-0.15.0.md).
-
-Die Funktionsabnahme des freigegebenen Android-Vorgängers ist in [checks-0.12.10.md](docs/checks-0.12.10.md) commitgenau dokumentiert.
-
-## Grenzen
-
-- Testphase unter 1.0.0; keine Store-Veröffentlichung.
-- iOS-Laufzeitprüfung unter Xcode 16.4 / iOS 18.5 in GitHub Actions; keine Prüfung auf physischen Geräten. Geräteinstallation/TestFlight benötigt Apple-Signierung; das unsignierte Archiv ist keine installierbare IPA.
-- Persönliche produktive Intern-Aktionen und reale Zahlungen bleiben ausserhalb der synthetischen Prüfungen.
+- Zur Bereinigung von 0.15.0 wurden 48 abgeschlossene Branches und drei einmalige Hilfsdateien entfernt; drei Archiv-Tags und historische Nachweise blieben erhalten. [Bereinigungsnachweis](docs/cleanup-0.15.0.md).
+- Entwicklungsversion unter 1.0.0; keine Store-Veröffentlichung. iOS-Geräteinstallation/TestFlight benötigt Apple-Signierung und Provisionierung. Keine Prüfung auf physischen Geräten; persönliche produktive Intern-Aktionen und reale Zahlungen sind nicht durch die synthetischen Tests belegt.
 
 ## Referenzen
 
 - [Projektumfang](PROJECT.md)
-- [Bisherige Status- und Prüfgeschichte](docs/status-history-before-0.15.0.md)
+- [Bisherige Statusgeschichte](docs/status-history-before-0.15.0.md)
 - [Vereinsinhalte und UX](decisions/native-club-content.md)

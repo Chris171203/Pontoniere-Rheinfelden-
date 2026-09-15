@@ -1,6 +1,6 @@
 # iOS-Portierung
 
-Stand: 2026-09-14 · **0.15.0 / Build 2** · iPhone und iPad ab iOS 17.
+Stand: 2026-09-15 · **0.15.1 / Build 3** · iPhone und iPad ab iOS 17.
 
 Die freigegebene Android-Vereinsansicht ist in SwiftUI umgesetzt: direkt sichtbare Sommer-/Winterzeiten und Treffpunkte, App-Kalender, kompakte Themenzeilen und vollständig lesbare native Unterseiten. Nur der vollständige Originaltext bleibt optional aufklappbar.
 
@@ -8,7 +8,9 @@ Die freigegebene Android-Vereinsansicht ist in SwiftUI umgesetzt: direkt sichtba
 
 ## Abnahme
 
-PR #32 ist nach `main` übernommen. [CI 36](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34869645361) besteht: je iPhone 61 Core + 22 Hosted + 14 UI = 97 Tests, iPad alle 14 UI-Fälle, fünf separate Live-Quellenfälle und das Gerätearchiv. Beide iPhone-Jobs benötigten wegen Simulator-Verzögerungen eine einmalige unveränderte Wiederholung. Tatsächliche Ergebnisse, Commits und Sichtprüfungen stehen in [Abnahme 0.15.0](../docs/checks-0.15.0.md). Reproduktion: [BUILD_TESTS.md](BUILD_TESTS.md).
+PR #34 ist nach `main` übernommen. Alle laufenden oder kommenden Termine am nächsten relevanten Tag erhalten eigenes Wetter für ihre Uhrzeiten; Mittag und Abend werden getrennt dargestellt. Absagen, beendete Termine und doppelte Regeltrainings werden ausgeschlossen. Zeitlich begrenzte lange Anlässe verwenden nur ihre betroffenen Stunden.
+
+[CI 39](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/34943348505) besteht: je iPhone 67 Core + 22 Hosted + 16 UI = 105 Tests, iPad alle 16 UI-Fälle, fünf separate Live-Quellenfälle und das Gerätearchiv. Der vollständige iOS-Baum ist identisch zum integrierten Quellstand; spätere Änderungen betrafen Android und die Auswahl der Vorschauaufnahmen. Originale Wetter-Screenshots beider Varianten wurden auf allen drei Profilen angesehen. Tatsächliche Ergebnisse und Commitbezug: [Abnahme 0.15.1](../docs/checks-0.15.1.md). Vorheriger Stand: [Abnahme 0.15.0](../docs/checks-0.15.0.md). Reproduktion: [BUILD_TESTS.md](BUILD_TESTS.md).
 
 Die frühere Portierungsarbeit ist unverändert in [PORTING_HISTORY_0.12.6.md](PORTING_HISTORY_0.12.6.md) erhalten. Ihre Ergebnisse beschreiben den damaligen Stand. Weitere historische Laufprotokolle: [TEST_RESULTS.md](TEST_RESULTS.md).
 

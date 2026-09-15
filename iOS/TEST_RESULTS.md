@@ -1,6 +1,6 @@
 # iOS-Testnachweise
 
-Aktuelle Version: [Abnahme 0.15.0](../docs/checks-0.15.0.md). Die nachfolgenden Ergebnisse sind historische Nachweise für 0.12.6.
+Aktuelle Version: [Abnahme 0.15.1](../docs/checks-0.15.1.md). Der vorherige Stand bleibt unter [Abnahme 0.15.0](../docs/checks-0.15.0.md) dokumentiert. Die nachfolgenden Ergebnisse sind historische Nachweise für 0.12.6.
 
 Aktualisiert: 2026-09-10. Ergebnisse beziehen sich immer auf den angegebenen Commit, nicht automatisch auf spätere lokale Änderungen.
 
