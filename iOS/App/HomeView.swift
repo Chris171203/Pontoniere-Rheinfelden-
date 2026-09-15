@@ -70,7 +70,7 @@ struct EventWeatherTile: View {
                             Text(AppDates.number(forecast.minTemperature) + "–" + AppDates.number(forecast.maxTemperature) + " °C").font(.title2.weight(.semibold))
                         }
                     }
-                    WeatherSummary(summary: forecast).accessibilityElement(children: .contain).accessibilityIdentifier("home.weather.summary")
+                    WeatherSummary(summary: forecast)
                 }
             }
             if events.isEmpty { Text(state.ui("Kein nächster Termin verfügbar.")).foregroundStyle(.secondary) }
