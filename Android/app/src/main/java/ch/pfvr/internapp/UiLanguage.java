@@ -499,6 +499,7 @@ final class UiLanguage {
         put("Regen –", "Räge –");
         put("Regenmenge", "Rägemängi");
         put("Tag", "Tag");
+        put("Zeitraum", "Ziitruum");
         put("Uhr", "Uhr");
         put("Prozent", "Prozänt");
         put("Kontaktformular öffnen", "Kontaktformular ufmache");

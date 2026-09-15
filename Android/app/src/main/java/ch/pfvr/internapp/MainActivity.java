@@ -832,7 +832,7 @@ private void rebuildHomePreservingScroll(){
 
         List<WeatherDaily.Summary> summaries=WeatherDaily.summarize(hours,slot.start.toLocalDate(),1);
         if(!summaries.isEmpty()&&summaries.get(0).hasData()){
-            TextView details=txtRaw(weatherDayDetails(summaries.get(0)),10,MUTED,false);
+            TextView details=txtRaw(weatherDayDetails(summaries.get(0),slot.allDay?"Tag":"Zeitraum"),10,MUTED,false);
             details.setPadding(0,dp(8),0,0);
             c.addView(details);
         }else{
@@ -992,11 +992,13 @@ private void rebuildHomePreservingScroll(){
         return condition.isEmpty()?temperature:temperature+" · "+condition;
     }
 
-    private String weatherDayDetails(WeatherDaily.Summary summary){
+    private String weatherDayDetails(WeatherDaily.Summary summary){return weatherDayDetails(summary,"Tag");}
+
+    private String weatherDayDetails(WeatherDaily.Summary summary,String period){
         if(!summary.hasData())return ui("Für diesen Tag liegen noch keine Stundenwerte vor.");
         StringBuilder details=new StringBuilder();
         if(Double.isFinite(summary.minTemperature)&&Double.isFinite(summary.maxTemperature)){
-            details.append(ui("Tag")).append(' ').append(String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature));
+            details.append(ui(period)).append(' ').append(String.format(Locale.GERMAN,"%.0f–%.0f °C",summary.minTemperature,summary.maxTemperature));
         }
         if(Double.isFinite(summary.precipitationSum)){
             if(details.length()>0)details.append(" · ");

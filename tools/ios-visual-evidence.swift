@@ -25,9 +25,9 @@ func collect(_ value: Any, context: String = "") {
 for file in files where file.pathExtension == "json" {
     if let data = try? Data(contentsOf: file), let object = try? JSONSerialization.jsonObject(with: data) { collect(object) }
 }
-let desired = profile == "tablet"
+let desired = ["weather-midday-gsw", "weather-evening-gsw", "weather-only-evening"] + (profile == "tablet"
     ? ["club-training-de", "club-sport-de", "club-training-gsw-large", "club-sport-gsw-large", "club-footer-gsw", "club-youth", "system-share-ui", "system-calendar-ui", "failure"]
-    : ["club-training-de", "club-sport-de", "club-training-gsw-large", "club-sport-gsw-large", "club-footer-gsw", "club-youth", "screen-home", "screen-internal", "screen-cash"]
+    : ["club-training-de", "club-sport-de", "club-training-gsw-large", "club-sport-gsw-large", "club-footer-gsw", "club-youth", "screen-home", "screen-internal", "screen-cash"])
 var chosen: [(String, NSImage)] = []
 for name in desired {
     guard let file = files.first(where: { candidate in
