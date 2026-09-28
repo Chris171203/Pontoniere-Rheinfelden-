@@ -3,6 +3,7 @@ package ch.pfvr.internapp;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -14,6 +15,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
+@Config(sdk=28)
 public class AuditCalendarRegressionTest {
     private static final ZoneId ZONE=ZoneId.of("Europe/Zurich");
 
