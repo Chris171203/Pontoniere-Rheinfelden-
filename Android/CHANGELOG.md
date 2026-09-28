@@ -1,3 +1,9 @@
+## 0.15.3 – Kalendergesteuerter Saisonwechsel
+
+- Sommertraining endet bei herbstlichen Abschlussankern im Kalender.
+- Wintertraining wird erst ab dem eingetragenen Winterstart ergänzt.
+- Saisonanker bleiben nach ihrem Termin im Cache wirksam; explizite Trainings bleiben sichtbar.
+
 # Android Changelog
 
 ## 0.15.1 · 2026-09-15

@@ -706,7 +706,15 @@ private View homeRiverChartsTile(){
     return group;
 }
 
+private List<Event> upcomingEvents(){
+    ZonedDateTime now=ZonedDateTime.now(ZoneId.of("Europe/Zurich"));
+    List<Event> upcoming=new ArrayList<>();
+    for(Event event:events)if(eventEnd(event).isAfter(now))upcoming.add(event);
+    return upcoming;
+}
+
 private View homeEventsTile(){
+    List<Event> events=upcomingEvents();
     LinearLayout group=tileGroup("Als Nächstes",null);
     if(events.isEmpty()){
         LinearLayout loading=card();
@@ -1560,7 +1568,16 @@ private void rebuildHomePreservingScroll(){
         return background;
     }
 
-    private boolean summerTraining(LocalDate day){int month=day.getMonthValue();return month>=4&&month<=9;}
+    private TrainingSeason.Season trainingSeason(LocalDate day){
+        List<TrainingSeason.Anchor> anchors=new ArrayList<>();
+        for(Event event:events)if(event.start!=null&&TrainingSeason.isAnchor(event.title,event.start.toLocalDate()))
+            anchors.add(new TrainingSeason.Anchor(event.start.toLocalDate(),event.title,isCancelledEvent(event)));
+        return TrainingSeason.on(day,anchors);
+    }
+    private boolean summerTraining(LocalDate day){
+        if(trainingSeason(day)==TrainingSeason.Season.WINTER)return false;
+        return day.getMonthValue()>=4&&day.getMonthValue()<=9;
+    }
     private boolean regularTrainingDay(LocalDate day){DayOfWeek weekday=day.getDayOfWeek();return summerTraining(day)?(weekday==DayOfWeek.MONDAY||weekday==DayOfWeek.WEDNESDAY):weekday==DayOfWeek.THURSDAY;}
     private LocalTime regularTrainingStart(LocalDate day){return summerTraining(day)?LocalTime.of(18,30):LocalTime.of(19,30);}
     private LocalTime regularTrainingEnd(LocalDate day){return summerTraining(day)?LocalTime.of(20,0):LocalTime.of(21,0);}
@@ -1628,8 +1645,14 @@ private void rebuildHomePreservingScroll(){
         LocalDate first=now.toLocalDate();
         for(int offset=0;offset<21;offset++){
             LocalDate day=first.plusDays(offset);
-            if(!regularTrainingDay(day)||isCancelledTrainingDate(day))continue;
+            if(isCancelledTrainingDate(day))continue;
             Event override=trainingOverrideForDate(day);
+            if(override!=null&&TrainingMatcher.isExplicitTraining(override.title,override.description,override.start.getHour(),override.allDay)){
+                TrainingSlot slot=trainingSlotFromEvent(override);
+                if(slot.end.isAfter(now))return slot;
+                continue;
+            }
+            if(trainingSeason(day)==TrainingSeason.Season.PAUSE||!regularTrainingDay(day))continue;
             if(override!=null){
                 TrainingSlot slot=trainingSlotFromEvent(override);
                 if(slot.end.isAfter(now))return slot;
@@ -2556,6 +2579,7 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
     }
 
     private View eventScreen() {
+        List<Event> events=upcomingEvents();
         ScrollView scroll=new ScrollView(this);
         LinearLayout body=body();
         scroll.addView(body);
@@ -4088,6 +4112,10 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,ui("Kalender-Aktualisierung läuft bereits."),Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" "+ui("kommende Termine aktualisiert"),Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,ui(m),Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,ui("Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern."),Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
     private List<Event> parseIcs(String raw){
+        return parseIcs(raw,ZonedDateTime.now(ZoneId.of("Europe/Zurich")));
+    }
+
+    private List<Event> parseIcs(String raw,ZonedDateTime clock){
         List<String> lines=unfold(raw);
         List<Event> parsed=new ArrayList<>();
         Event currentEvent=null;
@@ -4133,7 +4161,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         }
 
         ZoneId zone=ZoneId.of("Europe/Zurich");
-        ZonedDateTime now=ZonedDateTime.now(zone).minusHours(6);
+        ZonedDateTime now=clock.withZoneSameInstant(zone).minusHours(6);
         ZonedDateTime limit=now.plusMonths(14);
         Map<String,Event> mastersByUid=new HashMap<>();
         List<Event> overrides=new ArrayList<>();
@@ -4153,7 +4181,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
             if(replacement.start!=null)expanded.add(replacement);
         }
 
-        expanded.removeIf(event->event.start==null||event.start.isAfter(limit)||eventEnd(event).isBefore(now));
+        expanded.removeIf(event->event.start==null||event.start.isAfter(limit)||(eventEnd(event).isBefore(now)&&!(TrainingSeason.isAnchor(event.title,event.start.toLocalDate())&&!event.start.isBefore(now.minusYears(1)))));
         expanded.sort(Comparator.comparing(event->event.start));
 
         Map<String,Event> unique=new LinkedHashMap<>();

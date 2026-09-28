@@ -2,6 +2,13 @@
 
 Stand: 2026-09-15 · Android **0.15.2 / Versionscode 70** · iOS **0.15.2 / Build 4**.
 
+## Saisonsteuerung – Umsetzung 2026-09-28
+
+- Implementiert für Android/iOS: Sommerabschluss aus mehreren Kalenderankern im September/Oktober; Winterergänzung erst ab ausdrücklich bezeichnetem Winterstart. Explizite Kalendertrainings bleiben maßgeblich.
+- Vergangene Anker bleiben ein Jahr erhalten; kommende Terminlisten blenden sie aus. Jahreswechsel, Absagen und Saisonwechsel werden berücksichtigt.
+- Kandidat: Android 0.15.3 / 71, iOS 0.15.3 / 5. Regressionstests ergänzt; vollständige CI-Prüfung noch ausstehend.
+- Live-Kalender am 28.09. nicht erreichbar; keine Aussage über dessen aktuellen Inhalt. Tests verwenden gezielte Kalender-Fixtures. iOS übernimmt die erweiterten Anker beim nächsten erfolgreichen Kalenderabruf (bestehender Cache maximal eine Stunde frisch).
+
 ## Aktueller Stand
 
 - PR #35 ist nach `main` übernommen. Eine gemeinsame Wettervorhersage zeigt alle laufenden oder kommenden Termine des nächsten relevanten Tages mit ihren Titeln und Uhrzeiten.
