@@ -36,7 +36,7 @@ public class AppLinkPolicyTest {
 
     @Test public void newsInitialAndRedirectTargetsRequireExactHttpsHost(){
         assertTrue(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch/verein/news/"));
-        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://intern.pfvr.ch/index.php?what=abmeldung"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://intern.pfvr.ch/"));
         assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch.evil.example/post"));
         assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch@evil.example/post"));
         assertFalse(AppLinkPolicy.isTrustedNewsUrl("http://www.pfvr.ch/post"));
