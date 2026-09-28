@@ -40,6 +40,10 @@ Mobile PFVR-App mit schnellem Zugriff auf Training, Rhein- und Wetterdaten, Vere
 - Test-APK reproduzierbar aus dem eingecheckten Quellstand bauen; keine verdeckten Build-Patches.
 - Dauerhafte Android-Updates setzen eine unveränderte Paket-ID und dieselbe geschützte Signatur voraus.
 - Android und iOS-App sollen dieselben fachlichen Kernfunktionen bieten.
+- Ein Wechsel des persönlichen Intern-Links trennt gespeicherte Personen und WebView-Sitzungsdaten von der vorherigen Identität; externe Navigationsziele dürfen den persönlichen Link nicht erhalten.
+- Ein gültig leerer Kalender ersetzt einen alten Terminstand. Ungültige Kalenderregeln oder unbrauchbare Live-Messreihen dürfen dagegen keine letzten guten Daten überschreiben.
+- Freie Zahlungsbeträge werden centgenau geprüft und niemals still gerundet; Rhein-Grenzwerte werden aus dem tatsächlichen BAFU-Rohwert getestet.
+- Rheinverläufe und Kassenmengen müssen auch ohne Drag-Geste und mit Screenreader bedienbar sein.
 
 ## Release
 

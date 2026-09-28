@@ -88,7 +88,7 @@ jobs:
           ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
-        run: gradle --no-daemon --stacktrace testDebugUnitTest bundleRelease
+        run: gradle --no-daemon --stacktrace testDebugUnitTest lintRelease bundleRelease
 
       - name: Verify and package release bundle
         shell: bash
@@ -108,6 +108,14 @@ jobs:
           # required here; `-strict` would also treat the expected trust-chain warning as failure.
           jarsigner -verify -verbose -certs "$AAB" > dist/aab-signature.txt
           grep -Fq 'jar verified.' dist/aab-signature.txt
+
+          BUNDLETOOL="$RUNNER_TEMP/bundletool-all-1.18.2.jar"
+          curl --fail --location --silent --show-error --retry 3 \
+            https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar \
+            --output "$BUNDLETOOL"
+          printf '%s  %s\n' '378b5434cd1378bef6b2bc527b8c7f0ff2584b273830335bce54d6d0813c8584' "$BUNDLETOOL" | sha256sum --check
+          java -jar "$BUNDLETOOL" dump manifest --bundle="$AAB" > dist/release-manifest.xml
+          python3 tools/verify-release-manifest.py dist/release-manifest.xml "$VERSION_NAME" "$VERSION_CODE"
 
           OUT="PFVR-Rheinfelden-${VERSION_NAME}-${VERSION_CODE}.aab"
           cp "$AAB" "dist/$OUT"

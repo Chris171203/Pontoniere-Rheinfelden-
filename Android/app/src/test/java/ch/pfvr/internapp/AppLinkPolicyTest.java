@@ -34,4 +34,13 @@ public class AppLinkPolicyTest {
         assertFalse(AppLinkPolicy.mayOpenExternally("intent"));assertFalse(AppLinkPolicy.mayOpenExternally("file"));assertFalse(AppLinkPolicy.mayOpenExternally("javascript"));assertFalse(AppLinkPolicy.mayOpenExternally(null));
     }
 
+    @Test public void newsInitialAndRedirectTargetsRequireExactHttpsHost(){
+        assertTrue(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch/verein/news/"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://intern.pfvr.ch/index.php?what=abmeldung"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch.evil.example/post"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch@evil.example/post"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("http://www.pfvr.ch/post"));
+        assertFalse(AppLinkPolicy.isTrustedNewsUrl("https://www.pfvr.ch:8443/post"));
+    }
+
 }

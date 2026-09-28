@@ -192,6 +192,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/skin-classes" browser-results
           javac -d "$RUNNER_TEMP/skin-classes" Android/app/src/main/java/ch/pfvr/internapp/UiLanguage.java Android/app/src/main/java/ch/pfvr/internapp/InternalAttendanceSkin.java tools/ExportAttendanceSkin.java
           java -cp "$RUNNER_TEMP/skin-classes" ch.pfvr.internapp.ExportAttendanceSkin browser-results
+      - name: Verify person state cannot cross internal link identities
+        run: node tools/internal-identity-regression.mjs
       - name: Install browser test runtime
         run: |
           npm install --prefix "$RUNNER_TEMP/pfvr-browser" playwright@1.51.1
