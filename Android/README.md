@@ -1,6 +1,6 @@
 # Android
 
-Aktuelle Android-Testversion: `0.15.2` (`versionCode 70`).
+Aktuelle Android-Testversion: `0.15.3` (`versionCode 71`).
 
 ## Entwicklung
 

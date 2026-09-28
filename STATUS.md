@@ -1,12 +1,13 @@
 # Status
 
-Stand: 2026-09-15 · Android **0.15.2 / Versionscode 70** · iOS **0.15.2 / Build 4**.
+Stand: 2026-09-28 · Kandidat Android **0.15.3 / Versionscode 71** · iOS **0.15.3 / Build 5**.
 
 ## Saisonsteuerung – Umsetzung 2026-09-28
 
 - Implementiert für Android/iOS: Sommerabschluss aus mehreren Kalenderankern im September/Oktober; Winterergänzung erst ab ausdrücklich bezeichnetem Winterstart. Explizite Kalendertrainings bleiben maßgeblich.
 - Vergangene Anker bleiben ein Jahr erhalten; kommende Terminlisten blenden sie aus. Jahreswechsel, Absagen und Saisonwechsel werden berücksichtigt.
-- Kandidat: Android 0.15.3 / 71, iOS 0.15.3 / 5. Regressionstests ergänzt; vollständige CI-Prüfung noch ausstehend.
+- Android-Prüfung erfolgreich: Unit-Tests, Lint, APK/AAB, Signatur-/Paketprüfung und Browserfälle ([CI](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/36465237414)).
+- iOS: 72 Core-Tests bestanden, fünf Live-Tests separat bestanden. Gerätearchiv kompiliert; zunächst veraltete feste Versionsprüfung (0.15.2) fehlgeschlagen, nun aus Projektkonfiguration abgeleitet und um Buildnummer ergänzt. Erneute CI-Prüfung und Simulatorläufe ausstehend.
 - Live-Kalender am 28.09. nicht erreichbar; keine Aussage über dessen aktuellen Inhalt. Tests verwenden gezielte Kalender-Fixtures. iOS übernimmt die erweiterten Anker beim nächsten erfolgreichen Kalenderabruf (bestehender Cache maximal eine Stunde frisch).
 
 ## Aktueller Stand
