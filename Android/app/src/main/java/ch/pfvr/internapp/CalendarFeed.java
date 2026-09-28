@@ -7,7 +7,7 @@ final class CalendarFeed {
     static boolean validStructure(String raw){
         if(raw==null||raw.isBlank())return false;
         int calendars=0,closedCalendars=0,events=0,closedEvents=0;
-        boolean insideCalendar=false,insideEvent=false;
+        boolean insideCalendar=false,insideEvent=false,eventHasStart=false;
         for(String line:raw.replace("\r\n","\n").replace('\r','\n').split("\n")){
             if("BEGIN:VCALENDAR".equals(line)){
                 if(insideCalendar||insideEvent)return false;
@@ -17,10 +17,15 @@ final class CalendarFeed {
                 insideCalendar=false;closedCalendars++;
             }else if("BEGIN:VEVENT".equals(line)){
                 if(!insideCalendar||insideEvent)return false;
-                insideEvent=true;events++;
+                insideEvent=true;eventHasStart=false;events++;
             }else if("END:VEVENT".equals(line)){
-                if(!insideEvent)return false;
+                if(!insideEvent||!eventHasStart)return false;
                 insideEvent=false;closedEvents++;
+            }else if(insideEvent&&(line.startsWith("DTSTART:")||line.startsWith("DTSTART;")
+                    ||line.startsWith("RECURRENCE-ID:")||line.startsWith("RECURRENCE-ID;"))){
+                int separator=line.indexOf(':');
+                if(separator<0||separator==line.length()-1)return false;
+                eventHasStart=true;
             }else if(insideEvent&&line.startsWith("RRULE:")){
                 if(!validRuleNumbers(line.substring(6)))return false;
             }

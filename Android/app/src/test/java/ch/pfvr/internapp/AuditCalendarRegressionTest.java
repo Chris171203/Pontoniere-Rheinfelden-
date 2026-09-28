@@ -1,6 +1,8 @@
 package ch.pfvr.internapp;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -11,6 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
+@RunWith(RobolectricTestRunner.class)
 public class AuditCalendarRegressionTest {
     private static final ZoneId ZONE=ZoneId.of("Europe/Zurich");
 
@@ -33,6 +36,7 @@ public class AuditCalendarRegressionTest {
     @Test public void explicitDateTimeAndGenuinelyEmptyFeed(){
         assertTrue(CalendarFeed.validStructure("BEGIN:VCALENDAR\nEND:VCALENDAR\n"));
         assertFalse(CalendarFeed.validStructure("BEGIN:VCALENDAR\nBEGIN:VEVENT\nEND:VCALENDAR\n"));
+        assertFalse(CalendarFeed.validStructure("BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:missing-date\nEND:VEVENT\nEND:VCALENDAR\n"));
     }
 
     @Test public void parsesExplicitDateTimeAndClearedCalendar() throws Exception {
