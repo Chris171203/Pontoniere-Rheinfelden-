@@ -23,6 +23,18 @@ public class RhineNavigationTest {
         assertEquals(248.20,RhineNavigation.thresholdGraphValue(RhineNavigation.Stage.HWM_IIA,false),0.0001);
     }
 
+    @Test public void classifiesBafuMetresThroughActualGaugeConversion(){
+        long now=10_000_000L;
+        assertEquals(RhineNavigation.Stage.HWM_IIB,RhineNavigation.fromCurrentBaselGaugeCm(
+                RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,248.19),now,now,now));
+        assertEquals(RhineNavigation.Stage.HWM_IIA,RhineNavigation.fromCurrentBaselGaugeCm(
+                RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,248.20),now,now,now));
+        assertEquals(RhineNavigation.Stage.HWM_IIA,RhineNavigation.fromCurrentBaselGaugeCm(
+                RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,248.21),now,now,now));
+        assertEquals(RhineNavigation.Stage.UNKNOWN,RhineNavigation.fromCurrentBaselGaugeCm(
+                RiverDisplay.gaugeCentimetres(HydroStation.BASEL_RHEINHALLE,248.20),now-RhineNavigation.MAX_CURRENT_AGE_MS-1,now,now));
+    }
+
     @Test public void reportsUnknownWhenBaselGaugeIsMissing(){
         assertEquals(RhineNavigation.Stage.UNKNOWN,RhineNavigation.fromBaselGaugeCm(Double.NaN));
         assertTrue(RhineNavigation.detail(RhineNavigation.Stage.HWM_IIB).contains("Kleinschifffahrt"));

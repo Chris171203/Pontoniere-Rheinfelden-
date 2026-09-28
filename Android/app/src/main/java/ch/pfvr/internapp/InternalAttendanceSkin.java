@@ -92,6 +92,21 @@ final class InternalAttendanceSkin {
             String language,
             String baseInternalUrl
     ) {
+        return javascript(background,card,soft,text,muted,border,link,language,baseInternalUrl,"");
+    }
+
+    static String javascript(
+            String background,
+            String card,
+            String soft,
+            String text,
+            String muted,
+            String border,
+            String link,
+            String language,
+            String baseInternalUrl,
+            String identityScope
+    ) {
         String template = """
                 (function(){
                   if(window.__pfvrAttendanceMobileV2)return;
@@ -129,6 +144,7 @@ final class InternalAttendanceSkin {
                   var RESTORE_KEY='pfvr-attendance-restore-v4';
                   var RESTORE_REQUEST_KEY='pfvr-attendance-explicit-restore-v1';
                   var baseInternalUrl='__BASE_INTERNAL_URL__';
+                  var identityScope='__IDENTITY_SCOPE__';
                   var sourceTableRef=null;
                   var sourcePeopleObserver=null;
                   var headerOverlay=null;
@@ -535,6 +551,7 @@ final class InternalAttendanceSkin {
                     else if(clean.length>19)el.classList.add('pfvr-name-small');
                   };
                   var savePeopleState=function(state){
+                    state.identityScope=identityScope;
                     try{localStorage.setItem(PEOPLE_KEY,JSON.stringify(state));}catch(ignore){}
                   };
                   var personTokenKey=function(value){
@@ -685,7 +702,7 @@ final class InternalAttendanceSkin {
                         if(legacy)state=JSON.parse(legacy);
                       }
                     }catch(ignore){}
-                    return state;
+                    return state&&(state.identityScope===identityScope||(!identityScope&&!state.identityScope))?state:null;
                   };
                   var shouldTakeSourceList=function(currentNames,state){
                     var currentReal=dedupePeople(currentNames);
@@ -698,6 +715,7 @@ final class InternalAttendanceSkin {
                   };
                   var loadPeopleState=function(currentNames,seed){
                     var state=seed||readPeopleState();
+                    if(state&&state.identityScope!==identityScope&&(identityScope||state.identityScope))state=null;
 
                     if(currentNames.length&&shouldTakeSourceList(currentNames,state)){
                       var sourceReal=dedupePeople(currentNames);
@@ -1413,6 +1431,7 @@ final class InternalAttendanceSkin {
                 .replace("__I_PARTICIPANT__", escapeJs(UiLanguage.translate("Teilnehmer", language)))
                 .replace("__I_RESTORE_SAVED__", escapeJs(UiLanguage.translate("Gespeicherte Personen wiederherstellen", language)))
                 .replace("__BASE_INTERNAL_URL__", escapeJs(baseInternalUrl == null ? "" : baseInternalUrl))
+                .replace("__IDENTITY_SCOPE__", escapeJs(identityScope == null ? "" : identityScope))
                 .replace("__SCHEME__", scheme);
     }
 

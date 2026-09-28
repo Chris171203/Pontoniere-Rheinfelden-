@@ -1,6 +1,7 @@
 package ch.pfvr.internapp;
 
 import java.util.Locale;
+import java.net.URI;
 
 /** Central allow-list for URLs rendered inside the app's WebViews. */
 final class AppLinkPolicy {
@@ -13,6 +14,15 @@ final class AppLinkPolicy {
 
     static boolean isInternalPfvrHost(String host) {
         return "intern.pfvr.ch".equals(normalize(host));
+    }
+
+    static boolean isTrustedNewsUrl(String url){
+        try{
+            URI uri=new URI(url);
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    &&"www.pfvr.ch".equals(normalize(uri.getHost()))
+                    &&uri.getUserInfo()==null&&(uri.getPort()==-1||uri.getPort()==443);
+        }catch(Exception ignored){return false;}
     }
 
     static boolean isGoogleCalendarHost(String host) {

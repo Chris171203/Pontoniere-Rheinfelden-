@@ -61,7 +61,7 @@ public final class BackgroundRefreshWorker extends Worker {
     private void refreshCalendar(SharedPreferences prefs, long now) {
         try {
             String raw = httpGet(ICS, "text/calendar,text/plain,*/*");
-            if (!raw.contains("BEGIN:VCALENDAR") || !raw.contains("BEGIN:VEVENT")) return;
+            if (!CalendarFeed.validStructure(raw)) return;
             prefs.edit().putString(PREF_ICS_CACHE, raw).putLong(PREF_ICS_UPDATED, now).apply();
         } catch (Exception ignored) {}
     }
@@ -85,7 +85,7 @@ public final class BackgroundRefreshWorker extends Worker {
                 raw = httpGet(WEATHER_BASE, "application/json");
                 source = "Open-Meteo Best Match";
             }
-            new JSONObject(raw).getJSONObject("hourly");
+            if(!PublicPayload.validWeather(raw,now))return;
             prefs.edit().putString(PREF_WEATHER_CACHE, raw).putLong(PREF_WEATHER_UPDATED, now).putString(PREF_WEATHER_SOURCE, source).apply();
         } catch (Exception ignored) {}
     }
@@ -113,9 +113,7 @@ public final class BackgroundRefreshWorker extends Worker {
     private void refreshHydroSeries(SharedPreferences prefs, long now, String query, String arrayName, String cacheKey, String updatedKey) {
         try {
             String raw = bafuPost(query);
-            JSONObject json = new JSONObject(raw);
-            if (json.has("errors")) return;
-            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray(arrayName);
+            if(!PublicPayload.validHydro(raw,arrayName,now))return;
             prefs.edit().putString(cacheKey, raw).putLong(updatedKey, now).apply();
         } catch (Exception ignored) {}
     }
