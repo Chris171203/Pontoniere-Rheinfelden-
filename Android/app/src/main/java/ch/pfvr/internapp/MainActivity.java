@@ -2132,6 +2132,7 @@ private void rebuildHomePreservingScroll(){
         status.setPadding(0,dp(4),0,dp(10));
         access.addView(status);
         Button edit=btn(validInternal(internal)?"Link ändern":"Link einrichten",NAVY,Color.WHITE);
+        edit.setEnabled(!internalResetPending);
         edit.setOnClickListener(v->editInternalSetting());
         access.addView(edit,new LinearLayout.LayoutParams(-1,dp(46)));
 
@@ -4090,13 +4091,14 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     }
 
     private void updateInternalLink(String next){
-        if(internalResetPending)return;
+        if(internalResetPending){Toast.makeText(this,ui("Intern-Daten werden zurückgesetzt."),Toast.LENGTH_SHORT).show();return;}
         String previous=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
         if(previous.equals(next))return;
         internalResetPending=true;
         destroyActiveWebView();
         // Remove the old link immediately; a killed process must never reopen it mid-reset.
         prefs.edit().remove(PREF_INTERNAL_URL).putString(PREF_INTERNAL_SCOPE,java.util.UUID.randomUUID().toString()).commit();
+        if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
         try{
             WebStorage.getInstance().deleteAllData();
             CookieManager.getInstance().removeAllCookies(removed->{

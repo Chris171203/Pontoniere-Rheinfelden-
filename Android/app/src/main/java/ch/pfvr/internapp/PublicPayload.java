@@ -23,7 +23,8 @@ final class PublicPayload {
             LocalDateTime minimum=Instant.ofEpochMilli(now).atZone(ZoneId.of("Europe/Zurich")).toLocalDateTime().minusHours(6);
             LocalDateTime maximum=minimum.plusDays(10);
             for(int i=0;i<times.length();i++){
-                LocalDateTime time=LocalDateTime.parse(times.getString(i));
+                LocalDateTime time;
+                try{time=LocalDateTime.parse(times.getString(i));}catch(Exception ignored){continue;}
                 if(time.isBefore(minimum)||time.isAfter(maximum))continue;
                 if(Double.isFinite(hourly.getJSONArray("temperature_2m").optDouble(i,Double.NaN))
                         &&Double.isFinite(hourly.getJSONArray("precipitation").optDouble(i,Double.NaN))
@@ -46,7 +47,8 @@ final class PublicPayload {
                 if(!("Q".equals(parameter)||"W".equals(parameter)||"WT".equals(parameter)))continue;
                 double value=row.optDouble("value",Double.NaN);
                 if(!Double.isFinite(value))continue;
-                long timestamp=Instant.parse(row.getString("timestamp")).toEpochMilli();
+                long timestamp;
+                try{timestamp=Instant.parse(row.getString("timestamp")).toEpochMilli();}catch(Exception ignored){continue;}
                 if(timestamp>=oldest&&timestamp<=now+10L*60L*1000L)return true;
             }
         }catch(Exception ignored){}
