@@ -107,7 +107,8 @@ public enum CalendarParser {
             let replacement = event.materialize(event.start ?? original, master: master)
             result[replacement.id] = replacement
         }
-        return result.values.filter { $0.start <= limit && $0.end >= earliest }.sorted { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }
+        let anchorFloor = PFVRDate.calendar.date(byAdding: .year, value: -1, to: now)!
+        return result.values.filter { $0.start <= limit && ($0.end >= earliest || ($0.start >= anchorFloor && CalendarPolicy.isSeasonAnchor($0))) }.sorted { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }
     }
     private static func parseDate(key: String, value: String) -> (date: Date, allDay: Bool, zone: TimeZone)? {
         let allDay = key.uppercased().components(separatedBy: ";").contains("VALUE=DATE") || value.count == 8

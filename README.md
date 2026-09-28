@@ -4,7 +4,7 @@ Mobile Vereins-App für den Pontonierfahrverein Rheinfelden: Vereinstermine, Wet
 
 ## Aktueller Stand
 
-Android-Testversion **0.15.2**, Versionscode **70**. Der freigegebene Funktionsstand wird in [STATUS.md](STATUS.md) mit den Prüfnachweisen geführt. iOS-Testversion **0.15.2**, Build **4**, übernimmt dieselben Vereinsinhalte mit nativer Navigation. Plattformnachweise stehen in der [Abnahme 0.15.2](docs/checks-0.15.2.md).
+Android-Testversion **0.15.3**, Versionscode **71**. Der freigegebene Funktionsstand wird in [STATUS.md](STATUS.md) mit den Prüfnachweisen geführt. iOS-Testversion **0.15.3**, Build **5**, übernimmt dieselben Vereinsinhalte mit nativer Navigation. Prüfstand und Saisonsteuerung stehen in [STATUS.md](STATUS.md); vorherige Plattformabnahme: [0.15.2](docs/checks-0.15.2.md).
 
 - Vereinsübersicht mit kurzem Einstieg, direkt sichtbarem Sommer-/Wintertraining, Treffpunkten und Kalenderzugang.
 - Native Themenseiten für Boote, Fahrtechnik, Nachwuchs, Vorstand, Geschichte, Vereinsleben und Kontakt; Texte und Bilder aus der öffentlichen Homepage mit lokalem Cache.

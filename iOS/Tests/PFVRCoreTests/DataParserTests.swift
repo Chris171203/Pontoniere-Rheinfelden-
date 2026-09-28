@@ -137,7 +137,7 @@ final class DataParserTests: XCTestCase {
         XCTAssertEqual(CalendarPolicy.nextWeatherEvent(events: [running], now: date("2026-09-10T12:00"))?.id, "run")
         let cancelled = PFVREvent(id: "cancel", title: "Training fällt aus", start: date("2026-09-14T18:30"), end: date("2026-09-14T20:00"))
         XCTAssertEqual(CalendarPolicy.nextRegularTraining(events: [cancelled], now: date("2026-09-14T12:00"))?.start, date("2026-09-16T18:30"))
-        XCTAssertEqual(CalendarPolicy.nextRegularTraining(events: [], now: date("2026-10-01T12:00"))?.start, date("2026-10-01T19:30"))
+        XCTAssertNil(CalendarPolicy.nextRegularTraining(events: [], now: date("2026-10-01T12:00")))
     }
     func testForecastDaysUse06Noon18AndNullStaysMissing() throws {
         let hours = try WeatherForecast.parse(data("""
