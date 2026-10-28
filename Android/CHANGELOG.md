@@ -1,3 +1,15 @@
+## 0.15.4 – Auditkorrekturen
+
+- Rheingrenze 820 cm, Intern-Identitätswechsel und WebView-Lebenszyklus korrigiert.
+- Kalenderwiederholungen und gültige leere Feeds, Cachevalidierung und centgenaue freie Beträge abgesichert.
+- News-/Intern-Navigation, zugängliche Rheinverläufe/Kassenbuttons und signiertes Release-Gate verbessert.
+
+## 0.15.3 – Kalendergesteuerter Saisonwechsel
+
+- Sommertraining endet bei herbstlichen Abschlussankern im Kalender.
+- Wintertraining wird erst ab dem eingetragenen Winterstart ergänzt.
+- Saisonanker bleiben nach ihrem Termin im Cache wirksam; explizite Trainings bleiben sichtbar.
+
 # Android Changelog
 
 ## 0.15.1 · 2026-09-15

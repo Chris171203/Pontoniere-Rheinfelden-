@@ -52,6 +52,8 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct AppShellView: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .caption2) private var tabTextSize: CGFloat = 10
     @State private var settings = false
 
     var body: some View {
@@ -81,9 +83,9 @@ struct AppShellView: View {
                         Button { state.tab = tab } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: tab.symbol).font(.system(size: 20))
-                                Text(state.ui(tab.title)).font(.system(size: 10, weight: .medium)).lineLimit(1)
+                                Text(state.ui(tab.title)).font(.system(size: tabTextSize, weight: .medium)).lineLimit(2)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 74 : 52)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

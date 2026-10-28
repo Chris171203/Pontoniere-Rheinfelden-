@@ -56,8 +56,10 @@ final class InternalAttendanceTests: XCTestCase {
         model.loadFixture(fixture)
     }
 
-    private func waitFor(_ predicate: @escaping () async throws -> Bool, timeout: TimeInterval = 8,
+    private func waitFor(_ predicate: @escaping () async throws -> Bool, timeout: TimeInterval = 20,
                          file: StaticString = #filePath, line: UInt = #line) async throws {
+        // The first WKWebView on a cold large simulator can take longer than 8s
+        // before didFinish clears `loading`. Later tests in the same process are faster.
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if try await predicate() { return }

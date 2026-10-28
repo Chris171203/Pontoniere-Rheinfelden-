@@ -93,6 +93,32 @@ struct RiverChartCard: View {
     private var levels: [HydroObservation] { dataset?.series(parameter: "W", range: state.range) ?? [] }
     private var flows: [HydroObservation] { dataset?.series(parameter: "Q", range: state.range) ?? [] }
     private var levelUnit: String { RiverDisplay.graphLevelUnit(station: station, centimetres: centimetres) }
+    private var graphTimes: [Date] { Array(Set((levels + flows).map(\.time))).sorted() }
+    private func graphValue(at date: Date) -> String {
+        let level = levels.min { abs($0.time.timeIntervalSince(date)) < abs($1.time.timeIntervalSince(date)) }
+        let flow = flows.min { abs($0.time.timeIntervalSince(date)) < abs($1.time.timeIntervalSince(date)) }
+        return AppDates.stamp(date) + " · " + state.ui("Abfluss") + " " + AppDates.number(flow?.value) + " m³/s · "
+            + state.ui("Pegel") + " " + AppDates.number(level.map { RiverDisplay.graphLevelValue(station: station, metresAboveSea: $0.value, centimetres: centimetres) }, digits: centimetres ? 0 : 2) + " " + levelUnit
+    }
+    private var graphSummary: String {
+        guard let first = graphTimes.first, let last = graphTimes.last else { return state.ui("Keine Messdaten") }
+        return state.ui("Anfang") + ": " + graphValue(at: first) + ". " + state.ui("Ende") + ": " + graphValue(at: last)
+            + ". " + state.ui("Tiefstwert") + ": " + AppDates.number(flows.map(\.value).min()) + " m³/s, "
+            + AppDates.number(levels.map { RiverDisplay.graphLevelValue(station: station, metresAboveSea: $0.value, centimetres: centimetres) }.min(), digits: centimetres ? 0 : 2) + " " + levelUnit
+            + ". " + state.ui("Höchstwert") + ": " + AppDates.number(flows.map(\.value).max()) + " m³/s, "
+            + AppDates.number(levels.map { RiverDisplay.graphLevelValue(station: station, metresAboveSea: $0.value, centimetres: centimetres) }.max(), digits: centimetres ? 0 : 2) + " " + levelUnit
+    }
+    private func moveGraphSelection(_ direction: AccessibilityAdjustmentDirection) {
+        guard !graphTimes.isEmpty else { return }
+        let nearest = selectedTime.flatMap { current in
+            graphTimes.indices.min { abs(graphTimes[$0].timeIntervalSince(current)) < abs(graphTimes[$1].timeIntervalSince(current)) }
+        }
+        switch direction {
+        case .increment: selectedTime = graphTimes[min(graphTimes.count - 1, (nearest ?? -1) + 1)]
+        case .decrement: selectedTime = graphTimes[max(0, (nearest ?? graphTimes.count) - 1)]
+        @unknown default: break
+        }
+    }
     var body: some View {
         PFVRCard(station.label + " · " + state.range.label) {
             HStack {
@@ -112,7 +138,10 @@ struct RiverChartCard: View {
             } else {
                 DualRiverGraph(station: station, levels: levels, flows: flows, centimetres: centimetres, selection: $selectedTime)
                     .frame(height: 205)
+                    .accessibilityElement(children: .ignore)
                     .accessibilityLabel(station.label + " · " + state.ui("Abfluss und Pegel") + " · " + state.range.label)
+                    .accessibilityValue(graphSummary + (selectedTime.map { ". " + state.ui("Auswahl") + ": " + graphValue(at: $0) } ?? ""))
+                    .accessibilityAdjustableAction { direction in moveGraphSelection(direction) }
                     .accessibilityIdentifier("river.graph.\(station.rawValue)")
                 if let selectedTime {
                     let level = levels.min { abs($0.time.timeIntervalSince(selectedTime)) < abs($1.time.timeIntervalSince(selectedTime)) }

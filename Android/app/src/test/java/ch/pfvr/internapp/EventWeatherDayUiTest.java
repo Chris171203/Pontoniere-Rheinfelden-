@@ -95,4 +95,30 @@ public class EventWeatherDayUiTest {
             String rendered=text((View)call(app,"homeWeatherTile","2026-09-15T09:00"));assertTrue(rendered.contains("14 °C"));assertFalse(rendered.contains("28 °C"));assertFalse(rendered.contains("99 km/h"));assertFalse(rendered.contains("06 Uhr"));assertFalse(rendered.contains("12 Uhr"));
         }
     }
+    @Test public void seasonPauseAndWinterStartSurviveCalendarParsing() throws Exception {
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity app=controller.get();
+            String ics="BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:end\nSUMMARY:Schiffe verladen\nDTSTART;VALUE=DATE:20260926\nDTEND;VALUE=DATE:20260927\nEND:VEVENT\nBEGIN:VEVENT\nUID:start\nSUMMARY:Start Wintertraining\nDTSTART;TZID=Europe/Zurich:20261022T193000\nDTEND;TZID=Europe/Zurich:20261022T210000\nEND:VEVENT\nEND:VCALENDAR";
+            Method parser=MainActivity.class.getDeclaredMethod("parseIcs",String.class,ZonedDateTime.class);parser.setAccessible(true);
+            List<?> parsed=(List<?>)parser.invoke(app,ics,time("2026-09-28T12:00"));
+            assertEquals(2,parsed.size());set(app,"events",new ArrayList<>(parsed));
+            assertTrue(selected(app,"2026-09-28T12:00").isEmpty());
+            assertEquals("Start Wintertraining",field(selected(app,"2026-10-20T12:00").get(0),"title"));
+            assertEquals(time("2026-10-29T19:30"),field(selected(app,"2026-10-23T12:00").get(0),"start"));
+            // Re-parse the cached feed after both anchors have passed.
+            parsed=(List<?>)parser.invoke(app,ics,time("2027-01-04T12:00"));set(app,"events",new ArrayList<>(parsed));
+            assertEquals(time("2027-01-07T19:30"),field(selected(app,"2027-01-04T12:00").get(0),"start"));
+        }
+    }
+    @Test public void explicitTrainingWinsDuringPauseAndCancelledAnchorDoesNotEndSummer() throws Exception {
+        try(var controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity app=controller.get();Object end=event("Schiffe reinigen","2026-09-26T00:00","2026-09-27T00:00",true);
+            events(app,end,event("Zusatztraining","2026-09-29T18:00","2026-09-29T20:00",false));
+            assertEquals("Zusatztraining",field(selected(app,"2026-09-28T12:00").get(0),"title"));
+            set(end,"status","CANCELLED");events(app,end);
+            assertEquals(time("2026-09-28T18:30"),field(selected(app,"2026-09-28T12:00").get(0),"start"));
+            events(app);assertTrue(selected(app,"2026-10-01T12:00").isEmpty());
+        }
+    }
+
 }

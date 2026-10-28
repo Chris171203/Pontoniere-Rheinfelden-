@@ -8,6 +8,10 @@ final class PFVRUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        // XCUIApplication.terminate() on a busy simulator has blocked for about
+        // 45s in CI. Restart tests then miss the 60s default and the runner aborts
+        // the following launch. The suite cap in tools/ios-test.sh is 300s.
+        executionTimeAllowance = 180
         XCUIDevice.shared.orientation = .portrait
         app = XCUIApplication()
     }
@@ -16,7 +20,9 @@ final class PFVRUITests: XCTestCase {
         if let run = testRun, run.totalFailureCount > 0, app.state == .runningForeground {
             capture("failure")
         }
-        app.terminate()
+        if app.state != .notRunning {
+            app.terminate()
+        }
     }
 
     private func launch(reset: Bool = true, unlocked: Bool = true, pending: Bool = false, weatherDay: String? = nil, swissGerman: Bool = false) {
@@ -303,7 +309,10 @@ final class PFVRUITests: XCTestCase {
     /// Opens Apple's real controllers and cancels them without sharing or saving.
     /// The full UI suite also runs on iPad, covering native modal/popover presentation.
     func testSystemShareAndCalendarEditorsCanBeCancelled() {
-        executionTimeAllowance = 90 // Includes first simulator launch and two native controller transitions.
+        // The iPad share popover keeps the app non-idle for about a minute, and the
+        // accessibility snapshot that then finds activityCollectionView can take longer
+        // than the old 10s wait. The class allowance is 180s; this case needs the suite cap.
+        executionTimeAllowance = 300
         launch()
         addDrink()
         let savedTotal = cashTotal()
@@ -313,9 +322,9 @@ final class PFVRUITests: XCTestCase {
         // Observed in the actual iPad AX tree: UIKit presents these native
         // controls in a remote activity view and omits our container's ID.
         let activities = app.collectionViews["activityCollectionView"]
-        let shareAppeared = activities.waitForExistence(timeout: 10)
+        let shareAppeared = activities.waitForExistence(timeout: 90)
         let copyAction = activities.cells.matching(NSPredicate(format: "label IN %@", ["Kopieren", "Copy"])).firstMatch
-        let copyAppeared = copyAction.waitForExistence(timeout: 5)
+        let copyAppeared = copyAction.waitForExistence(timeout: 20)
         capture("system-share-ui")
         if !shareAppeared || !copyAppeared {
             print("PFVR_SYSTEM_SHARE_AX_BEGIN\n" + app.debugDescription + "\nPFVR_SYSTEM_SHARE_AX_END")
@@ -338,7 +347,7 @@ final class PFVRUITests: XCTestCase {
         // The source title must be editable in Apple's real editor; the
         // underlying event detail has only static text and no title field.
         let titleField = app.textFields.matching(NSPredicate(format: "value == %@", "Vereinstraining")).firstMatch
-        let calendarAppeared = titleField.waitForExistence(timeout: 10)
+        let calendarAppeared = titleField.waitForExistence(timeout: 45)
         capture("system-calendar-ui")
         if !calendarAppeared {
             print("PFVR_SYSTEM_CALENDAR_AX_BEGIN\n" + app.debugDescription + "\nPFVR_SYSTEM_CALENDAR_AX_END")

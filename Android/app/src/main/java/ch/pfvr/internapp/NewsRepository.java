@@ -37,7 +37,7 @@ final class NewsRepository {
             JSONObject row=rows.optJSONObject(i);if(row==null)continue;String link=row.optString("link","").trim();
             JSONObject titleObject=row.optJSONObject("title"),excerptObject=row.optJSONObject("excerpt");
             String title=plain(titleObject==null?"":titleObject.optString("rendered",""));String excerpt=plain(excerptObject==null?"":excerptObject.optString("rendered",""));
-            if(title.isBlank()||link.isBlank())continue;long publishedAt=0L;
+            if(title.isBlank()||!AppLinkPolicy.isTrustedNewsUrl(link))continue;long publishedAt=0L;
             try{LocalDateTime local=LocalDateTime.parse(row.optString("date",""),DateTimeFormatter.ISO_LOCAL_DATE_TIME);publishedAt=local.atZone(zone).toInstant().toEpochMilli();}catch(Exception ignored){}
             result.add(new Article(row.optLong("id",0L),publishedAt,title,excerpt,link));
         }

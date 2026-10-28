@@ -1,6 +1,21 @@
 # Status
 
-Stand: 2026-09-15 · Android **0.15.2 / Versionscode 70** · iOS **0.15.2 / Build 4**.
+Stand: 2026-09-28 · Kandidat Android **0.15.4 / Versionscode 72** · iOS **0.15.4 / Build 6**.
+
+## Auditkorrekturen – Kandidat 0.15.4
+
+- Android: 820-cm-Rhein-Grenze vom BAFU-Rohwert aus stabilisiert. Persönliche Intern-Personenstände an eine lokale Identitätsgeneration gebunden; Linkwechsel/Entfernen stoppt die WebView und setzt Cookies/WebStorage zurück. Fremde Intern-Navigation wird blockiert; News-WebView nimmt nur den expliziten öffentlichen Vereins-Host an.
+- Android: ICS-Datumstypen, Monats-/Wochenregeln, Ganztagsdauer über DST, RDATE und gültige leere Kalenderstände korrigiert. Ungültige Wiederholungsintervalle scheitern begrenzt. Wetter-/Hydroantworten werden vor Cache-Ersatz auf nutzbare Messwerte geprüft. QR-Beträge bleiben centgenau.
+- Beide Plattformen: Rheinverlauf mit zugänglicher Messwertzusammenfassung/Navigation; Kassen- und Tab-Bedienung präzisiert. Der manuelle Play-Workflow prüft nun Lint und das konkrete signierte AAB-Manifest.
+- Dieser Zweig ist die Umsetzung der Befunde A01–A11 des Audits vom 28.09.2026. Tests/Builds und Gerätetests für diesen Kandidaten stehen noch aus; das vorherige grüne CI-Ergebnis gehört zu 0.15.3 und belegt diese Änderungen nicht. Architektur und Abnahmegrenzen: [Audit-Entscheidung](decisions/audit-remediation-2026-09-28.md).
+
+## Saisonsteuerung – Umsetzung 2026-09-28
+
+- Implementiert für Android/iOS: Sommerabschluss aus mehreren Kalenderankern im September/Oktober; Winterergänzung erst ab ausdrücklich bezeichnetem Winterstart. Explizite Kalendertrainings bleiben maßgeblich.
+- Vergangene Anker bleiben ein Jahr erhalten; kommende Terminlisten blenden sie aus. Jahreswechsel, Absagen und Saisonwechsel werden berücksichtigt.
+- Android-Prüfung erfolgreich: Unit-Tests, Lint, APK/AAB, Signatur-/Paketprüfung und Browserfälle ([CI](https://github.com/Chris171203/Pontoniere-Rheinfelden-/actions/runs/36465237414)).
+- iOS: 72 Core-Tests bestanden, fünf Live-Tests separat bestanden. Gerätearchiv kompiliert; zunächst veraltete feste Versionsprüfung (0.15.2) fehlgeschlagen, nun aus Projektkonfiguration abgeleitet und um Buildnummer ergänzt. Erneute CI-Prüfung und Simulatorläufe ausstehend.
+- Live-Kalender am 28.09. nicht erreichbar; keine Aussage über dessen aktuellen Inhalt. Tests verwenden gezielte Kalender-Fixtures. iOS übernimmt die erweiterten Anker beim nächsten erfolgreichen Kalenderabruf (bestehender Cache maximal eine Stunde frisch).
 
 ## Aktueller Stand
 

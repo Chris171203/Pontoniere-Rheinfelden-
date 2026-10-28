@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import plistlib
+import re
 import struct
 import subprocess
 import sys
@@ -47,8 +48,15 @@ def verify(archive):
         raise ValueError('Invalid archive application path')
     app = archive / 'Products' / relative
     info = plistlib.loads((app / 'Info.plist').read_bytes())
+    spec = (Path(__file__).resolve().parents[1] / 'iOS/project.yml').read_text()
+    def setting(name):
+        match = re.search(r"(?m)^\s*" + name + r":\s*['\"]?([0-9.]+)['\"]?\s*$", spec)
+        if not match:
+            raise ValueError(f'Missing version setting: {name}')
+        return match.group(1)
     expected = {'CFBundleIdentifier': 'ch.pfvr.app.test',
-                'CFBundleShortVersionString': '0.15.2',
+                'CFBundleShortVersionString': setting('MARKETING_VERSION'),
+                'CFBundleVersion': setting('CURRENT_PROJECT_VERSION'),
                 'CFBundlePackageType': 'APPL',
                 'CFBundleSupportedPlatforms': ['iPhoneOS'],
                 'UIDeviceFamily': [1, 2], 'MinimumOSVersion': '17.0'}
