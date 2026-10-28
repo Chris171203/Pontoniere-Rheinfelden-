@@ -31,12 +31,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebStorage;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -92,6 +95,7 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
     private static final String PREFS = "pfvr_prefs";
     private static final String PREF_INTERNAL_URL = "start_url";
+    private static final String PREF_INTERNAL_SCOPE = "internal_identity_scope_v1";
     private static final String PREF_BANK_PACKAGE = "bank_package";
     private static final String PREF_BANK_LABEL = "bank_label";
     private static final String PREF_ICS_CACHE = "ics_cache";
@@ -210,6 +214,7 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private Screen current = Screen.HOME;
     private WebView activeWebView;
+    private boolean internalResetPending;
     private List<Event> events = new ArrayList<>();
     private long eventsUpdated = 0L;
     private volatile boolean eventsLoading = false;
@@ -495,6 +500,7 @@ public class MainActivity extends Activity {
     private void addNav(LinearLayout nav, Screen screen, String label) {
         TextView t = txt(label,13,Color.rgb(65,82,96),true);
         t.setGravity(Gravity.CENTER); t.setPadding(dp(2),0,dp(2),0);
+        t.setContentDescription(ui(label));
         t.setOnClickListener(v -> navigate(screen));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,-1,1); lp.setMargins(dp(2),0,dp(2),0); nav.addView(t,lp);
         navButtons.put(screen,t);
@@ -503,7 +509,8 @@ public class MainActivity extends Activity {
     private void navigate(Screen screen) {
         if(current==Screen.CLUB&&screen!=Screen.CLUB&&content!=null&&content.getChildCount()>0)clubOverviewScrollY=content.getChildAt(0).getScrollY();
         if(screen!=Screen.CLUB_DETAIL)clubHistory.clear();
-        current = screen; activeWebView = null;
+        destroyActiveWebView();
+        current = screen;
         if(screen!=Screen.HOME){homeScroll=null;homeLiveStack=null;}
         if(screen!=Screen.TILE_SETTINGS)tileSettingsScroll=null;
         if (headerBack != null) headerBack.setVisibility((screen == Screen.HOME || screen == Screen.INTERNAL) ? View.GONE : View.VISIBLE);
@@ -511,6 +518,7 @@ public class MainActivity extends Activity {
         for (Map.Entry<Screen,TextView> e: navButtons.entrySet()) {
             boolean selected = e.getKey()==selectedNavigation;
             e.getValue().setTextColor(selected?Color.WHITE:themeText(Color.rgb(65,82,96)));
+            e.getValue().setSelected(selected);
             e.getValue().setTypeface(Typeface.DEFAULT_BOLD);
             e.getValue().setBackground(selected?round(NAVY,16):null);
         }
@@ -1920,7 +1928,7 @@ private void rebuildHomePreservingScroll(){
                 String source;
                 try{raw=httpGet(base+"&models=meteoswiss_icon_seamless");source="MeteoSwiss ICON via Open-Meteo";}
                 catch(Exception first){raw=httpGet(base);source="Open-Meteo Best Match";}
-                new JSONObject(raw).getJSONObject("hourly");
+                if(!PublicPayload.validWeather(raw,System.currentTimeMillis()))throw new IllegalArgumentException("Unbrauchbare Wetterantwort");
                 if(!weatherHasFiniteUv(raw)){
                     String supplemented=supplementWeatherUv(raw);
                     if(weatherHasFiniteUv(supplemented)){
@@ -1928,6 +1936,7 @@ private void rebuildHomePreservingScroll(){
                         source+=" · UV Open-Meteo Best Match";
                     }
                 }
+                if(!PublicPayload.validWeather(raw,System.currentTimeMillis()))throw new IllegalArgumentException("Unbrauchbare Wetterantwort");
                 prefs.edit().putString(PREF_WEATHER_CACHE,raw).putLong(PREF_WEATHER_UPDATED,System.currentTimeMillis()).putString(PREF_WEATHER_SOURCE,source).apply();
             }catch(Exception ignored){}
             finally{
@@ -2025,9 +2034,7 @@ private void rebuildHomePreservingScroll(){
     private void refreshHydroCache(String query,String arrayName,String cacheKey,String updatedKey){
         try{
             String raw=bafuPost(query);
-            JSONObject json=new JSONObject(raw);
-            if(json.has("errors"))return;
-            json.getJSONObject("data").getJSONObject("water").getJSONObject("observations").getJSONArray(arrayName);
+            if(!PublicPayload.validHydro(raw,arrayName,System.currentTimeMillis()))return;
             prefs.edit().putString(cacheKey,raw).putLong(updatedKey,System.currentTimeMillis()).apply();
         }catch(Exception ignored){}
     }
@@ -2125,6 +2132,7 @@ private void rebuildHomePreservingScroll(){
         status.setPadding(0,dp(4),0,dp(10));
         access.addView(status);
         Button edit=btn(validInternal(internal)?"Link ändern":"Link einrichten",NAVY,Color.WHITE);
+        edit.setEnabled(!internalResetPending);
         edit.setOnClickListener(v->editInternalSetting());
         access.addView(edit,new LinearLayout.LayoutParams(-1,dp(46)));
 
@@ -2547,7 +2555,10 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         return c;
     }
 
-    private void openNewsArticle(NewsRepository.Article article){navigate(Screen.NEWS);openInApp(article.link,"Vereinsnews");}
+    private void openNewsArticle(NewsRepository.Article article){
+        if(!AppLinkPolicy.isTrustedNewsUrl(article.link))return;
+        navigate(Screen.NEWS);openInApp(article.link,"Vereinsnews");
+    }
 
     private View newsScreen(){
         ScrollView scroll=new ScrollView(this);LinearLayout body=body();scroll.addView(body);
@@ -2639,7 +2650,8 @@ private View tileSettingsRow(TileLayoutStore.Spec spec){
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(14),dp(12),dp(12),dp(12));
         card.setLayoutParams(margin(-1,-2,0,0,0,9));
-        card.setContentDescription(event.title+", "+eventWhen(event));
+        card.setContentDescription((cancelled?ui("Abgesagt")+", ":"")+event.title+", "+eventWhen(event)
+                +(event.location==null||event.location.isBlank()?"":", "+event.location));
         card.setOnClickListener(v->showEventDetails(event));
 
         LinearLayout date=new LinearLayout(this);
@@ -3173,13 +3185,22 @@ private View cashPaymentDetailsTile(){
         LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);copy.setPadding(0,0,dp(8),0);row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
         copy.addView(txtRaw(item.name,14,TEXT,true));
         String detail=(item.variant==null||item.variant.isBlank()?"":item.variant+" · ")+formatCashPrice(item.price)+(item.deposit?" · Depot":"");copy.addView(txtRaw(detail,12,item.deposit?WATER:MUTED,false));
-        Button minus=btn("−",Color.rgb(232,240,244),NAVY);row.addView(minus,new LinearLayout.LayoutParams(dp(40),dp(40)));
-        TextView quantity=txt(String.valueOf(cashCart.getOrDefault(item.id,0)),16,TEXT,true);quantity.setGravity(Gravity.CENTER);row.addView(quantity,new LinearLayout.LayoutParams(dp(38),dp(40)));
+        Button minus=btn("−",Color.rgb(232,240,244),NAVY);row.addView(minus,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView quantity=txt(String.valueOf(cashCart.getOrDefault(item.id,0)),16,TEXT,true);quantity.setGravity(Gravity.CENTER);row.addView(quantity,new LinearLayout.LayoutParams(dp(34),dp(48)));
         cashQuantityViews.put(item.id,quantity);
-        Button plus=btn("+",NAVY,Color.WHITE);row.addView(plus,new LinearLayout.LayoutParams(dp(40),dp(40)));
-        minus.setOnClickListener(v->{int next=Math.max(0,cashCart.getOrDefault(item.id,0)-1);setCashQuantity(item.id,next);updateCashSummary();});
-        plus.setOnClickListener(v->{int next=Math.min(99,cashCart.getOrDefault(item.id,0)+1);setCashQuantity(item.id,next);updateCashSummary();});
+        Button plus=btn("+",NAVY,Color.WHITE);row.addView(plus,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        updateCashQuantityAccessibility(item,minus,plus,quantity);
+        minus.setOnClickListener(v->{int next=Math.max(0,cashCart.getOrDefault(item.id,0)-1);setCashQuantity(item.id,next);updateCashQuantityAccessibility(item,minus,plus,quantity);updateCashSummary();});
+        plus.setOnClickListener(v->{int next=Math.min(99,cashCart.getOrDefault(item.id,0)+1);setCashQuantity(item.id,next);updateCashQuantityAccessibility(item,minus,plus,quantity);updateCashSummary();});
         return row;
+    }
+
+    private void updateCashQuantityAccessibility(CashCatalog.Item item,Button minus,Button plus,TextView quantity){
+        int count=cashCart.getOrDefault(item.id,0);
+        String article=item.name+(item.variant==null||item.variant.isBlank()?"":" "+item.variant);
+        minus.setContentDescription(article+": "+ui("entfernen")+", "+ui("Menge")+" "+count);
+        plus.setContentDescription(article+": "+ui("hinzufügen")+", "+ui("Menge")+" "+count);
+        quantity.setContentDescription(article+", "+ui("Menge")+" "+count);
     }
 
     private void setCashQuantity(String itemId,int quantity){
@@ -3652,7 +3673,7 @@ private View cashPaymentDetailsTile(){
     }
 
 
-    private String amount(String raw) { if(raw==null||raw.trim().isEmpty())return ""; try{double n=Double.parseDouble(raw.trim().replace(',','.')); if(n<0||n>100000)return null; if(n==0)return ""; return String.format(Locale.US,"%.2f",n);}catch(Exception e){return null;} }
+    private String amount(String raw) { return PaymentAmount.normalize(raw); }
     private void copy(String label,String value,String toast){ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE); if(cm!=null)cm.setPrimaryClip(ClipData.newPlainText(label,value)); Toast.makeText(this,ui(toast),Toast.LENGTH_SHORT).show();}
 
     private View club() {
@@ -3974,7 +3995,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
 }
 
     private View internal() {
-        String url=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,"")); if(!validInternal(url)) return internalMissing(); prefs.edit().putString(PREF_INTERNAL_URL,url).apply();
+        String url=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,"")); if(internalResetPending||!validInternal(url)) return internalMissing(); prefs.edit().putString(PREF_INTERNAL_URL,url).apply();
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(themeBg(Color.WHITE));
         LinearLayout tools=new LinearLayout(this); tools.setPadding(dp(9),dp(8),dp(9),dp(8)); tools.setBackgroundColor(themeBg(Color.rgb(236,243,247))); root.addView(tools,new LinearLayout.LayoutParams(-1,dp(56)));
         WebView web=web(false); activeWebView=web; web.setBackgroundColor(themeBg(Color.WHITE));
@@ -3992,7 +4013,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,dp(40),1.25f); mp.setMargins(dp(7),0,0,0); tools.addView(mode,mp);
         Button reload=btn("Neu laden",Color.WHITE,NAVY); reload.setOnClickListener(v->{if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))hideInternalWebForAppView(web);web.clearCache(false);web.reload();}); LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(40),1); rp.setMargins(dp(7),0,0,0); tools.addView(reload,rp);
         web.setWebViewClient(new WebViewClient(){
-            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();if("https".equalsIgnoreCase(u.getScheme())&&AppLinkPolicy.isInternalPfvrHost(u.getHost()))return false;external(u.toString());return true;}
+            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){Uri u=r.getUrl();return !("https".equalsIgnoreCase(u.getScheme())&&AppLinkPolicy.isInternalPfvrHost(u.getHost()));}
             @Override public void onPageStarted(WebView v,String u,Bitmap icon){super.onPageStarted(v,u,icon);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true))hideInternalWebForAppView(v);else showInternalWeb(v);}
             @Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);if(prefs.getBoolean(PREF_INTERNAL_APP_VIEW,true)){internalSkin(v);revealInternalAppViewWhenReady(v,0);}else showInternalWeb(v);}
             @Override public void onReceivedError(WebView v,android.webkit.WebResourceRequest r,android.webkit.WebResourceError e){super.onReceivedError(v,r,e);if(r.isForMainFrame())showInternalLoadError(v,"Ladefehler "+e.getErrorCode()+": "+String.valueOf(e.getDescription()));}
@@ -4028,7 +4049,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     String border=darkMode?"#344550":"#DCE5EA";
     String link=darkMode?"#5BBED5":"#247E99";
     String baseInternalUrl=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
-    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl),null);
+    view.evaluateJavascript(InternalAttendanceSkin.javascript(background,card,soft,text,muted,border,link,uiMode(),baseInternalUrl,internalIdentityScope()),null);
 }
 
     private void hideInternalWebForAppView(WebView web){if(web!=null){web.animate().cancel();web.setAlpha(1f);web.setVisibility(View.INVISIBLE);}}
@@ -4056,9 +4077,40 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     private void editInternalSetting(){
         EditText input=new EditText(this); input.setText(prefs.getString(PREF_INTERNAL_URL,"")); input.setHint("https://intern.pfvr.ch/…"); input.setTextColor(themeText(TEXT)); input.setHintTextColor(themeText(MUTED)); input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI); input.setPadding(dp(12),dp(10),dp(12),dp(10)); input.setBackground(round(Color.rgb(238,243,246),12));
         new AlertDialog.Builder(this,dialogTheme()).setTitle(ui("Persönlichen Intern-Link ändern")).setView(input)
-            .setPositiveButton(ui("Speichern"),(d,w)->{String x=normalizeInternalUrl(input.getText().toString().trim());if(validInternal(x)){prefs.edit().putString(PREF_INTERNAL_URL,x).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);}else Toast.makeText(this,ui("Bitte den persönlichen An-/Abmelde-Link (what=abmeldung) verwenden."),Toast.LENGTH_LONG).show();})
-            .setNeutralButton(ui("Entfernen"),(d,w)->{prefs.edit().remove(PREF_INTERNAL_URL).apply();if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);})
+            .setPositiveButton(ui("Speichern"),(d,w)->{String x=normalizeInternalUrl(input.getText().toString().trim());if(validInternal(x))updateInternalLink(x);else Toast.makeText(this,ui("Bitte den persönlichen An-/Abmelde-Link (what=abmeldung) verwenden."),Toast.LENGTH_LONG).show();})
+            .setNeutralButton(ui("Entfernen"),(d,w)->updateInternalLink(""))
             .setNegativeButton(ui("Abbrechen"),null).show();
+    }
+
+    private String internalIdentityScope(){
+        String scope=prefs.getString(PREF_INTERNAL_SCOPE,"");
+        if(!scope.isBlank())return scope;
+        scope=java.util.UUID.randomUUID().toString();
+        prefs.edit().putString(PREF_INTERNAL_SCOPE,scope).commit();
+        return scope;
+    }
+
+    private void updateInternalLink(String next){
+        if(internalResetPending){Toast.makeText(this,ui("Intern-Daten werden zurückgesetzt."),Toast.LENGTH_SHORT).show();return;}
+        String previous=normalizeInternalUrl(prefs.getString(PREF_INTERNAL_URL,""));
+        if(previous.equals(next))return;
+        internalResetPending=true;
+        destroyActiveWebView();
+        // Remove the old link immediately; a killed process must never reopen it mid-reset.
+        prefs.edit().remove(PREF_INTERNAL_URL).putString(PREF_INTERNAL_SCOPE,java.util.UUID.randomUUID().toString()).commit();
+        if(current==Screen.SETTINGS)navigate(Screen.SETTINGS);
+        try{
+            WebStorage.getInstance().deleteAllData();
+            CookieManager.getInstance().removeAllCookies(removed->{
+                CookieManager.getInstance().flush();
+                if(!next.isEmpty())prefs.edit().putString(PREF_INTERNAL_URL,next).commit();
+                internalResetPending=false;
+                if(!isFinishing()&&!isDestroyed()&&current==Screen.SETTINGS)navigate(Screen.SETTINGS);
+            });
+        }catch(RuntimeException error){
+            internalResetPending=false;
+            Toast.makeText(this,ui("Intern-Daten konnten nicht zurückgesetzt werden. Link bitte erneut speichern."),Toast.LENGTH_LONG).show();
+        }
     }
 
     private String normalizeInternalUrl(String x){if(x==null)return "";return x.trim().replace("what=abmeldung_ics_feed","what=abmeldung");}
@@ -4088,13 +4140,18 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
                 Uri uri=request.getUrl();
+                if(simplify){
+                    if(AppLinkPolicy.isTrustedNewsUrl(uri.toString()))return false;
+                    external(uri.toString());
+                    return true;
+                }
                 if("https".equalsIgnoreCase(uri.getScheme())&&AppLinkPolicy.mayStayInPublicWebView(uri.getHost()))return false;
                 external(uri.toString());
                 return true;
             }
             @Override public void onPageFinished(WebView view,String url){
                 super.onPageFinished(view,url);
-                try{if(simplify&&AppLinkPolicy.isPfvrHost(Uri.parse(url).getHost()))skin(view);}catch(Exception ignored){}
+                try{if(simplify&&AppLinkPolicy.isTrustedNewsUrl(url))skin(view);}catch(Exception ignored){}
             }
         });
         return web;
@@ -4105,17 +4162,18 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         String css="html{color-scheme:light!important;}header,.site-header,.header-wrapper,nav,.main-navigation,footer,.site-footer,.scroll-top,.back-to-top{display:none!important;}html,body{background:#F4F7F9!important;}body{margin:0!important;padding:14px 14px 40px!important;font-family:Arial,sans-serif!important;color:#15232E!important;}main,.site-content,.content-area,.container,.wrapper{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;}article,.post,.entry,.entry-content{background:#FFFFFF!important;color:#15232E!important;border-radius:16px!important;padding:16px!important;margin:0 0 14px!important;box-shadow:0 2px 10px rgba(0,0,0,.10)!important;}article p,article li,article span,.entry-content p,.entry-content li,.entry-content span,.entry-content div{color:#15232E!important;}img{max-width:100%!important;height:auto!important;border-radius:12px!important;}iframe{background:#FFFFFF!important;}a{color:#247E99!important;}h1,h2,h3,h4,h5,h6{color:#0C2D48!important;}";
         String js="(function(){var s=document.getElementById('pfvr-app-style');if(!s){s=document.createElement('style');s.id='pfvr-app-style';document.head.appendChild(s);}s.innerHTML='"+css.replace("\\","\\\\").replace("'","\\'")+"';})();"; v.evaluateJavascript(js,null);
     }
-    private void openInApp(String url,String title){headerSubtitle.setText(ui(title));content.removeAllViews();content.addView(webScreen(url,true));}
+    private void openInApp(String url,String title){destroyActiveWebView();headerSubtitle.setText(ui(title));content.removeAllViews();content.addView(webScreen(url,true));}
 
     private void loadCachedEvents(){String raw=prefs.getString(PREF_ICS_CACHE,"");eventsUpdated=prefs.getLong(PREF_ICS_UPDATED,0L);if(raw.trim().isEmpty())return;try{events=parseIcs(raw);}catch(Exception ex){events=new ArrayList<>();eventsUpdated=0L;prefs.edit().remove(PREF_ICS_CACHE).remove(PREF_ICS_UPDATED).apply();}}
     private String calendarStatus(){if(eventsUpdated<=0)return ui(eventsLoading?"Erster Abruf läuft im Hintergrund.":"Noch kein lokaler Kalender-Cache.");ZonedDateTime z=java.time.Instant.ofEpochMilli(eventsUpdated).atZone(ZoneId.of("Europe/Zurich"));String d=z.toLocalDate().equals(LocalDate.now(ZoneId.of("Europe/Zurich")))?ui("heute")+" "+z.format(DateTimeFormatter.ofPattern("HH:mm")):z.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));return ui("Lokal gespeichert · zuletzt aktualisiert")+" "+d+" Uhr";}
-    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,ui("Kalender-Aktualisierung läuft bereits."),Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);if(parsed.isEmpty())throw new Exception("Keine kommenden Termine im Feed");long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" "+ui("kommende Termine aktualisiert"),Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,ui(m),Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,ui("Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern."),Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
+    private void refreshEvents(boolean toast,Runnable done){if(!toast&&eventsUpdated>0L&&System.currentTimeMillis()-eventsUpdated<60L*60L*1000L){if(done!=null)done.run();return;}if(eventsLoading){if(toast)Toast.makeText(this,ui("Kalender-Aktualisierung läuft bereits."),Toast.LENGTH_SHORT).show();return;}eventsLoading=true;new Thread(()->{HttpURLConnection c=null;try{c=(HttpURLConnection)new URL(ICS).openConnection();c.setConnectTimeout(6000);c.setReadTimeout(8000);c.setUseCaches(true);c.setRequestProperty("User-Agent","PFVR-Rheinfelden-App/"+BuildConfig.VERSION_NAME);c.setRequestProperty("Accept","text/calendar,text/plain,*/*");if(c.getResponseCode()/100!=2)throw new Exception("HTTP "+c.getResponseCode());BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),java.nio.charset.StandardCharsets.UTF_8));StringBuilder sb=new StringBuilder();String line;while((line=br.readLine())!=null)sb.append(line).append(System.lineSeparator());br.close();String raw=sb.toString();List<Event> parsed=parseIcs(raw);long updated=System.currentTimeMillis();prefs.edit().putString(PREF_ICS_CACHE,raw).putLong(PREF_ICS_UPDATED,updated).apply();runOnUiThread(()->{events=parsed;eventsUpdated=updated;eventsLoading=false;if(toast)Toast.makeText(this,parsed.size()+" "+ui("kommende Termine aktualisiert"),Toast.LENGTH_SHORT).show();if(done!=null)done.run();});}catch(Exception ex){runOnUiThread(()->{eventsLoading=false;if(toast){String m=events.isEmpty()?"Kalender konnte gerade nicht geladen werden.":"Keine Verbindung – gespeicherter Kalenderstand bleibt sichtbar.";Toast.makeText(this,ui(m),Toast.LENGTH_LONG).show();}else if(events.isEmpty())Toast.makeText(this,ui("Kalender lädt im Hintergrund. Bei langsamer Verbindung kann der erste Abruf etwas dauern."),Toast.LENGTH_LONG).show();if(done!=null)done.run();});}finally{if(c!=null)c.disconnect();}}).start();}
 
     private List<Event> parseIcs(String raw){
         return parseIcs(raw,ZonedDateTime.now(ZoneId.of("Europe/Zurich")));
     }
 
     private List<Event> parseIcs(String raw,ZonedDateTime clock){
+        if(!CalendarFeed.validStructure(raw))throw new IllegalArgumentException("Ungültiger VCALENDAR-Feed");
         List<String> lines=unfold(raw);
         List<Event> parsed=new ArrayList<>();
         Event currentEvent=null;
@@ -4152,6 +4210,13 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
                 ParsedDate parsedDate=date(key,value);
                 if(parsedDate!=null){currentEvent.recurrenceId=parsedDate.z;if(currentEvent.start==null)currentEvent.allDay=parsedDate.allDay;}
             }else if(key.startsWith("RRULE"))currentEvent.rule=value;
+            else if(key.startsWith("RDATE")){
+                for(String additional:value.split(",")){
+                    ParsedDate parsedDate=date(key,additional);
+                    if(parsedDate==null)throw new IllegalArgumentException("Ungültiges RDATE");
+                    currentEvent.rdates.add(parsedDate.z);
+                }
+            }
             else if(key.startsWith("EXDATE")){
                 for(String exception:value.split(",")){
                     ParsedDate parsedDate=date(key,exception);
@@ -4206,7 +4271,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         if(result.uid==null||result.uid.isBlank())result.uid=master.uid;
         if(override.start==null)result.allDay=master.allDay;
         if(result.end==null&&result.start!=null&&master.end!=null&&master.start!=null){
-            result.end=result.start.plus(java.time.Duration.between(master.start,master.end));
+            result.end=shiftEventEnd(master,result.start);
         }
         return result;
     }
@@ -4239,7 +4304,9 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     private ParsedDate date(String key,String value){
         try{
             ZoneId local=ZoneId.of("Europe/Zurich");
-            if(key.contains("VALUE=DATE")||value.length()==8)return new ParsedDate(LocalDate.parse(value,DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay(local),true);
+            boolean allDay=value.length()==8;
+            for(String parameter:key.split(";"))if("VALUE=DATE".equalsIgnoreCase(parameter))allDay=true;
+            if(allDay)return new ParsedDate(LocalDate.parse(value,DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay(local),true);
             boolean utc=value.endsWith("Z");
             String plain=utc?value.substring(0,value.length()-1):value;
             DateTimeFormatter formatter=plain.length()>=15?DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"):DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmm");
@@ -4255,66 +4322,111 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
 
     private void expand(Event event,ZonedDateTime limit,List<Event> out){
         if(event.start==null)return;
-        if(event.rule==null||event.rule.isBlank()){
-            out.add(event.copy(event.start));
-            return;
-        }
+        if(!event.ex.contains(event.start.toLocalDate())&&(event.rule==null||event.rule.isBlank()))out.add(event.copy(event.start));
+        for(ZonedDateTime additional:event.rdates)if(!event.ex.contains(additional.toLocalDate()))out.add(event.copy(additional));
+        if(event.rule==null||event.rule.isBlank())return;
         Map<String,String> rule=new HashMap<>();
         for(String part:event.rule.split(";")){
             int separator=part.indexOf('=');
-            if(separator>0)rule.put(part.substring(0,separator),part.substring(separator+1));
+            if(separator<=0||rule.putIfAbsent(part.substring(0,separator).toUpperCase(Locale.ROOT),part.substring(separator+1).toUpperCase(Locale.ROOT))!=null)
+                throw new IllegalArgumentException("Ungültige RRULE");
         }
         String frequency=rule.getOrDefault("FREQ","");
-        int interval=intval(rule.get("INTERVAL"),1);
-        int count=intval(rule.get("COUNT"),10000);
+        if(!Set.of("DAILY","WEEKLY","MONTHLY","YEARLY").contains(frequency)
+                ||!Set.of("FREQ","INTERVAL","COUNT","UNTIL","BYDAY","BYMONTHDAY","BYMONTH","WKST").containsAll(rule.keySet()))
+            throw new IllegalArgumentException("Nicht unterstützte RRULE");
+        int interval=positiveRuleNumber(rule.get("INTERVAL"),1,10000);
+        int count=positiveRuleNumber(rule.get("COUNT"),100000,100000);
         int made=0;
         ZonedDateTime until=limit;
         if(rule.get("UNTIL")!=null){
             ParsedDate parsedUntil=date("DTSTART",rule.get("UNTIL"));
-            if(parsedUntil!=null&&parsedUntil.z.isBefore(until))until=parsedUntil.z;
+            if(parsedUntil==null)throw new IllegalArgumentException("Ungültiges UNTIL");
+            if(parsedUntil.z.isBefore(until))until=parsedUntil.z;
         }
-        if("WEEKLY".equals(frequency)){
-            List<DayOfWeek> weekdays=days(rule.get("BYDAY"));
-            if(weekdays.isEmpty())weekdays.add(event.start.getDayOfWeek());
-            LocalDate week=event.start.toLocalDate().minusDays(event.start.getDayOfWeek().getValue()-1L);
-            for(int weekOffset=0;made<count;weekOffset+=interval){
-                LocalDate base=week.plusWeeks(weekOffset);
-                if(base.atStartOfDay(event.start.getZone()).isAfter(until))break;
-                for(DayOfWeek weekday:weekdays){
-                    ZonedDateTime occurrence=ZonedDateTime.of(base.plusDays(weekday.getValue()-1L),event.start.toLocalTime(),event.start.getZone());
-                    if(occurrence.isBefore(event.start)||occurrence.isAfter(until))continue;
+        DayOfWeek weekStart=rule.containsKey("WKST")?dayOfWeek(rule.get("WKST")):DayOfWeek.MONDAY;
+        if(weekStart==null)throw new IllegalArgumentException("Ungültiger Wochenbeginn");
+        List<String> byDays=rule.containsKey("BYDAY")?List.of(rule.get("BYDAY").split(",",-1)):List.of();
+        for(String token:byDays){
+            if(!token.matches("(?:[+-]?[1-5])?(?:MO|TU|WE|TH|FR|SA|SU)"))throw new IllegalArgumentException("Ungültiges BYDAY");
+            if(token.length()>2&&!("MONTHLY".equals(frequency)||"YEARLY".equals(frequency)&&rule.containsKey("BYMONTH")))
+                throw new IllegalArgumentException("Nicht unterstütztes ordinales BYDAY");
+        }
+        List<Integer> byMonths=ruleNumbers(rule.get("BYMONTH"),1,12,false);
+        List<Integer> byMonthDays=ruleNumbers(rule.get("BYMONTHDAY"),-31,31,true);
+        LocalDate startDay=event.start.toLocalDate();
+        LocalDate anchorWeek=startDay.minusDays((startDay.getDayOfWeek().getValue()-weekStart.getValue()+7)%7);
+        LocalDate day=startDay;
+        int iterations=0;
+        while(!day.atStartOfDay(event.start.getZone()).isAfter(until)&&made<count){
+            if(++iterations>100000)throw new IllegalArgumentException("RRULE Expansionslimit überschritten");
+            long elapsedDays=java.time.temporal.ChronoUnit.DAYS.between(startDay,day);
+            long elapsedWeeks=java.time.temporal.ChronoUnit.DAYS.between(anchorWeek,day)/7;
+            long elapsedMonths=java.time.temporal.ChronoUnit.MONTHS.between(startDay.withDayOfMonth(1),day.withDayOfMonth(1));
+            long elapsedYears=day.getYear()-startDay.getYear();
+            boolean matches=switch(frequency){
+                case "DAILY" -> elapsedDays%interval==0;
+                case "WEEKLY" -> elapsedWeeks%interval==0&&(byDays.isEmpty()?day.getDayOfWeek()==startDay.getDayOfWeek():true);
+                case "MONTHLY" -> elapsedMonths%interval==0&&(byDays.isEmpty()&&byMonthDays.isEmpty()?day.getDayOfMonth()==startDay.getDayOfMonth():true);
+                default -> elapsedYears%interval==0&&(byMonths.isEmpty()&&byDays.isEmpty()&&byMonthDays.isEmpty()?day.getMonth()==startDay.getMonth():true)
+                        &&(byDays.isEmpty()&&byMonthDays.isEmpty()?day.getDayOfMonth()==startDay.getDayOfMonth():true);
+            };
+            if(!byMonths.isEmpty())matches&=byMonths.contains(day.getMonthValue());
+            if(!byMonthDays.isEmpty()){
+                int dom=day.getDayOfMonth(),length=day.lengthOfMonth();
+                matches&=byMonthDays.stream().anyMatch(n->n>0?n==dom:length+n+1==dom);
+            }
+            if(!byDays.isEmpty()){
+                LocalDate candidate=day;
+                matches&=byDays.stream().anyMatch(token->matchesByDay(candidate,token));
+            }
+            if(matches){
+                ZonedDateTime occurrence=ZonedDateTime.of(day,event.start.toLocalTime(),event.start.getZone());
+                if(!occurrence.isBefore(event.start)&&!occurrence.isAfter(until)){
                     made++;
-                    if(!event.ex.contains(occurrence.toLocalDate()))out.add(event.copy(occurrence));
-                    if(made>=count)break;
+                    if(!event.ex.contains(day))out.add(event.copy(occurrence));
                 }
             }
-            return;
-        }
-        ZonedDateTime occurrence=event.start;
-        while(made<count&&!occurrence.isAfter(until)){
-            made++;
-            if(!event.ex.contains(occurrence.toLocalDate()))out.add(event.copy(occurrence));
-            if("DAILY".equals(frequency))occurrence=occurrence.plusDays(interval);
-            else if("MONTHLY".equals(frequency))occurrence=occurrence.plusMonths(interval);
-            else if("YEARLY".equals(frequency))occurrence=occurrence.plusYears(interval);
-            else break;
+            day=day.plusDays(1);
         }
     }
 
-    private int intval(String value,int fallback){
-        try{return value==null?fallback:Integer.parseInt(value);}catch(Exception ignored){return fallback;}
+    private int positiveRuleNumber(String raw,int fallback,int maximum){
+        if(raw==null)return fallback;
+        try{int value=Integer.parseInt(raw);if(value>0&&value<=maximum)return value;}catch(NumberFormatException ignored){}
+        throw new IllegalArgumentException("Ungültige RRULE-Zahl");
     }
 
-    private List<DayOfWeek> days(String value){
-        List<DayOfWeek> out=new ArrayList<>();
-        if(value==null)return out;
-        Map<String,DayOfWeek> map=Map.of("MO",DayOfWeek.MONDAY,"TU",DayOfWeek.TUESDAY,"WE",DayOfWeek.WEDNESDAY,"TH",DayOfWeek.THURSDAY,"FR",DayOfWeek.FRIDAY,"SA",DayOfWeek.SATURDAY,"SU",DayOfWeek.SUNDAY);
-        for(String day:value.split(",")){
-            String plain=day.replaceAll("^[+-]?\\d+","");
-            if(map.containsKey(plain))out.add(map.get(plain));
+    private List<Integer> ruleNumbers(String raw,int minimum,int maximum,boolean excludeZero){
+        if(raw==null)return List.of();
+        List<Integer> values=new ArrayList<>();
+        for(String part:raw.split(",",-1)){
+            try{int value=Integer.parseInt(part);if(value<minimum||value>maximum||excludeZero&&value==0)throw new NumberFormatException();values.add(value);}
+            catch(NumberFormatException ex){throw new IllegalArgumentException("Ungültiger RRULE-Filter",ex);}
         }
-        out.sort(Comparator.comparingInt(DayOfWeek::getValue));
-        return out;
+        return values;
+    }
+
+    private DayOfWeek dayOfWeek(String value){
+        return switch(value){
+            case "MO" -> DayOfWeek.MONDAY;case "TU" -> DayOfWeek.TUESDAY;case "WE" -> DayOfWeek.WEDNESDAY;
+            case "TH" -> DayOfWeek.THURSDAY;case "FR" -> DayOfWeek.FRIDAY;case "SA" -> DayOfWeek.SATURDAY;
+            case "SU" -> DayOfWeek.SUNDAY;default -> null;
+        };
+    }
+
+    private boolean matchesByDay(LocalDate day,String token){
+        if(day.getDayOfWeek()!=dayOfWeek(token.substring(token.length()-2)))return false;
+        if(token.length()==2)return true;
+        int ordinal=Integer.parseInt(token.substring(0,token.length()-2));
+        return ordinal>0?(day.getDayOfMonth()-1)/7+1==ordinal
+                :-((day.lengthOfMonth()-day.getDayOfMonth())/7+1)==ordinal;
+    }
+
+    private ZonedDateTime shiftEventEnd(Event event,ZonedDateTime newStart){
+        if(event.end==null||event.start==null)return null;
+        if(event.allDay)return newStart.plusDays(java.time.temporal.ChronoUnit.DAYS.between(event.start.toLocalDate(),event.end.toLocalDate()));
+        return newStart.plus(java.time.Duration.between(event.start,event.end));
     }
 
     private LinearLayout body(){LinearLayout b=new LinearLayout(this);b.setOrientation(LinearLayout.VERTICAL);b.setPadding(dp(14),dp(12),dp(14),dp(28));b.setBackgroundColor(themeBg(SURFACE));return b;}
@@ -4359,7 +4471,19 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
         return;
     }if(current==Screen.INTERNAL){navigate(Screen.HOME);return;}if(activeWebView!=null&&activeWebView.canGoBack())activeWebView.goBack();else if(current==Screen.TILE_SETTINGS)navigate(Screen.SETTINGS);else if(current!=Screen.HOME)navigate(Screen.HOME);else super.onBackPressed();}
     @Override public void onBackPressed(){handleBack();}
-    @Override protected void onDestroy(){if(clubImages!=null)clubImages.close();if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);if(activeWebView!=null)activeWebView.destroy();super.onDestroy();}
+    private void destroyActiveWebView(){
+        WebView old=activeWebView;
+        activeWebView=null;
+        if(old==null)return;
+        old.stopLoading();
+        old.setWebViewClient(new WebViewClient());
+        old.setWebChromeClient(new WebChromeClient());
+        ViewGroup parent=(ViewGroup)old.getParent();
+        if(parent!=null)parent.removeView(old);
+        old.destroy();
+    }
+
+    @Override protected void onDestroy(){if(clubImages!=null)clubImages.close();if(dataRefreshHandler!=null)dataRefreshHandler.removeCallbacks(dataRefreshTick);destroyActiveWebView();super.onDestroy();}
 
     private static class HydroPoint {final long time;final double value;HydroPoint(long t,double v){time=t;value=v;}}
     private static class TrendSeries {List<Long> times=new ArrayList<>();List<Double> values=new ArrayList<>();}
@@ -4397,7 +4521,56 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
             threshold.setStyle(Paint.Style.STROKE);threshold.setStrokeWidth(dp(1.2f));threshold.setPathEffect(new DashPathEffect(new float[]{dp(6),dp(4)},0));
             point.setStyle(Paint.Style.FILL);tooltip.setStyle(Paint.Style.FILL);
             tooltipText.setTextSize(10*getResources().getDisplayMetrics().scaledDensity);tooltipText.setTypeface(Typeface.DEFAULT_BOLD);
-            setContentDescription("Abfluss und Pegel "+station.label+" · "+range.label);
+            setContentDescription(accessibilitySummary());
+        }
+
+        private String accessibilitySummary(){
+            StringBuilder summary=new StringBuilder(ui("Abfluss und Pegel")+" "+station.label+" · "+range.label);
+            if(flow.values.isEmpty()||level.values.isEmpty())return summary.toString();
+            summary.append(". ").append(ui("Anfang")).append(" ")
+                    .append(formatMetric(station,RiverMetric.FLOW,flow.values.get(0))).append(" m³/s, ")
+                    .append(formatGraphLevel(station,level.values.get(0))).append(" ").append(graphLevelUnit(station));
+            summary.append(". ").append(ui("Ende")).append(" ")
+                    .append(formatMetric(station,RiverMetric.FLOW,flow.values.get(flow.values.size()-1))).append(" m³/s, ")
+                    .append(formatGraphLevel(station,level.values.get(level.values.size()-1))).append(" ").append(graphLevelUnit(station));
+            double flowMin=flow.values.stream().filter(Double::isFinite).mapToDouble(Double::doubleValue).min().orElse(Double.NaN);
+            double flowMax=flow.values.stream().filter(Double::isFinite).mapToDouble(Double::doubleValue).max().orElse(Double.NaN);
+            double levelMin=level.values.stream().filter(Double::isFinite).mapToDouble(Double::doubleValue).min().orElse(Double.NaN);
+            double levelMax=level.values.stream().filter(Double::isFinite).mapToDouble(Double::doubleValue).max().orElse(Double.NaN);
+            if(Double.isFinite(flowMin)&&Double.isFinite(flowMax)&&Double.isFinite(levelMin)&&Double.isFinite(levelMax))
+                summary.append(". ").append(ui("Tiefstwert")).append(" ").append(formatMetric(station,RiverMetric.FLOW,flowMin))
+                        .append(" m³/s, ").append(formatGraphLevel(station,levelMin)).append(" ").append(graphLevelUnit(station))
+                        .append(". ").append(ui("Höchstwert")).append(" ").append(formatMetric(station,RiverMetric.FLOW,flowMax))
+                        .append(" m³/s, ").append(formatGraphLevel(station,levelMax)).append(" ").append(graphLevelUnit(station));
+            if(selectedTime!=Long.MIN_VALUE){
+                int fi=HydroMath.nearestIndex(flow.times,selectedTime),li=HydroMath.nearestIndex(level.times,selectedTime);
+                if(fi>=0&&li>=0)summary.append(". ").append(java.time.Instant.ofEpochMilli(selectedTime).atZone(ZoneId.of("Europe/Zurich")).format(DateTimeFormatter.ofPattern("dd.MM. HH:mm")))
+                        .append(" · ").append(formatMetric(station,RiverMetric.FLOW,flow.values.get(fi))).append(" m³/s · ")
+                        .append(formatGraphLevel(station,level.values.get(li))).append(" ").append(graphLevelUnit(station));
+            }
+            return summary.toString();
+        }
+
+        @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info){
+            super.onInitializeAccessibilityNodeInfo(info);
+            if(level.times.size()>1){
+                info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD);
+                info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD);
+            }
+        }
+
+        @Override public boolean performAccessibilityAction(int action,Bundle args){
+            if((action==AccessibilityNodeInfo.ACTION_SCROLL_FORWARD||action==AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)&&!level.times.isEmpty()){
+                int index=selectedTime==Long.MIN_VALUE?(action==AccessibilityNodeInfo.ACTION_SCROLL_FORWARD?0:level.times.size()-1)
+                        :HydroMath.nearestIndex(level.times,selectedTime)+(action==AccessibilityNodeInfo.ACTION_SCROLL_FORWARD?1:-1);
+                index=Math.max(0,Math.min(level.times.size()-1,index));
+                selectedTime=level.times.get(index);
+                setContentDescription(accessibilitySummary());
+                sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SELECTED);
+                invalidate();
+                return true;
+            }
+            return super.performAccessibilityAction(action,args);
         }
 
         @Override public boolean performClick(){super.performClick();return true;}
@@ -4410,6 +4583,7 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
                 long minTime=Math.min(flow.times.get(0),level.times.get(0));
                 long maxTime=Math.max(flow.times.get(flow.times.size()-1),level.times.get(level.times.size()-1));
                 selectedTime=minTime+Math.round((maxTime-minTime)*(x-left)/Math.max(1f,right-left));
+                setContentDescription(accessibilitySummary());
                 invalidate();
                 if(event.getAction()==MotionEvent.ACTION_UP)performClick();
                 return true;
@@ -4551,7 +4725,6 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
             RectF box=new RectF(boxLeft,top+dp(4),boxLeft+boxWidth,top+textHeight+dp(14));
             tooltip.setColor(darkMode?DARK_SOFT:NAVY);canvas.drawRoundRect(box,dp(8),dp(8),tooltip);
             canvas.save();canvas.clipRect(box);canvas.drawText(text,box.left+dp(8),box.bottom-dp(6),tooltipText);canvas.restore();
-            setContentDescription(text);
         }
     }
 
@@ -4565,12 +4738,15 @@ private void refreshClubPage(ClubPageRepository.Page page,boolean force){
     private static class Event {
         String title,location,rule,description,status,uid;
         ZonedDateTime start,end,recurrenceId;
-        boolean allDay;Set<LocalDate> ex=new LinkedHashSet<>();
+        boolean allDay;Set<LocalDate> ex=new LinkedHashSet<>();List<ZonedDateTime> rdates=new ArrayList<>();
         Event copy(ZonedDateTime newStart){
             Event copy=new Event();
             copy.title=title;copy.location=location;copy.rule=rule;copy.description=description;copy.status=status;copy.uid=uid;
-            copy.start=newStart;copy.allDay=allDay;copy.recurrenceId=recurrenceId;copy.ex=new LinkedHashSet<>(ex);
-            if(end!=null&&start!=null&&newStart!=null)copy.end=newStart.plus(java.time.Duration.between(start,end));
+            copy.start=newStart;copy.allDay=allDay;copy.recurrenceId=recurrenceId;copy.ex=new LinkedHashSet<>(ex);copy.rdates=new ArrayList<>(rdates);
+            if(end!=null&&start!=null&&newStart!=null){
+                copy.end=allDay?newStart.plusDays(java.time.temporal.ChronoUnit.DAYS.between(start.toLocalDate(),end.toLocalDate()))
+                        :newStart.plus(java.time.Duration.between(start,end));
+            }
             return copy;
         }
     }

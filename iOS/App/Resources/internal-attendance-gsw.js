@@ -35,6 +35,7 @@
   var RESTORE_KEY='pfvr-attendance-restore-v4';
   var RESTORE_REQUEST_KEY='pfvr-attendance-explicit-restore-v1';
   var baseInternalUrl='__BASE_INTERNAL_URL__';
+  var identityScope='';
   var sourceTableRef=null;
   var sourcePeopleObserver=null;
   var headerOverlay=null;
@@ -441,6 +442,7 @@
     else if(clean.length>19)el.classList.add('pfvr-name-small');
   };
   var savePeopleState=function(state){
+    state.identityScope=identityScope;
     try{localStorage.setItem(PEOPLE_KEY,JSON.stringify(state));}catch(ignore){}
   };
   var personTokenKey=function(value){
@@ -591,7 +593,7 @@
         if(legacy)state=JSON.parse(legacy);
       }
     }catch(ignore){}
-    return state;
+    return state&&(state.identityScope===identityScope||(!identityScope&&!state.identityScope))?state:null;
   };
   var shouldTakeSourceList=function(currentNames,state){
     var currentReal=dedupePeople(currentNames);
@@ -604,6 +606,7 @@
   };
   var loadPeopleState=function(currentNames,seed){
     var state=seed||readPeopleState();
+    if(state&&state.identityScope!==identityScope&&(identityScope||state.identityScope))state=null;
 
     if(currentNames.length&&shouldTakeSourceList(currentNames,state)){
       var sourceReal=dedupePeople(currentNames);

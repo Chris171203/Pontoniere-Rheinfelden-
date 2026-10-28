@@ -7,15 +7,17 @@ final class RhineNavigation {
     static final double HWM_I_CM = 700.0d;
     static final double HWM_IIB_CM = 790.0d;
     static final double HWM_IIA_CM = 820.0d;
+    // Floating-point conversion from the BAFU metre value may miss an exact cm boundary.
+    private static final double CONVERSION_EPSILON_CM = 1e-9d;
     static final long MAX_CURRENT_AGE_MS = 60L * 60L * 1000L;
 
     private RhineNavigation() {}
 
     static Stage fromBaselGaugeCm(double gaugeCm){
         if(!Double.isFinite(gaugeCm))return Stage.UNKNOWN;
-        if(gaugeCm>=HWM_IIA_CM)return Stage.HWM_IIA;
-        if(gaugeCm>=HWM_IIB_CM)return Stage.HWM_IIB;
-        if(gaugeCm>=HWM_I_CM)return Stage.HWM_I;
+        if(gaugeCm+CONVERSION_EPSILON_CM>=HWM_IIA_CM)return Stage.HWM_IIA;
+        if(gaugeCm+CONVERSION_EPSILON_CM>=HWM_IIB_CM)return Stage.HWM_IIB;
+        if(gaugeCm+CONVERSION_EPSILON_CM>=HWM_I_CM)return Stage.HWM_I;
         return Stage.NORMAL;
     }
 

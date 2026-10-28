@@ -1,6 +1,13 @@
 # Status
 
-Stand: 2026-09-28 · Kandidat Android **0.15.3 / Versionscode 71** · iOS **0.15.3 / Build 5**.
+Stand: 2026-09-28 · Kandidat Android **0.15.4 / Versionscode 72** · iOS **0.15.4 / Build 6**.
+
+## Auditkorrekturen – Kandidat 0.15.4
+
+- Android: 820-cm-Rhein-Grenze vom BAFU-Rohwert aus stabilisiert. Persönliche Intern-Personenstände an eine lokale Identitätsgeneration gebunden; Linkwechsel/Entfernen stoppt die WebView und setzt Cookies/WebStorage zurück. Fremde Intern-Navigation wird blockiert; News-WebView nimmt nur den expliziten öffentlichen Vereins-Host an.
+- Android: ICS-Datumstypen, Monats-/Wochenregeln, Ganztagsdauer über DST, RDATE und gültige leere Kalenderstände korrigiert. Ungültige Wiederholungsintervalle scheitern begrenzt. Wetter-/Hydroantworten werden vor Cache-Ersatz auf nutzbare Messwerte geprüft. QR-Beträge bleiben centgenau.
+- Beide Plattformen: Rheinverlauf mit zugänglicher Messwertzusammenfassung/Navigation; Kassen- und Tab-Bedienung präzisiert. Der manuelle Play-Workflow prüft nun Lint und das konkrete signierte AAB-Manifest.
+- Dieser Zweig ist die Umsetzung der Befunde A01–A11 des Audits vom 28.09.2026. Tests/Builds und Gerätetests für diesen Kandidaten stehen noch aus; das vorherige grüne CI-Ergebnis gehört zu 0.15.3 und belegt diese Änderungen nicht. Architektur und Abnahmegrenzen: [Audit-Entscheidung](decisions/audit-remediation-2026-09-28.md).
 
 ## Saisonsteuerung – Umsetzung 2026-09-28
 
