@@ -87,7 +87,7 @@ if [[ "$PFVR_PROFILE" == tablet ]]; then
 fi
 xcodebuild "${PFVR_ARGS[@]}" test-without-building -resultBundlePath "$PFVR_OUT/tests.xcresult" \
   -parallel-testing-enabled NO -test-timeouts-enabled YES \
-  -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 \
+  -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 180 \
   2>&1 | tee "$PFVR_OUT/test.log"
 
 [[ -d "$PFVR_OUT/tests.xcresult" ]]

@@ -8,6 +8,10 @@ final class PFVRUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        // XCUIApplication.terminate() on the large simulator has blocked for about
+        // 45s in CI. Restart tests then miss the 60s default and the runner aborts
+        // the following launch. The suite cap in tools/ios-test.sh is 180s.
+        executionTimeAllowance = 180
         XCUIDevice.shared.orientation = .portrait
         app = XCUIApplication()
     }
@@ -16,7 +20,9 @@ final class PFVRUITests: XCTestCase {
         if let run = testRun, run.totalFailureCount > 0, app.state == .runningForeground {
             capture("failure")
         }
-        app.terminate()
+        if app.state != .notRunning {
+            app.terminate()
+        }
     }
 
     private func launch(reset: Bool = true, unlocked: Bool = true, pending: Bool = false, weatherDay: String? = nil, swissGerman: Bool = false) {
@@ -303,7 +309,6 @@ final class PFVRUITests: XCTestCase {
     /// Opens Apple's real controllers and cancels them without sharing or saving.
     /// The full UI suite also runs on iPad, covering native modal/popover presentation.
     func testSystemShareAndCalendarEditorsCanBeCancelled() {
-        executionTimeAllowance = 90 // Includes first simulator launch and two native controller transitions.
         launch()
         addDrink()
         let savedTotal = cashTotal()
